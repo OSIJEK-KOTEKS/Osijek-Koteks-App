@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "Start Metro",
+      "command": "npx react-native start",
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Run Android",
+      "command": "npx react-native run-android",
+      "problemMatcher": []
+    }
+  ]
+}
