@@ -1,51 +1,33 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
+
+const AUTH_TOKEN_KEY = 'auth_token';
 
 export const saveAuthToken = async (token: string) => {
   try {
-    await AsyncStorage.setItem('authToken', token);
+    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
   } catch (error) {
-    console.error('Error saving auth token', error);
+    console.error('Error saving auth token:', error);
   }
 };
 
 export const getAuthToken = async () => {
   try {
-    return await AsyncStorage.getItem('authToken');
+    return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
   } catch (error) {
-    console.error('Error getting auth token', error);
+    console.error('Error getting auth token:', error);
     return null;
   }
 };
 
 export const removeAuthToken = async () => {
   try {
-    await AsyncStorage.removeItem('authToken');
+    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
   } catch (error) {
-    console.error('Error removing auth token', error);
+    console.error('Error removing auth token:', error);
   }
-};
-
-export const checkAuthState = async () => {
-  try {
-    const token = await getAuthToken();
-    if (token) {
-      // Verify the token with Firebase
-      await auth().signInWithCustomToken(token);
-      return true;
-    }
-  } catch (error) {
-    console.error('Error checking auth state:', error);
-    await removeAuthToken(); // Clear the invalid token
-  }
-  return false;
 };
 
 export const logoutUser = async () => {
-  try {
-    await auth().signOut();
-    await removeAuthToken();
-  } catch (error) {
-    console.error('Error logging out', error);
-  }
+  await removeAuthToken();
+  // Add any other logout logic here, such as clearing user data or resetting the app state
 };

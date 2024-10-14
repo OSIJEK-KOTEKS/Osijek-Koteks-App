@@ -4,12 +4,7 @@ import {Input, Button, Text} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import auth from '@react-native-firebase/auth';
 import {saveAuthToken} from '../utils/authUtils';
-
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Main: undefined;
-};
+import {RootStackParamList} from '../AppNavigator';
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -48,7 +43,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       const userCredential = await confirm.confirm(confirmationCode);
       const token = await userCredential.user.getIdToken();
       await saveAuthToken(token);
-      // Navigation to Main screen is handled by App.tsx
+      navigation.navigate('Main');
     } catch (error) {
       console.error('Error confirming code:', error);
       Alert.alert('Error', 'Invalid confirmation code. Please try again.');
