@@ -1,10 +1,16 @@
-import React, {useState} from 'react';
+import React, {useState, ReactNode} from 'react';
 import {View, StyleSheet, Alert} from 'react-native';
-import {Input, Button, Text} from 'react-native-elements';
+import {Input, Button, Text as RNEText} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import auth from '@react-native-firebase/auth';
 import {saveAuthToken} from '../utils/authUtils';
-import {RootStackParamList} from '../AppNavigator';
+
+// Define RootStackParamList here since AppNavigator.tsx is removed
+type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Main: undefined;
+};
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -14,6 +20,18 @@ type LoginScreenNavigationProp = StackNavigationProp<
 type LoginScreenProps = {
   navigation: LoginScreenNavigationProp;
 };
+
+// Corrected Text component with proper typing
+const Text: React.FC<{h3?: boolean; style?: object; children: ReactNode}> = ({
+  h3,
+  style,
+  children,
+  ...props
+}) => (
+  <RNEText h3={h3} style={[h3 && styles.h3Text, style]} {...props}>
+    {children}
+  </RNEText>
+);
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -89,5 +107,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+  },
+  h3Text: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
   },
 });

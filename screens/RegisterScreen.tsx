@@ -1,10 +1,15 @@
 import React, {useState} from 'react';
 import {View, StyleSheet, Alert} from 'react-native';
-import {Input, Button, Text} from 'react-native-elements';
+import {Input, Button, Text as RNEText} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import {RootStackParamList} from '../AppNavigator';
+
+type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Main: undefined;
+};
 
 type RegisterScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -14,6 +19,16 @@ type RegisterScreenNavigationProp = StackNavigationProp<
 type RegisterScreenProps = {
   navigation: RegisterScreenNavigationProp;
 };
+
+const Text: React.FC<{
+  h3?: boolean;
+  style?: object;
+  children: React.ReactNode;
+}> = ({h3, style, children, ...props}) => (
+  <RNEText h3={h3} style={[h3 && styles.h3Text, style]} {...props}>
+    {children}
+  </RNEText>
+);
 
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const [firstName, setFirstName] = useState('');
@@ -115,5 +130,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+  },
+  h3Text: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
   },
 });
