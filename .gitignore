@@ -1,6 +1,7 @@
 # OSX
 #
 .DS_Store
+.env
 
 # Xcode
 #
@@ -75,6 +76,3 @@ yarn-error.log
 
 
 
-#env
-.env
-env.d.ts
