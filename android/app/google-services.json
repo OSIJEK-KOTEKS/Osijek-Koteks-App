@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "92611075012",
+    "project_id": "osijek-koteks-97fc2",
+    "storage_bucket": "osijek-koteks-97fc2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:92611075012:android:adc5f970491122c5cb6291",
+        "android_client_info": {
+          "package_name": "com.osijek"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCw63OZXXSG1chwMKrZBnKl8hghYIDFSWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

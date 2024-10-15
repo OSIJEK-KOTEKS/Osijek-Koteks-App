@@ -1,16 +1,10 @@
-import React, {useState, ReactNode} from 'react';
+import React, {useState, ReactNode, useEffect} from 'react';
 import {View, StyleSheet, Alert} from 'react-native';
 import {Input, Button, Text as RNEText} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import auth from '@react-native-firebase/auth';
 import {saveAuthToken} from '../utils/authUtils';
-
-// Define RootStackParamList here since AppNavigator.tsx is removed
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Main: undefined;
-};
+import {RootStackParamList} from '../App';
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -21,7 +15,6 @@ type LoginScreenProps = {
   navigation: LoginScreenNavigationProp;
 };
 
-// Corrected Text component with proper typing
 const Text: React.FC<{h3?: boolean; style?: object; children: ReactNode}> = ({
   h3,
   style,
@@ -40,7 +33,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
   const handleSendCode = async () => {
     try {
+      console.log('Attempting to send code to:', phoneNumber);
       const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
+      console.log('Confirmation received:', confirmation);
       setConfirm(confirmation);
     } catch (error) {
       console.error('Error sending code:', error);
@@ -58,7 +53,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     }
 
     try {
+      console.log('Attempting to confirm code:', confirmationCode);
       const userCredential = await confirm.confirm(confirmationCode);
+      console.log('User credential received:', userCredential);
       const token = await userCredential.user.getIdToken();
       await saveAuthToken(token);
       navigation.navigate('Main');
@@ -73,7 +70,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       <View style={styles.container}>
         <Text h3>Login</Text>
         <Input
-          placeholder="Phone Number"
+          placeholder="Phone Number (e.g., +1234567890)"
           value={phoneNumber}
           onChangeText={setPhoneNumber}
           keyboardType="phone-pad"

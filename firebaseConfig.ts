@@ -1,4 +1,5 @@
 import {initializeApp, getApps} from '@react-native-firebase/app';
+import '@react-native-firebase/auth';
 import {
   FIREBASE_API_KEY,
   FIREBASE_AUTH_DOMAIN,
@@ -19,6 +20,12 @@ const firebaseConfig = {
 
 export const initializeFirebase = () => {
   if (getApps().length === 0) {
-    initializeApp(firebaseConfig);
+    console.log('Initializing Firebase with config:', firebaseConfig);
+    const app = initializeApp(firebaseConfig);
+    console.log('Firebase initialized:', app);
+    return app;
+  } else {
+    console.log('Firebase already initialized');
+    return getApps()[0];
   }
 };
