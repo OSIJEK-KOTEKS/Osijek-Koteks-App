@@ -1,4 +1,5 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
+import {View, Text} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {LoginScreen} from './screens/LoginScreen';
@@ -9,10 +10,33 @@ import {initializeFirebase} from './firebaseConfig';
 const Stack = createStackNavigator();
 
 const App = () => {
+  const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+
   useEffect(() => {
     const app = initializeFirebase();
-    console.log('Firebase app initialized in App.tsx:', app);
+    if (app) {
+      setIsFirebaseInitialized(true);
+    } else {
+      setInitError('Failed to initialize Firebase');
+    }
   }, []);
+
+  if (initError) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text>Error: {initError}</Text>
+      </View>
+    );
+  }
+
+  if (!isFirebaseInitialized) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text>Initializing Firebase...</Text>
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
