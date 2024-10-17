@@ -4,6 +4,7 @@ import {Input, Button, Text as RNEText} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import {saveAuthToken} from '../utils/authUtils'; // Import the saveAuthToken function
 
 type RootStackParamList = {
   Login: undefined;
@@ -66,7 +67,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
         phoneNumber,
         role: 'user',
       });
-      navigation.navigate('Login');
+
+      // Get the user's token and save it
+      const token = await userCredential.user.getIdToken();
+      await saveAuthToken(token);
+
+      // Navigate to the Main screen instead of Login
+      navigation.replace('Main');
     } catch (error) {
       console.error('Error confirming code:', error);
       Alert.alert(

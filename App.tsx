@@ -6,6 +6,7 @@ import {LoginScreen} from './screens/LoginScreen';
 import {RegisterScreen} from './screens/RegisterScreen';
 import {MainScreen} from './screens/MainScreen';
 import {initializeFirebase} from './firebaseConfig';
+import {getAuthToken} from '../Osijek/utils/authUtils';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -18,15 +19,34 @@ const Stack = createStackNavigator<RootStackParamList>();
 const App = () => {
   const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const app = initializeFirebase();
-    if (app) {
-      setIsFirebaseInitialized(true);
-    } else {
-      setInitError('Failed to initialize Firebase');
-    }
+    const initializeApp = async () => {
+      const app = initializeFirebase();
+      if (app) {
+        setIsFirebaseInitialized(true);
+        const token = await getAuthToken();
+        if (token) {
+          setIsAuthenticated(true);
+        }
+      } else {
+        setInitError('Failed to initialize Firebase');
+      }
+      setIsLoading(false);
+    };
+
+    initializeApp();
   }, []);
+
+  if (isLoading) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   if (initError) {
     return (
@@ -47,7 +67,7 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login"
+        initialRouteName={isAuthenticated ? 'Main' : 'Login'}
         screenOptions={{headerShown: false}}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />

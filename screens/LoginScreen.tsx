@@ -1,4 +1,4 @@
-import React, {useState, ReactNode, useEffect} from 'react';
+import React, {useState, ReactNode} from 'react';
 import {View, StyleSheet, Alert} from 'react-native';
 import {Input, Button, Text as RNEText} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -58,7 +58,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       console.log('User credential received:', userCredential);
       const token = await userCredential.user.getIdToken();
       await saveAuthToken(token);
-      navigation.navigate('Main');
+      navigation.replace('Main');
     } catch (error) {
       console.error('Error confirming code:', error);
       Alert.alert('Error', 'Invalid confirmation code. Please try again.');
