@@ -7,7 +7,13 @@ import {RegisterScreen} from './screens/RegisterScreen';
 import {MainScreen} from './screens/MainScreen';
 import {initializeFirebase} from './firebaseConfig';
 
-const Stack = createStackNavigator();
+export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Main: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 const App = () => {
   const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
