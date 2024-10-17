@@ -1,100 +1,61 @@
-import React, {useState, ReactNode} from 'react';
+import React, {useState} from 'react';
 import {View, StyleSheet, Alert} from 'react-native';
 import {Input, Button, Text as RNEText} from 'react-native-elements';
-import {StackNavigationProp} from '@react-navigation/stack';
 import auth from '@react-native-firebase/auth';
-import {saveAuthToken} from '../utils/authUtils';
-import {RootStackParamList} from '../App';
+import {saveAuthData} from '../utils/authUtils';
 
-type LoginScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'Login'
->;
-
-type LoginScreenProps = {
-  navigation: LoginScreenNavigationProp;
-};
-
-const Text: React.FC<{h3?: boolean; style?: object; children: ReactNode}> = ({
-  h3,
-  style,
-  children,
-  ...props
-}) => (
+const Text: React.FC<{
+  h3?: boolean;
+  style?: object;
+  children: React.ReactNode;
+}> = ({h3, style, children, ...props}) => (
   <RNEText h3={h3} style={[h3 && styles.h3Text, style]} {...props}>
     {children}
   </RNEText>
 );
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [confirmationCode, setConfirmationCode] = useState('');
-  const [confirm, setConfirm] = useState<any>(null);
-
-  const handleSendCode = async () => {
-    try {
-      console.log('Attempting to send code to:', phoneNumber);
-      const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
-      console.log('Confirmation received:', confirmation);
-      setConfirm(confirmation);
-    } catch (error) {
-      console.error('Error sending code:', error);
-      Alert.alert(
-        'Error',
-        'Failed to send verification code. Please try again.',
-      );
-    }
-  };
+export const LoginScreen: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
-    if (!confirm) {
-      console.error('No confirmation object');
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password.');
       return;
     }
 
     try {
-      console.log('Attempting to confirm code:', confirmationCode);
-      const userCredential = await confirm.confirm(confirmationCode);
-      console.log('User credential received:', userCredential);
+      const userCredential = await auth().signInWithEmailAndPassword(
+        email,
+        password,
+      );
       const token = await userCredential.user.getIdToken();
-      await saveAuthToken(token);
-      navigation.replace('Main');
+      const uid = userCredential.user.uid;
+      await saveAuthData(token, uid);
+      // No need to navigate here, App.tsx will handle it based on auth state
     } catch (error) {
-      console.error('Error confirming code:', error);
-      Alert.alert('Error', 'Invalid confirmation code. Please try again.');
+      console.error('Error logging in:', error);
+      Alert.alert('Error', 'Invalid email or password. Please try again.');
     }
   };
 
-  if (!confirm) {
-    return (
-      <View style={styles.container}>
-        <Text h3>Login</Text>
-        <Input
-          placeholder="Phone Number (e.g., +1234567890)"
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-          keyboardType="phone-pad"
-        />
-        <Button title="Send Code" onPress={handleSendCode} />
-        <Button
-          title="Register"
-          type="clear"
-          onPress={() => navigation.navigate('Register')}
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <Text h3>Enter Confirmation Code</Text>
+      <Text h3>Login</Text>
       <Input
-        placeholder="Confirmation Code"
-        value={confirmationCode}
-        onChangeText={setConfirmationCode}
-        keyboardType="number-pad"
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
-      <Button title="Verify and Login" onPress={handleLogin} />
+      <Input
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+      <Button title="Login" onPress={handleLogin} />
     </View>
   );
 };

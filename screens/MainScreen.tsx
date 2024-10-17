@@ -1,20 +1,19 @@
 import React from 'react';
 import {View, StyleSheet} from 'react-native';
 import {Button, Text} from 'react-native-elements';
-import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList} from '../App';
 import {logoutUser} from '../utils/authUtils';
+import auth from '@react-native-firebase/auth';
 
-type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
-
-type MainScreenProps = {
-  navigation: MainScreenNavigationProp;
-};
-
-export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
+export const MainScreen: React.FC = () => {
   const handleLogout = async () => {
-    await logoutUser();
-    navigation.replace('Login');
+    try {
+      await auth().signOut(); // Sign out from Firebase
+      await logoutUser(); // Clear the stored token
+      // No need to navigate here, App.tsx will handle it based on auth state
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // You might want to show an error message to the user here
+    }
   };
 
   return (

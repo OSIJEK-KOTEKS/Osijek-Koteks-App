@@ -3,14 +3,13 @@ import {View, Text} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {LoginScreen} from './screens/LoginScreen';
-import {RegisterScreen} from './screens/RegisterScreen';
 import {MainScreen} from './screens/MainScreen';
 import {initializeFirebase} from './firebaseConfig';
-import {getAuthToken} from '../Osijek/utils/authUtils';
+import {getAuthToken, removeAuthData} from './utils/authUtils';
+import auth from '@react-native-firebase/auth';
 
 export type RootStackParamList = {
   Login: undefined;
-  Register: undefined;
   Main: undefined;
 };
 
@@ -19,17 +18,32 @@ const Stack = createStackNavigator<RootStackParamList>();
 const App = () => {
   const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const initializeApp = async () => {
+    const initApp = async () => {
       const app = initializeFirebase();
       if (app) {
         setIsFirebaseInitialized(true);
+        // Check for stored token
         const token = await getAuthToken();
         if (token) {
-          setIsAuthenticated(true);
+          try {
+            // Use the token to get the user
+            const currentUser = auth().currentUser;
+            if (currentUser) {
+              // If there's a current user, refresh the token
+              await currentUser.getIdToken(true);
+            } else {
+              // If no current user, try to refresh the auth state
+              await auth().signInWithCustomToken(token);
+            }
+          } catch (error) {
+            console.error('Error verifying stored token:', error);
+            // Token is invalid or expired, remove it
+            await removeAuthData();
+          }
         }
       } else {
         setInitError('Failed to initialize Firebase');
@@ -37,16 +51,13 @@ const App = () => {
       setIsLoading(false);
     };
 
-    initializeApp();
+    initApp();
   }, []);
 
-  if (isLoading) {
-    return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged(setUser);
+    return unsubscribe;
+  }, []);
 
   if (initError) {
     return (
@@ -56,22 +67,22 @@ const App = () => {
     );
   }
 
-  if (!isFirebaseInitialized) {
+  if (isLoading || !isFirebaseInitialized) {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <Text>Initializing Firebase...</Text>
+        <Text>Loading...</Text>
       </View>
     );
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={isAuthenticated ? 'Main' : 'Login'}
-        screenOptions={{headerShown: false}}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Main" component={MainScreen} />
+      <Stack.Navigator screenOptions={{headerShown: false}}>
+        {user ? (
+          <Stack.Screen name="Main" component={MainScreen} />
+        ) : (
+          <Stack.Screen name="Login" component={LoginScreen} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
