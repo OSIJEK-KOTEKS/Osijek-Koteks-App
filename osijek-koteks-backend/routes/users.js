@@ -14,17 +14,29 @@ router.get('/', async (req, res) => {
 
 // Create a new user
 router.post('/', async (req, res) => {
-  const user = new User({
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    company: req.body.company,
-    phoneNumber: req.body.phoneNumber,
-    code: req.body.code,
-    role: req.body.role || 'user', // Default to 'user' if not provided
-    isVerified: req.body.isVerified || false, // Default to false if not provided
-  });
-
   try {
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      company,
+      code,
+      role,
+      isVerified,
+    } = req.body;
+
+    const user = new User({
+      email,
+      password, // This will be hashed by the pre-save hook
+      firstName,
+      lastName,
+      company,
+      code,
+      role: role || 'user',
+      isVerified: isVerified || false,
+    });
+
     const newUser = await user.save();
     res.status(201).json(newUser);
   } catch (err) {
@@ -32,34 +44,41 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get a specific user
+// Get a specific user by ID
 router.get('/:id', getUser, (req, res) => {
   res.json(res.user);
 });
 
+// Get a user by UID
+router.get('/uid/:uid', async (req, res) => {
+  try {
+    const user = await User.findOne({uid: req.params.uid});
+    if (!user) {
+      return res.status(404).json({message: 'User not found'});
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({message: err.message});
+  }
+});
+
 // Update a user
 router.patch('/:id', getUser, async (req, res) => {
-  if (req.body.firstName != null) {
-    res.user.firstName = req.body.firstName;
-  }
-  if (req.body.lastName != null) {
-    res.user.lastName = req.body.lastName;
-  }
-  if (req.body.company != null) {
-    res.user.company = req.body.company;
-  }
-  if (req.body.phoneNumber != null) {
-    res.user.phoneNumber = req.body.phoneNumber;
-  }
-  if (req.body.code != null) {
-    res.user.code = req.body.code;
-  }
-  if (req.body.role != null) {
-    res.user.role = req.body.role;
-  }
-  if (req.body.isVerified != null) {
-    res.user.isVerified = req.body.isVerified;
-  }
+  const updatableFields = [
+    'firstName',
+    'lastName',
+    'company',
+    'email', // Changed from phoneNumber to email
+    'code',
+    'role',
+    'isVerified',
+  ];
+
+  updatableFields.forEach(field => {
+    if (req.body[field] != null) {
+      res.user[field] = req.body[field];
+    }
+  });
 
   try {
     const updatedUser = await res.user.save();

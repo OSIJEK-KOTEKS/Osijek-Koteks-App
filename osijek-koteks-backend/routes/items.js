@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Item = require('../models/Item');
 
-// Get all items
+// Get all items or filter by code
 router.get('/', async (req, res) => {
   try {
-    const items = await Item.find();
+    const code = req.query.code;
+    const items = code ? await Item.find({code}) : await Item.find();
     res.json(items);
   } catch (err) {
     res.status(500).json({message: err.message});
@@ -44,7 +45,6 @@ router.patch('/:id', getItem, async (req, res) => {
   if (req.body.pdfUrl != null) {
     res.item.pdfUrl = req.body.pdfUrl;
   }
-  res.item.updatedAt = Date.now();
 
   try {
     const updatedItem = await res.item.save();
@@ -57,7 +57,7 @@ router.patch('/:id', getItem, async (req, res) => {
 // Delete an item
 router.delete('/:id', getItem, async (req, res) => {
   try {
-    await res.item.remove();
+    await res.item.deleteOne();
     res.json({message: 'Item deleted'});
   } catch (err) {
     res.status(500).json({message: err.message});
