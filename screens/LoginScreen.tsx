@@ -78,10 +78,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          <Image
-            source={require('../assets/logo.png')} // Make sure to add your logo file
-            style={styles.logo}
-          />
+          <Image source={require('../assets/logo.png')} style={styles.logo} />
           <Text h3 style={styles.title}>
             Welcome Back
           </Text>
