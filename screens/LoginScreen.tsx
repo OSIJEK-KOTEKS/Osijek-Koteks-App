@@ -8,12 +8,13 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import {Input, Button, Text, Image} from 'react-native-elements';
+import {Input, Button, Text} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../types';
 import {apiService, LoginResponse} from '../utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {AuthContext} from '../AuthContext';
+import Logo from '../components/Logo';
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -78,10 +79,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          <Image source={require('../assets/logo.png')} style={styles.logo} />
-          <Text h3 style={styles.title}>
-            Welcome Back
-          </Text>
+          <Logo />
           <Input
             placeholder="Email"
             value={email}
@@ -89,7 +87,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             keyboardType="email-address"
             autoCapitalize="none"
             disabled={isLoading}
-            leftIcon={{type: 'font-awesome', name: 'envelope'}}
+            leftIcon={<Text style={styles.icon}>✉️</Text>}
+            containerStyle={styles.inputContainer}
           />
           <Input
             placeholder="Password"
@@ -97,7 +96,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             onChangeText={setPassword}
             secureTextEntry
             disabled={isLoading}
-            leftIcon={{type: 'font-awesome', name: 'lock'}}
+            leftIcon={<Text style={styles.icon}>🔒</Text>}
+            containerStyle={styles.inputContainer}
           />
           {errorMessage ? (
             <Text style={styles.errorText}>{errorMessage}</Text>
@@ -109,6 +109,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
               title="Login"
               onPress={handleLogin}
               buttonStyle={styles.loginButton}
+              containerStyle={styles.buttonContainer}
             />
           )}
           <Button
@@ -128,6 +129,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   inner: {
     flex: 1,
@@ -135,30 +137,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+  inputContainer: {
+    width: '100%',
+    marginBottom: 15,
   },
   loginButton: {
     backgroundColor: '#007AFF',
     borderRadius: 25,
-    width: 200,
+    paddingVertical: 10,
+  },
+  buttonContainer: {
+    width: '80%',
     marginTop: 20,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   forgotPasswordText: {
     color: '#007AFF',
-    marginTop: 15,
+    fontSize: 14,
   },
   errorText: {
     color: 'red',
     textAlign: 'center',
     marginBottom: 10,
+  },
+  icon: {
+    fontSize: 20,
+    marginRight: 10,
   },
 });
