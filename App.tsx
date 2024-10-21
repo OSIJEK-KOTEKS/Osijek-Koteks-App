@@ -1,91 +1,100 @@
-import React, {useEffect, useState} from 'react';
-import {View, Text} from 'react-native';
+import React, {useEffect, useState, useMemo} from 'react';
+import {View, StyleSheet, ActivityIndicator} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {LoginScreen} from './screens/LoginScreen';
 import {MainScreen} from './screens/MainScreen';
-import {initializeFirebase} from './firebaseConfig';
-import {getAuthToken, removeAuthData} from './utils/authUtils';
-import auth from '@react-native-firebase/auth';
-
-export type RootStackParamList = {
-  Login: undefined;
-  Main: undefined;
-};
+import {PDFViewer} from './screens/PDFViewer';
+import {RootStackParamList} from './types';
+import {AuthContext} from './AuthContext';
+import {apiService} from './utils/api';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-const App = () => {
-  const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
+const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const initApp = async () => {
-      const app = initializeFirebase();
-      if (app) {
-        setIsFirebaseInitialized(true);
-        // Check for stored token
-        const token = await getAuthToken();
+    const bootstrapAsync = async () => {
+      let token;
+      try {
+        token = await AsyncStorage.getItem('userToken');
         if (token) {
-          try {
-            // Use the token to get the user
-            const currentUser = auth().currentUser;
-            if (currentUser) {
-              // If there's a current user, refresh the token
-              await currentUser.getIdToken(true);
-            } else {
-              // If no current user, try to refresh the auth state
-              await auth().signInWithCustomToken(token);
-            }
-          } catch (error) {
-            console.error('Error verifying stored token:', error);
-            // Token is invalid or expired, remove it
-            await removeAuthData();
-          }
+          // Instead of verifying the token, we'll check if we can fetch the user profile
+          await apiService.getUserProfile();
         }
-      } else {
-        setInitError('Failed to initialize Firebase');
+      } catch (e) {
+        // Profile fetch failed, token is likely invalid
+        console.error('Failed to restore session', e);
+        token = null;
+        await AsyncStorage.removeItem('userToken');
       }
+      setUserToken(token);
       setIsLoading(false);
     };
 
-    initApp();
+    bootstrapAsync();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(setUser);
-    return unsubscribe;
-  }, []);
+  const authContext = useMemo(
+    () => ({
+      signIn: async (token: string) => {
+        setUserToken(token);
+        await AsyncStorage.setItem('userToken', token);
+      },
+      signOut: async () => {
+        setUserToken(null);
+        await AsyncStorage.removeItem('userToken');
+        try {
+          await apiService.logout();
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      },
+    }),
+    [],
+  );
 
-  if (initError) {
-    return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <Text>Error: {initError}</Text>
-      </View>
-    );
-  }
-
-  if (isLoading || !isFirebaseInitialized) {
-    return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <Text>Loading...</Text>
-      </View>
-    );
+  if (isLoading) {
+    return <LoadingDisplay />;
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
-        {user ? (
-          <Stack.Screen name="Main" component={MainScreen} />
-        ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthContext.Provider value={authContext}>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{headerShown: false}}>
+          {userToken ? (
+            <>
+              <Stack.Screen name="Main" component={MainScreen} />
+              <Stack.Screen
+                name="PDFViewer"
+                component={PDFViewer}
+                options={{headerShown: true}}
+              />
+            </>
+          ) : (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthContext.Provider>
   );
 };
+
+const LoadingDisplay: React.FC = () => (
+  <View style={styles.centered}>
+    <ActivityIndicator size="large" />
+  </View>
+);
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 export default App;

@@ -9,6 +9,7 @@ export const saveAuthData = async (token: string, uid: string) => {
     await AsyncStorage.setItem(USER_UID_KEY, uid);
   } catch (error) {
     console.error('Error saving auth data:', error);
+    throw error; // Rethrow the error to handle it in the calling function
   }
 };
 
@@ -21,9 +22,13 @@ export const getAuthToken = async () => {
   }
 };
 
-export const getUserUid = async () => {
+export const getUserUid = async (): Promise<string | null> => {
   try {
-    return await AsyncStorage.getItem(USER_UID_KEY);
+    const uid = await AsyncStorage.getItem(USER_UID_KEY);
+    if (!uid) {
+      console.warn('No user UID found in storage');
+    }
+    return uid;
   } catch (error) {
     console.error('Error getting user UID:', error);
     return null;
@@ -36,10 +41,16 @@ export const removeAuthData = async () => {
     await AsyncStorage.removeItem(USER_UID_KEY);
   } catch (error) {
     console.error('Error removing auth data:', error);
+    throw error; // Rethrow the error to handle it in the calling function
   }
 };
 
 export const logoutUser = async () => {
-  await removeAuthData();
-  // Add any other logout logic here, such as clearing user data or resetting the app state
+  try {
+    await removeAuthData();
+    // Add any other logout logic here, such as clearing user data or resetting the app state
+  } catch (error) {
+    console.error('Error during logout:', error);
+    throw error; // Rethrow the error to handle it in the calling function
+  }
 };
