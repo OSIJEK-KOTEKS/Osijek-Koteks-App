@@ -1,8 +1,35 @@
-import axios, {AxiosError} from 'axios';
+import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {User, Item} from '../types';
+import {Platform} from 'react-native';
 
+// Use your actual API URL here
 const API_URL = 'http://192.168.1.130:5000';
+
+const AUTH_TOKEN_KEY = 'auth_token';
+const USER_ID_KEY = 'user_id';
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  code: string;
+  role: 'admin' | 'user' | 'bot';
+  isVerified: boolean;
+}
+
+export interface Item {
+  _id: string;
+  title: string;
+  code: string;
+  pdfUrl: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -10,7 +37,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async config => {
-    const token = await AsyncStorage.getItem('userToken');
+    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -19,22 +46,25 @@ api.interceptors.request.use(
   error => Promise.reject(error),
 );
 
-api.interceptors.response.use(
-  response => response,
-  async error => {
-    if (error.response && error.response.status === 401) {
-      // Unauthorized, token might be invalid
-      await AsyncStorage.removeItem('userToken');
-      // You might want to redirect to login screen here
-    }
-    return Promise.reject(error);
-  },
-);
+const saveAuthData = async (token: string, userId: string) => {
+  try {
+    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+    await AsyncStorage.setItem(USER_ID_KEY, userId);
+  } catch (error) {
+    console.error('Error saving auth data:', error);
+    throw error;
+  }
+};
 
-export interface LoginResponse {
-  token: string;
-  user: User;
-}
+const removeAuthData = async () => {
+  try {
+    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    await AsyncStorage.removeItem(USER_ID_KEY);
+  } catch (error) {
+    console.error('Error removing auth data:', error);
+    throw error;
+  }
+};
 
 export const apiService = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -43,6 +73,8 @@ export const apiService = {
         email,
         password,
       });
+      const {token, user} = response.data;
+      await saveAuthData(token, user.id);
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
@@ -50,18 +82,35 @@ export const apiService = {
     }
   },
 
-  logout: async (): Promise<void> => {
+  register: async (
+    userData: Omit<User, 'id' | 'isVerified'>,
+  ): Promise<User> => {
     try {
-      await api.post('/api/auth/logout');
+      const response = await api.post<{token: string; user: User}>(
+        '/api/auth/register',
+        userData,
+      );
+      const {token, user} = response.data;
+      await saveAuthData(token, user.id);
+      return user;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  },
+
+  logout: async () => {
+    try {
+      await removeAuthData();
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
     }
   },
 
-  getItems: async (code?: string): Promise<Item[]> => {
+  getItems: async (code: string): Promise<Item[]> => {
     try {
-      const response = await api.get<Item[]>('/api/items', {params: {code}});
+      const response = await api.get<Item[]>(`/api/items?code=${code}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -69,42 +118,52 @@ export const apiService = {
     }
   },
 
-  getUserProfile: async (): Promise<User> => {
+  getUserById: async (id: string): Promise<User> => {
     try {
-      const response = await api.get<User>('/api/users/profile');
+      const response = await api.get<User>(`/api/users/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error fetching user:', error);
       throw error;
     }
   },
 
-  updateUserProfile: async (userData: Partial<User>): Promise<User> => {
+  updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
     try {
-      const response = await api.patch<User>('/api/users/profile', userData);
+      const response = await api.patch<User>(`/api/users/${id}`, userData);
       return response.data;
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      console.error('Error updating user:', error);
       throw error;
     }
   },
 
-  // Add more API methods as needed
+  createItem: async (itemData: Omit<Item, '_id'>): Promise<Item> => {
+    try {
+      const response = await api.post<Item>('/api/items', itemData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating item:', error);
+      throw error;
+    }
+  },
 
-  handleApiError: (error: unknown) => {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
-      if (axiosError.response) {
-        console.error('Error data:', axiosError.response.data);
-        console.error('Error status:', axiosError.response.status);
-        console.error('Error headers:', axiosError.response.headers);
-      } else if (axiosError.request) {
-        console.error('Error request:', axiosError.request);
-      } else {
-        console.error('Error message:', axiosError.message);
-      }
-    } else {
-      console.error('Non-Axios error:', error);
+  updateItem: async (id: string, itemData: Partial<Item>): Promise<Item> => {
+    try {
+      const response = await api.patch<Item>(`/api/items/${id}`, itemData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item:', error);
+      throw error;
+    }
+  },
+
+  deleteItem: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/api/items/${id}`);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      throw error;
     }
   },
 };

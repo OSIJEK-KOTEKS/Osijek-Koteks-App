@@ -43,7 +43,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('userToken');
+      await apiService.logout();
       signOut(); // Call the signOut function from AuthContext
     } catch (error) {
       console.error('Logout error:', error);
