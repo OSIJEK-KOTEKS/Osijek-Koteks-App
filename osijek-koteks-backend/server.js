@@ -18,8 +18,22 @@ mongoose
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
-    console.log('MONGODB_URI:', process.env.MONGODB_URI);
+    process.exit(1);
   });
+
+// Routes
+const usersRouter = require('./routes/users');
+const itemsRouter = require('./routes/items');
+const authRouter = require('./routes/auth');
+
+app.use('/api/users', usersRouter);
+app.use('/api/items', itemsRouter);
+app.use('/api/auth', authRouter);
+
+// Root route
+app.get('/', (req, res) => {
+  res.send('Welcome to the Osijek Koteks API');
+});
 
 // Database Connection Test Route
 app.get('/test-db', async (req, res) => {
@@ -31,19 +45,6 @@ app.get('/test-db', async (req, res) => {
       .status(500)
       .json({status: 'Database connection failed', error: error.message});
   }
-});
-
-// Routes
-const usersRouter = require('./routes/users');
-const itemsRouter = require('./routes/items');
-const authRouter = require('./routes/auth');
-
-app.use('/api/users', usersRouter);
-app.use('/api/items', itemsRouter);
-app.use('/api/auth', authRouter);
-// Root route
-app.get('/', (req, res) => {
-  res.send('Welcome to the Osijek Koteks API');
 });
 
 // Error handling middleware
