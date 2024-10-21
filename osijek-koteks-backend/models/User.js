@@ -10,6 +10,8 @@ const UserSchema = new mongoose.Schema({
   code: {type: String, required: true},
   role: {type: String, enum: ['admin', 'user', 'bot'], default: 'user'},
   isVerified: {type: Boolean, default: false},
+  phoneNumber: {type: String},
+  // uid field removed
 });
 
 // Hash the password before saving
