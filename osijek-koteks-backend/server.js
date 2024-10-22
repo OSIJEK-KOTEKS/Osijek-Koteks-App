@@ -11,6 +11,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
+// Set response headers for UTF-8
+app.use((req, res, next) => {
+  res.header('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
+
 // Routes
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
@@ -26,26 +32,11 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
-// Function to drop the uid_1 index
-const dropUidIndex = async () => {
-  try {
-    await mongoose.connection.collection('users').dropIndex('uid_1');
-    console.log('Successfully dropped uid_1 index');
-  } catch (error) {
-    if (error.code === 27) {
-      console.log('Index uid_1 does not exist, skipping drop');
-    } else {
-      console.error('Error dropping uid_1 index:', error);
-    }
-  }
-};
-
 // MongoDB connection and server start
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(async () => {
+  .then(() => {
     console.log('MongoDB connected successfully');
-    await dropUidIndex();
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch(err => {
