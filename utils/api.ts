@@ -2,7 +2,6 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Platform} from 'react-native';
 
-// Use your actual API URL here
 const API_URL = 'http://192.168.1.130:5000';
 
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -104,6 +103,21 @@ export const apiService = {
       await removeAuthData();
     } catch (error) {
       console.error('Logout error:', error);
+      throw error;
+    }
+  },
+
+  // New method to get user profile
+  getUserProfile: async (): Promise<User> => {
+    try {
+      const userId = await AsyncStorage.getItem(USER_ID_KEY);
+      if (!userId) {
+        throw new Error('No user ID found');
+      }
+      const response = await api.get<User>(`/api/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
       throw error;
     }
   },
