@@ -10,7 +10,7 @@ export interface User {
   firstName: string;
   lastName: string;
   company: string;
-  code: string;
+  codes: string[];
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
 }

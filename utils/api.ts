@@ -1,6 +1,5 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {Platform} from 'react-native';
 
 const API_URL = 'http://192.168.1.130:5000';
 
@@ -13,7 +12,7 @@ export interface User {
   firstName: string;
   lastName: string;
   company: string;
-  code: string;
+  codes: string[]; // Changed from code: string to codes: string[]
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
 }
@@ -107,7 +106,6 @@ export const apiService = {
     }
   },
 
-  // New method to get user profile
   getUserProfile: async (): Promise<User> => {
     try {
       const userId = await AsyncStorage.getItem(USER_ID_KEY);
@@ -122,12 +120,24 @@ export const apiService = {
     }
   },
 
-  getItems: async (code: string): Promise<Item[]> => {
+  getItems: async (): Promise<Item[]> => {
     try {
-      const response = await api.get<Item[]>(`/api/items?code=${code}`);
+      const response = await api.get<Item[]>('/api/items');
+      if (!response.data) {
+        console.warn('No items returned from API');
+        return [];
+      }
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);
+      // Log more details about the error
+      if (axios.isAxiosError(error)) {
+        console.error('API Error Details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        });
+      }
       throw error;
     }
   },

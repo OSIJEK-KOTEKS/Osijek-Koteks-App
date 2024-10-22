@@ -6,7 +6,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import {Text, Button, ListItem, Avatar, Divider} from 'react-native-elements';
+import {Text, Button, ListItem, Divider} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../types';
 import {apiService, Item, User} from '../utils/api';
@@ -29,12 +29,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [fetchedItems, profile] = await Promise.all([
-        apiService.getItems(''),
-        apiService.getUserProfile(),
-      ]);
-      setItems(fetchedItems);
+      const profile = await apiService.getUserProfile();
       setUserProfile(profile);
+
+      // Fetch items after getting user profile - remove the empty string parameter
+      const fetchedItems = await apiService.getItems();
+      setItems(fetchedItems);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -61,13 +61,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   };
 
-  const getInitials = (firstName?: string, lastName?: string): string => {
-    if (!firstName && !lastName) return '?';
-    return `${firstName?.charAt(0) || ''}${
-      lastName?.charAt(0) || ''
-    }`.toUpperCase();
-  };
-
   const renderItem = ({item}: {item: Item}) => (
     <ListItem
       bottomDivider
@@ -82,6 +75,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       <ListItem.Chevron />
     </ListItem>
   );
+
+  // Function to render codes as comma-separated string
+  const renderCodes = (codes: string[] = []): string => {
+    if (codes.length === 0) return '-';
+    return codes.join(', ');
+  };
 
   return (
     <View style={styles.container}>
@@ -118,9 +117,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
               <Text style={styles.statLabel}>Documents</Text>
               <Text style={styles.statValue}>{items.length}</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Code</Text>
-              <Text style={styles.statValue}>{userProfile?.code || '-'}</Text>
+            <View style={[styles.statBox, styles.codesBox]}>
+              <Text style={styles.statLabel}>Codes</Text>
+              <Text style={styles.codesValue} numberOfLines={2}>
+                {renderCodes(userProfile?.codes)}
+              </Text>
             </View>
           </View>
         </View>
@@ -166,6 +167,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  codesBox: {
+    flex: 2, // Give more space for codes
+  },
+  codesValue: {
+    fontSize: 16,
+    color: '#2196F3',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   scrollContent: {
     paddingBottom: 20,

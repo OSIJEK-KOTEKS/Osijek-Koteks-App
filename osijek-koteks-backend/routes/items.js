@@ -10,15 +10,28 @@ const validateCode = code => /^\d{5}$/.test(code);
 // Get items by user's codes
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('Fetching items for user:', req.user.id);
+
     const user = await User.findById(req.user.id);
     if (!user) {
+      console.log('User not found:', req.user.id);
       return res.status(404).json({message: 'User not found'});
     }
+
+    console.log('User details:', {
+      id: user._id,
+      role: user.role,
+      codes: user.codes,
+    });
 
     // If user is admin, they can see all items
     const query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
+    console.log('Query:', JSON.stringify(query));
+
     const items = await Item.find(query);
+    console.log(`Found ${items.length} items`);
+
     res.json(items);
   } catch (err) {
     console.error('Error fetching items:', err);
@@ -39,14 +52,6 @@ router.post('/', auth, async (req, res) => {
     // Validate code format
     if (!validateCode(code)) {
       return res.status(400).json({message: 'Code must be exactly 5 digits'});
-    }
-
-    // Check if item with this code already exists
-    const existingItem = await Item.findOne({code});
-    if (existingItem) {
-      return res
-        .status(400)
-        .json({message: 'Item with this code already exists'});
     }
 
     const item = new Item({
@@ -106,22 +111,9 @@ router.patch('/:id', auth, async (req, res) => {
       return res.status(404).json({message: 'Item not found'});
     }
 
-    // If code is being updated, validate new code
-    if (code) {
-      if (!validateCode(code)) {
-        return res.status(400).json({message: 'Code must be exactly 5 digits'});
-      }
-
-      // Check if new code already exists on another item
-      const existingItem = await Item.findOne({
-        code,
-        _id: {$ne: req.params.id},
-      });
-      if (existingItem) {
-        return res
-          .status(400)
-          .json({message: 'Item with this code already exists'});
-      }
+    // If code is being updated, validate new code format
+    if (code && !validateCode(code)) {
+      return res.status(400).json({message: 'Code must be exactly 5 digits'});
     }
 
     // Update fields if provided
