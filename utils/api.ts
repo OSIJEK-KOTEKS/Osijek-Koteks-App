@@ -12,7 +12,7 @@ export interface User {
   firstName: string;
   lastName: string;
   company: string;
-  codes: string[]; // Changed from code: string to codes: string[]
+  codes: string[];
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
 }
@@ -22,6 +22,14 @@ export interface Item {
   title: string;
   code: string;
   pdfUrl: string;
+  creationDate: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalDate?: string;
+  approvedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
 }
 
 export interface LoginResponse {
@@ -162,7 +170,12 @@ export const apiService = {
     }
   },
 
-  createItem: async (itemData: Omit<Item, '_id'>): Promise<Item> => {
+  createItem: async (
+    itemData: Omit<
+      Item,
+      '_id' | 'creationDate' | 'approvalStatus' | 'approvalDate' | 'approvedBy'
+    >,
+  ): Promise<Item> => {
     try {
       const response = await api.post<Item>('/api/items', itemData);
       return response.data;
@@ -172,12 +185,31 @@ export const apiService = {
     }
   },
 
-  updateItem: async (id: string, itemData: Partial<Item>): Promise<Item> => {
+  updateItem: async (
+    id: string,
+    itemData: Partial<
+      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
+    >,
+  ): Promise<Item> => {
     try {
       const response = await api.patch<Item>(`/api/items/${id}`, itemData);
       return response.data;
     } catch (error) {
       console.error('Error updating item:', error);
+      throw error;
+    }
+  },
+  updateItemApproval: async (
+    id: string,
+    approvalStatus: Item['approvalStatus'],
+  ): Promise<Item> => {
+    try {
+      const response = await api.patch<Item>(`/api/items/${id}/approval`, {
+        approvalStatus,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item approval:', error);
       throw error;
     }
   },

@@ -93,9 +93,37 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       containerStyle={styles.listItem}>
       <ListItem.Content>
         <ListItem.Title style={styles.title}>{item.title}</ListItem.Title>
-        <ListItem.Subtitle style={styles.subtitle}>
-          Code: {item.code}
-        </ListItem.Subtitle>
+        <View style={styles.itemDetailsContainer}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Code:</Text>
+            <Text style={styles.detailValue}>{item.code}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Created:</Text>
+            <Text style={styles.detailValue}>{item.creationDate}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Status:</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                item.approvalStatus === 'approved' && styles.statusApproved,
+                item.approvalStatus === 'rejected' && styles.statusRejected,
+                item.approvalStatus === 'pending' && styles.statusPending,
+              ]}>
+              <Text style={styles.statusText}>
+                {item.approvalStatus.charAt(0).toUpperCase() +
+                  item.approvalStatus.slice(1)}
+              </Text>
+            </View>
+          </View>
+          {item.approvalDate && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Approved:</Text>
+              <Text style={styles.detailValue}>{item.approvalDate}</Text>
+            </View>
+          )}
+        </View>
       </ListItem.Content>
       <ListItem.Chevron />
     </ListItem>
@@ -221,6 +249,54 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
+  itemDetailsContainer: {
+    marginTop: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  detailLabel: {
+    color: '#666',
+    fontSize: 14,
+    width: 70, // Fixed width for labels to align values
+    marginRight: 8,
+  },
+  detailValue: {
+    color: '#000',
+    fontSize: 14,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+  },
+  statusApproved: {
+    backgroundColor: '#e6f4ea',
+  },
+  statusRejected: {
+    backgroundColor: '#fce8e8',
+  },
+  statusPending: {
+    backgroundColor: '#fff3e0',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#000',
+  },
+  listItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  title: {
+    fontWeight: '500',
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 4,
+  },
   dropdownContainer: {
     flex: 1,
   },
@@ -338,14 +414,6 @@ const styles = StyleSheet.create({
   listContainer: {
     borderRadius: 8,
     overflow: 'hidden',
-  },
-  listItem: {
-    paddingVertical: 12,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#000',
   },
   subtitle: {
     color: '#666',

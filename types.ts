@@ -20,4 +20,12 @@ export interface Item {
   title: string;
   code: string;
   pdfUrl: string;
+  creationDate: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalDate?: string;
+  approvedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
 }
