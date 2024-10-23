@@ -1,8 +1,24 @@
+import type {StackNavigationProp} from '@react-navigation/stack';
+
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   PDFViewer: {pdfUrl: string};
 };
+
+export type AdminTabParamList = {
+  Items: undefined;
+  Users: undefined;
+};
+
+export type MainScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'Main'
+>;
+
+export interface MainScreenProps {
+  navigation: MainScreenNavigationProp;
+}
 
 export interface User {
   id: string;
@@ -13,6 +29,7 @@ export interface User {
   codes: string[];
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
+  phoneNumber?: string;
 }
 
 export interface Item {

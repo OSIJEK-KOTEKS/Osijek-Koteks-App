@@ -15,6 +15,7 @@ export interface User {
   codes: string[];
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
+  phoneNumber?: string;
 }
 
 export interface Item {
@@ -73,6 +74,7 @@ const removeAuthData = async () => {
 };
 
 export const apiService = {
+  // Auth methods
   login: async (email: string, password: string): Promise<LoginResponse> => {
     try {
       const response = await api.post<LoginResponse>('/api/auth/login', {
@@ -114,6 +116,17 @@ export const apiService = {
     }
   },
 
+  // User methods
+  getUsers: async (): Promise<User[]> => {
+    try {
+      const response = await api.get<User[]>('/api/users');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+  },
+
   getUserProfile: async (): Promise<User> => {
     try {
       const userId = await AsyncStorage.getItem(USER_ID_KEY);
@@ -124,28 +137,6 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      throw error;
-    }
-  },
-
-  getItems: async (): Promise<Item[]> => {
-    try {
-      const response = await api.get<Item[]>('/api/items');
-      if (!response.data) {
-        console.warn('No items returned from API');
-        return [];
-      }
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching items:', error);
-      // Log more details about the error
-      if (axios.isAxiosError(error)) {
-        console.error('API Error Details:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-        });
-      }
       throw error;
     }
   },
@@ -166,6 +157,47 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
+      throw error;
+    }
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/api/users/${id}`);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  },
+
+  updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
+    try {
+      const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user codes:', error);
+      throw error;
+    }
+  },
+
+  // Item methods
+  getItems: async (): Promise<Item[]> => {
+    try {
+      const response = await api.get<Item[]>('/api/items');
+      if (!response.data) {
+        console.warn('No items returned from API');
+        return [];
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('API Error Details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        });
+      }
       throw error;
     }
   },
@@ -199,6 +231,7 @@ export const apiService = {
       throw error;
     }
   },
+
   updateItemApproval: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
