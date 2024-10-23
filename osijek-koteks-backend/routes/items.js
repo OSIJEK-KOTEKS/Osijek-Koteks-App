@@ -27,9 +27,20 @@ router.get('/', auth, async (req, res) => {
     // If user is admin, they can see all items
     const query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
+    // Add date range filter if provided
+    if (req.query.startDate && req.query.endDate) {
+      query.creationDate = {
+        $gte: new Date(req.query.startDate),
+        $lte: new Date(req.query.endDate),
+      };
+    }
+
     console.log('Query:', JSON.stringify(query));
 
-    const items = await Item.find(query);
+    const items = await Item.find(query)
+      .sort({creationDate: -1}) // Sort by creation date, newest first
+      .populate('approvedBy', 'firstName lastName');
+
     console.log(`Found ${items.length} items`);
 
     res.json(items);
@@ -42,14 +53,12 @@ router.get('/', auth, async (req, res) => {
 // Create a new item (admin only)
 router.post('/', auth, async (req, res) => {
   try {
-    // Check if user is admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({message: 'Access denied. Admin only.'});
     }
 
-    const {title, code, pdfUrl} = req.body;
+    const {title, code, pdfUrl, creationDate} = req.body;
 
-    // Validate code format
     if (!validateCode(code)) {
       return res.status(400).json({message: 'Code must be exactly 5 digits'});
     }
@@ -58,6 +67,8 @@ router.post('/', auth, async (req, res) => {
       title,
       code,
       pdfUrl,
+      creationDate: creationDate ? new Date(creationDate) : new Date(),
+      approvalStatus: 'pending',
     });
 
     const newItem = await item.save();
@@ -71,15 +82,55 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Get a specific item
-router.get('/:id', auth, async (req, res) => {
+// Update approval status (admin only)
+router.patch('/:id/approval', auth, async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({message: 'Access denied. Admin only.'});
+    }
+
+    const {approvalStatus} = req.body;
+
+    if (!['pending', 'approved', 'rejected'].includes(approvalStatus)) {
+      return res.status(400).json({message: 'Invalid approval status'});
+    }
+
     const item = await Item.findById(req.params.id);
     if (!item) {
       return res.status(404).json({message: 'Item not found'});
     }
 
-    // Check if user has access to this item
+    item.approvalStatus = approvalStatus;
+    if (approvalStatus === 'approved' || approvalStatus === 'rejected') {
+      item.approvalDate = new Date();
+      item.approvedBy = req.user.id;
+    } else {
+      item.approvalDate = null;
+      item.approvedBy = null;
+    }
+
+    const updatedItem = await item.save();
+    await updatedItem.populate('approvedBy', 'firstName lastName');
+
+    res.json(updatedItem);
+  } catch (err) {
+    console.error('Error updating approval status:', err);
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
+// Get a specific item
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).populate(
+      'approvedBy',
+      'firstName lastName',
+    );
+
+    if (!item) {
+      return res.status(404).json({message: 'Item not found'});
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({message: 'User not found'});
@@ -99,19 +150,17 @@ router.get('/:id', auth, async (req, res) => {
 // Update an item (admin only)
 router.patch('/:id', auth, async (req, res) => {
   try {
-    // Check if user is admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({message: 'Access denied. Admin only.'});
     }
 
-    const {title, code, pdfUrl} = req.body;
+    const {title, code, pdfUrl, creationDate} = req.body;
     const item = await Item.findById(req.params.id);
 
     if (!item) {
       return res.status(404).json({message: 'Item not found'});
     }
 
-    // If code is being updated, validate new code format
     if (code && !validateCode(code)) {
       return res.status(400).json({message: 'Code must be exactly 5 digits'});
     }
@@ -120,8 +169,11 @@ router.patch('/:id', auth, async (req, res) => {
     if (title) item.title = title;
     if (code) item.code = code;
     if (pdfUrl) item.pdfUrl = pdfUrl;
+    if (creationDate) item.creationDate = new Date(creationDate);
 
     const updatedItem = await item.save();
+    await updatedItem.populate('approvedBy', 'firstName lastName');
+
     res.json(updatedItem);
   } catch (err) {
     console.error('Error updating item:', err);
@@ -135,7 +187,6 @@ router.patch('/:id', auth, async (req, res) => {
 // Delete an item (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    // Check if user is admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({message: 'Access denied. Admin only.'});
     }
