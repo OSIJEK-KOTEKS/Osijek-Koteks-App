@@ -5,8 +5,10 @@ import {
   FlatList,
   RefreshControl,
   ScrollView,
+  Platform,
 } from 'react-native';
 import {Text, Button, ListItem, Divider} from 'react-native-elements';
+import {Picker} from '@react-native-picker/picker';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../types';
 import {apiService, Item, User} from '../utils/api';
@@ -21,9 +23,12 @@ interface MainScreenProps {
 
 export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [items, setItems] = useState<Item[]>([]);
+  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [selectedCode, setSelectedCode] = useState<string>('all');
+  const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const {signOut} = useContext(AuthContext);
 
   const fetchData = async () => {
@@ -32,9 +37,20 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       const profile = await apiService.getUserProfile();
       setUserProfile(profile);
 
-      // Fetch items after getting user profile - remove the empty string parameter
       const fetchedItems = await apiService.getItems();
       setItems(fetchedItems);
+      setFilteredItems(fetchedItems);
+
+      // If user is admin, collect all unique codes from items
+      if (profile.role === 'admin') {
+        const uniqueCodes = Array.from(
+          new Set(fetchedItems.map(item => item.code)),
+        ).sort();
+        setAvailableCodes(uniqueCodes);
+      } else {
+        // For regular users, use their assigned codes
+        setAvailableCodes(profile.codes.sort());
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -45,6 +61,15 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (selectedCode === 'all') {
+      setFilteredItems(items);
+    } else {
+      const filtered = items.filter(item => item.code === selectedCode);
+      setFilteredItems(filtered);
+    }
+  }, [selectedCode, items]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -76,12 +101,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     </ListItem>
   );
 
-  // Function to render codes as comma-separated string
-  const renderCodes = (codes: string[] = []): string => {
-    if (codes.length === 0) return '-';
-    return codes.join(', ');
-  };
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -111,31 +130,53 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
           <Divider style={styles.divider} />
 
+          {/* Code Selection Picker */}
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>Selected Code</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={selectedCode}
+                onValueChange={itemValue => setSelectedCode(itemValue)}
+                style={styles.picker}
+                dropdownIconColor="#666">
+                <Picker.Item label="All Documents" value="all" />
+                {availableCodes.map(code => (
+                  <Picker.Item key={code} label={code} value={code} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
           {/* Stats Section */}
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Documents</Text>
-              <Text style={styles.statValue}>{items.length}</Text>
+              <Text style={styles.statValue}>{filteredItems.length}</Text>
             </View>
-            <View style={[styles.statBox, styles.codesBox]}>
-              <Text style={styles.statLabel}>Codes</Text>
-              <Text style={styles.codesValue} numberOfLines={2}>
-                {renderCodes(userProfile?.codes)}
-              </Text>
-            </View>
+            {userProfile?.role === 'admin' && (
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Total Codes</Text>
+                <Text style={styles.statValue}>{availableCodes.length}</Text>
+              </View>
+            )}
           </View>
         </View>
 
         {/* Documents Section */}
         <View style={styles.documentsContainer}>
-          <Text style={styles.sectionTitle}>Recent Documents</Text>
+          <Text style={styles.sectionTitle}>
+            Documents{' '}
+            {selectedCode !== 'all' ? `(Code: ${selectedCode})` : '(All)'}
+          </Text>
           {loading ? (
             <View style={styles.centerContent}>
               <Text style={styles.loadingText}>Loading documents...</Text>
             </View>
-          ) : items.length > 0 ? (
+          ) : filteredItems.length > 0 ? (
             <FlatList
-              data={items}
+              data={filteredItems}
               renderItem={renderItem}
               keyExtractor={item => item._id}
               scrollEnabled={false}
@@ -168,29 +209,73 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  codesBox: {
-    flex: 2, // Give more space for codes
+  modalStyle: {
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  codesValue: {
+  overlayStyle: {
+    backgroundColor: 'white',
+    width: '80%',
+    maxHeight: '60%',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  dropdownContainer: {
+    flex: 1,
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: '#f8f8f8',
+  },
+  dropdownScrollView: {
+    flex: 1,
+  },
+  dropdownItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#f0f9ff',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  selectedDropdownItemText: {
+    color: '#2196F3',
+    fontWeight: 'bold',
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  dropdownLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dropdownValue: {
     fontSize: 16,
     color: '#2196F3',
     fontWeight: 'bold',
-    textAlign: 'center',
   },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  cardContainer: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  dropdownArrow: {
+    fontSize: 16,
+    color: '#666',
   },
   documentsContainer: {
     backgroundColor: 'white',
@@ -207,14 +292,6 @@ const styles = StyleSheet.create({
   profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    backgroundColor: '#2196F3',
-  },
-  avatarTitle: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   profileInfo: {
     marginLeft: 16,
@@ -299,5 +376,50 @@ const styles = StyleSheet.create({
   buttonTitle: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  pickerContainer: {
+    marginVertical: 8,
+  },
+  pickerLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 4,
+    backgroundColor: 'white',
+    ...Platform.select({
+      ios: {
+        borderRadius: 8,
+      },
+    }),
+  },
+  picker: {
+    ...Platform.select({
+      ios: {
+        height: 150,
+      },
+      android: {
+        height: 50,
+      },
+    }),
+  },
+
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  cardContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 });
