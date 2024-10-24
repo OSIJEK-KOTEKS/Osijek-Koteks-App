@@ -3,16 +3,12 @@ const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
-// Validate 5-digit code format
-const validateCode = code => /^\d{5}$/.test(code);
-
 // Get all users (admin only)
 router.get('/', auth, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({message: 'Access denied. Admin only.'});
-  }
-
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({message: 'Access denied. Admin only.'});
+    }
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
@@ -21,22 +17,43 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get user profile
+// Get user by ID
 router.get('/:id', auth, async (req, res) => {
   try {
+    console.log('Fetching user profile:', req.params.id);
+
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
+      console.log('User not found:', req.params.id);
       return res.status(404).json({message: 'User not found'});
     }
 
     // Users can only access their own profile unless they're an admin
-    if (req.user.role !== 'admin' && req.user._id !== req.params.id) {
+    if (
+      req.user.role !== 'admin' &&
+      req.user._id.toString() !== req.params.id
+    ) {
+      console.log(
+        'Access denied for user:',
+        req.user._id,
+        'trying to access:',
+        req.params.id,
+      );
       return res.status(403).json({message: 'Access denied'});
     }
+
+    console.log('User profile found:', {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    });
 
     res.json(user);
   } catch (error) {
     console.error('Error fetching user profile:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({message: 'Invalid user ID format'});
+    }
     res.status(500).json({message: 'Server error'});
   }
 });
@@ -44,20 +61,23 @@ router.get('/:id', auth, async (req, res) => {
 // Update user codes (admin only)
 router.patch('/:id/codes', auth, async (req, res) => {
   try {
-    // Check if user is admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({message: 'Access denied. Admin only.'});
     }
 
     const {codes} = req.body;
+    console.log('Updating codes for user:', req.params.id, 'New codes:', codes);
 
-    // Validate input
     if (!Array.isArray(codes)) {
       return res.status(400).json({message: 'Codes must be an array'});
     }
 
-    // Validate each code format
-    if (!codes.every(validateCode)) {
+    // Filter out empty strings and validate each code
+    const validCodes = codes
+      .filter(code => code.trim())
+      .map(code => code.trim());
+
+    if (!validCodes.every(code => /^\d{5}$/.test(code))) {
       return res
         .status(400)
         .json({message: 'Each code must be exactly 5 digits'});
@@ -68,14 +88,15 @@ router.patch('/:id/codes', auth, async (req, res) => {
       return res.status(404).json({message: 'User not found'});
     }
 
-    // Update codes
-    user.codes = [...new Set(codes)]; // Remove duplicates
-    await user.save();
+    user.codes = [...new Set(validCodes)]; // Remove duplicates
+    const updatedUser = await user.save();
 
-    res.json({
-      message: 'User codes updated successfully',
-      codes: user.codes,
+    console.log('Successfully updated user codes:', {
+      userId: user._id,
+      newCodes: user.codes,
     });
+
+    res.json(updatedUser);
   } catch (error) {
     console.error('Error updating user codes:', error);
     if (error.name === 'ValidationError') {
@@ -85,11 +106,14 @@ router.patch('/:id/codes', auth, async (req, res) => {
   }
 });
 
-// Update user profile (partial update)
+// Update user profile
 router.patch('/:id', auth, async (req, res) => {
   try {
     // Users can only update their own profile unless they're an admin
-    if (req.user.role !== 'admin' && req.user._id !== req.params.id) {
+    if (
+      req.user.role !== 'admin' &&
+      req.user._id.toString() !== req.params.id
+    ) {
       return res.status(403).json({message: 'Access denied'});
     }
 
@@ -98,12 +122,9 @@ router.patch('/:id', auth, async (req, res) => {
       return res.status(404).json({message: 'User not found'});
     }
 
-    // Fields that can be updated
     const updatableFields = ['firstName', 'lastName', 'company', 'phoneNumber'];
-
-    // Admin can also update these fields
     if (req.user.role === 'admin') {
-      updatableFields.push('role', 'isVerified');
+      updatableFields.push('role', 'isVerified', 'codes');
     }
 
     // Update allowed fields
@@ -113,14 +134,33 @@ router.patch('/:id', auth, async (req, res) => {
       }
     });
 
-    await user.save();
-    const updatedUser = await User.findById(user._id).select('-password');
+    const updatedUser = await user.save();
     res.json(updatedUser);
   } catch (error) {
     console.error('Error updating user:', error);
     if (error.name === 'ValidationError') {
       return res.status(400).json({message: error.message});
     }
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
+// Delete user (admin only)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({message: 'Access denied. Admin only.'});
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({message: 'User not found'});
+    }
+
+    await user.deleteOne();
+    res.json({message: 'User deleted successfully'});
+  } catch (error) {
+    console.error('Error deleting user:', error);
     res.status(500).json({message: 'Server error'});
   }
 });
