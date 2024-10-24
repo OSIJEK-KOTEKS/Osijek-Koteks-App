@@ -4,25 +4,18 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-// Set response headers for UTF-8
-app.use((req, res, next) => {
-  res.header('Content-Type', 'application/json; charset=utf-8');
-  next();
-});
-
 // Routes
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const itemsRouter = require('./routes/items');
 
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authRouter); // Make sure this line exists
 app.use('/api/users', usersRouter);
 app.use('/api/items', itemsRouter);
 
@@ -37,7 +30,9 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('MongoDB connected successfully');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(process.env.PORT || 5000, () => {
+      console.log(`Server running on port ${process.env.PORT || 5000}`);
+    });
   })
   .catch(err => {
     console.error('MongoDB connection error:', err);

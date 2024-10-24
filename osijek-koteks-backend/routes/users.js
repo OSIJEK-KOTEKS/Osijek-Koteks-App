@@ -144,7 +144,59 @@ router.patch('/:id', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+router.post('/', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({message: 'Access denied. Admin only.'});
+    }
 
+    console.log('Creating new user:', {
+      ...req.body,
+      password: '[REDACTED]',
+    });
+
+    const {firstName, lastName, company, email, password, codes, role} =
+      req.body;
+
+    // Check if user already exists
+    let existingUser = await User.findOne({email});
+    if (existingUser) {
+      return res.status(400).json({message: 'User already exists'});
+    }
+
+    // Create new user
+    const user = new User({
+      firstName,
+      lastName,
+      company,
+      email,
+      password, // Will be hashed by the pre-save middleware
+      codes: codes || [],
+      role: role || 'user',
+      isVerified: false,
+    });
+
+    await user.save();
+
+    // Return user without password
+    const userResponse = await User.findById(user._id).select('-password');
+    console.log('User created successfully:', {
+      userId: user._id,
+      email: user.email,
+    });
+
+    res.status(201).json(userResponse);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Validation error',
+        details: error.message,
+      });
+    }
+    res.status(500).json({message: 'Server error'});
+  }
+});
 // Delete user (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {
