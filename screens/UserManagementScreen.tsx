@@ -16,8 +16,16 @@ import {apiService, User} from '../utils/api';
 import CustomAvatar from '../components/CustomAvatar';
 
 // Define form data interface
-interface UserFormData extends Omit<User, 'id' | 'isVerified'> {
+interface UserFormData {
+  _id?: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  role: 'admin' | 'user' | 'bot';
+  codes: string[];
   password?: string;
+  isVerified?: boolean;
 }
 
 export const UserManagementScreen: React.FC = () => {
@@ -36,6 +44,7 @@ export const UserManagementScreen: React.FC = () => {
     role: 'user',
     codes: [],
     password: '',
+    isVerified: false,
   };
 
   const [formData, setFormData] = useState<UserFormData>(initialUserState);
@@ -74,12 +83,14 @@ export const UserManagementScreen: React.FC = () => {
     setModalMode('edit');
     setSelectedUser(user);
     setFormData({
+      _id: user._id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       company: user.company,
       role: user.role,
       codes: user.codes,
+      isVerified: user.isVerified,
     });
     setModalVisible(true);
   };
@@ -136,11 +147,29 @@ export const UserManagementScreen: React.FC = () => {
 
     try {
       if (modalMode === 'create') {
-        await apiService.register(formData);
-      } else if (selectedUser) {
-        const {password, ...updateData} = formData;
-        await apiService.updateUser(selectedUser.id, updateData);
+        if (!formData.password) {
+          Alert.alert('Error', 'Password is required for new users');
+          return;
+        }
+
+        // Prepare registration data
+        const registrationData = {
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          company: formData.company,
+          role: formData.role,
+          codes: formData.codes,
+          password: formData.password,
+        };
+
+        await apiService.register(registrationData);
+      } else if (selectedUser?._id) {
+        // For updates, we omit password and use the existing _id
+        const {password, _id, isVerified, ...updateData} = formData;
+        await apiService.updateUser(selectedUser._id, updateData);
       }
+
       setModalVisible(false);
       await fetchUsers();
       Alert.alert(
@@ -266,7 +295,7 @@ export const UserManagementScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteUser(item.id)}>
+          onPress={() => handleDeleteUser(item._id)}>
           <MaterialIcons name="delete" size={20} color="white" />
           <Text style={styles.actionButtonText}>Delete</Text>
         </TouchableOpacity>
@@ -285,7 +314,7 @@ export const UserManagementScreen: React.FC = () => {
           <FlatList
             data={users}
             renderItem={renderItem}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item._id}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }

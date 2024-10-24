@@ -30,7 +30,7 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     // Users can only access their own profile unless they're an admin
-    if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
+    if (req.user.role !== 'admin' && req.user._id !== req.params.id) {
       return res.status(403).json({message: 'Access denied'});
     }
 
@@ -89,7 +89,7 @@ router.patch('/:id/codes', auth, async (req, res) => {
 router.patch('/:id', auth, async (req, res) => {
   try {
     // Users can only update their own profile unless they're an admin
-    if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
+    if (req.user.role !== 'admin' && req.user._id !== req.params.id) {
       return res.status(403).json({message: 'Access denied'});
     }
 

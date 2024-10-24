@@ -21,7 +21,7 @@ export interface MainScreenProps {
 }
 
 export interface User {
-  id: string;
+  _id: string; // Change this from 'id' to '_id'
   email: string;
   firstName: string;
   lastName: string;

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import {Input, Button, Text} from 'react-native-elements';
 import {StackNavigationProp} from '@react-navigation/stack';
+import axios from 'axios'; // Add this import
 import {RootStackParamList} from '../types';
 import {apiService, LoginResponse} from '../utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,23 +52,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     setIsLoading(true);
     try {
       console.log('Attempting login with:', {email, password});
-      const loginResponse: LoginResponse = await apiService.login(
-        email,
-        password,
-      );
+      const loginResponse = await apiService.login(email, password);
       console.log('Login successful', loginResponse.user);
 
-      // Store the token securely
-      await AsyncStorage.setItem('userToken', loginResponse.token);
+      if (!loginResponse.token || !loginResponse.user._id) {
+        throw new Error('Invalid login response');
+      }
 
       // Call the signIn function from AuthContext
       await signIn(loginResponse.token);
 
       // Navigate to the Main screen
       navigation.replace('Main');
-    } catch (error) {
+    } catch (error: unknown) {
+      // Explicitly type the error as unknown
       console.error('Error logging in:', error);
-      setErrorMessage('An error occurred during login. Please try again.');
+      let errorMessage = 'An error occurred during login.';
+
+      // Type guard to check if error is an AxiosError
+      if (axios.isAxiosError(error) && error.response?.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      } else if (error instanceof Error) {
+        // Handle standard Error objects
+        errorMessage = error.message;
+      }
+
+      setErrorMessage(errorMessage);
     } finally {
       setIsLoading(false);
     }

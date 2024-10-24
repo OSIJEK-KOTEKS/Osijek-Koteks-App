@@ -1,0 +1,16 @@
+"Admin has Items and Users screen with correct icons. CRUD functionality is not fully up"
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   App.tsx
+#	modified:   android/app/build.gradle
+#	modified:   package-lock.json
+#	modified:   package.json
+#	new file:   screens/UserManagementScreen.tsx
+#	modified:   types.ts
+#	modified:   utils/api.ts
+#

@@ -7,7 +7,7 @@ const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
 
 export interface User {
-  id: string;
+  _id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -37,6 +37,9 @@ export interface LoginResponse {
   token: string;
   user: User;
 }
+export interface RegistrationData extends Omit<User, '_id' | 'isVerified'> {
+  password: string; // Make password required for registration
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -47,16 +50,42 @@ api.interceptors.request.use(
     const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding token to request:', token.substring(0, 20) + '...');
     }
     return config;
   },
-  error => Promise.reject(error),
+  error => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  },
+);
+
+// Response interceptor
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', {
+      endpoint: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    return Promise.reject(error);
+  },
 );
 
 const saveAuthData = async (token: string, userId: string) => {
   try {
-    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-    await AsyncStorage.setItem(USER_ID_KEY, userId);
+    if (!token || !userId) {
+      throw new Error('Token or userId is missing');
+    }
+
+    console.log('Saving auth data:', {token, userId});
+
+    await AsyncStorage.multiSet([
+      [AUTH_TOKEN_KEY, token],
+      [USER_ID_KEY, userId],
+    ]);
   } catch (error) {
     console.error('Error saving auth data:', error);
     throw error;
@@ -77,12 +106,29 @@ export const apiService = {
   // Auth methods
   login: async (email: string, password: string): Promise<LoginResponse> => {
     try {
+      console.log('Attempting login for:', email);
+
       const response = await api.post<LoginResponse>('/api/auth/login', {
         email,
         password,
       });
+
+      console.log('Login response received:', {
+        tokenExists: !!response.data.token,
+        userExists: !!response.data.user,
+        userId: response.data.user._id,
+      });
+
       const {token, user} = response.data;
-      await saveAuthData(token, user.id);
+
+      if (!token || !user._id) {
+        throw new Error(
+          'Invalid response from server: missing token or user ID',
+        );
+      }
+
+      await saveAuthData(token, user._id.toString());
+
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
@@ -91,7 +137,7 @@ export const apiService = {
   },
 
   register: async (
-    userData: Omit<User, 'id' | 'isVerified'>,
+    userData: Omit<User, '_id' | 'isVerified'> & {password: string},
   ): Promise<User> => {
     try {
       const response = await api.post<{token: string; user: User}>(
@@ -99,7 +145,7 @@ export const apiService = {
         userData,
       );
       const {token, user} = response.data;
-      await saveAuthData(token, user.id);
+      await saveAuthData(token, user._id);
       return user;
     } catch (error) {
       console.error('Registration error:', error);
@@ -133,6 +179,8 @@ export const apiService = {
       if (!userId) {
         throw new Error('No user ID found');
       }
+      console.log('Fetching user profile for ID:', userId);
+
       const response = await api.get<User>(`/api/users/${userId}`);
       return response.data;
     } catch (error) {
@@ -151,7 +199,10 @@ export const apiService = {
     }
   },
 
-  updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
+  updateUser: async (
+    id: string,
+    userData: Partial<Omit<User, '_id'>>,
+  ): Promise<User> => {
     try {
       const response = await api.patch<User>(`/api/users/${id}`, userData);
       return response.data;
@@ -183,6 +234,14 @@ export const apiService = {
   // Item methods
   getItems: async (): Promise<Item[]> => {
     try {
+      const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+      const userId = await AsyncStorage.getItem(USER_ID_KEY);
+
+      console.log('Fetching items with:', {
+        hasToken: !!token,
+        userId,
+      });
+
       const response = await api.get<Item[]>('/api/items');
       if (!response.data) {
         console.warn('No items returned from API');

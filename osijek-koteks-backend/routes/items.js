@@ -10,15 +10,15 @@ const validateCode = code => /^\d{5}$/.test(code);
 // Get items by user's codes
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Fetching items for user:', req.user.id);
+    console.log('Fetching items for user:', req.user._id);
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (!user) {
-      console.log('User not found:', req.user.id);
+      console.log('User not found with ID:', req.user._id);
       return res.status(404).json({message: 'User not found'});
     }
 
-    console.log('User details:', {
+    console.log('Found user:', {
       id: user._id,
       role: user.role,
       codes: user.codes,
@@ -38,15 +38,14 @@ router.get('/', auth, async (req, res) => {
     console.log('Query:', JSON.stringify(query));
 
     const items = await Item.find(query)
-      .sort({creationDate: -1}) // Sort by creation date, newest first
+      .sort({creationDate: -1})
       .populate('approvedBy', 'firstName lastName');
 
     console.log(`Found ${items.length} items`);
-
     res.json(items);
   } catch (err) {
     console.error('Error fetching items:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({message: 'Server error', error: err.message});
   }
 });
 
@@ -103,7 +102,7 @@ router.patch('/:id/approval', auth, async (req, res) => {
     item.approvalStatus = approvalStatus;
     if (approvalStatus === 'approved' || approvalStatus === 'rejected') {
       item.approvalDate = new Date();
-      item.approvedBy = req.user.id;
+      item.approvedBy = req.user._id;
     } else {
       item.approvalDate = null;
       item.approvedBy = null;
@@ -131,7 +130,7 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({message: 'Item not found'});
     }
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({message: 'User not found'});
     }
