@@ -113,21 +113,23 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   };
 
   const renderItem = ({item}: {item: Item}) => (
-    <ListItem
-      bottomDivider
-      onPress={() => navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})}
-      containerStyle={styles.listItem}>
-      <ListItem.Content>
-        <ListItem.Title style={styles.title}>{item.title}</ListItem.Title>
-        <View style={styles.itemDetailsContainer}>
+    <View style={styles.itemContainer}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})}
+        style={styles.itemContent}>
+        <Text style={styles.itemTitle}>{item.title}</Text>
+
+        <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Code:</Text>
             <Text style={styles.detailValue}>{item.code}</Text>
           </View>
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Created:</Text>
             <Text style={styles.detailValue}>{item.creationDate}</Text>
           </View>
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Status:</Text>
             <View
@@ -144,23 +146,21 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             </View>
           </View>
 
-          {/* Show approval information if item is approved */}
           {item.approvalStatus === 'approved' && item.approvedBy && (
             <>
-              <View style={styles.approvalInfoContainer}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Approved by:</Text>
-                  <Text style={styles.detailValue}>
-                    {item.approvedBy.firstName} {item.approvedBy.lastName}
-                  </Text>
-                </View>
-                {item.approvalDate && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Approved on:</Text>
-                    <Text style={styles.detailValue}>{item.approvalDate}</Text>
-                  </View>
-                )}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Approved by:</Text>
+                <Text style={styles.detailValue}>
+                  {item.approvedBy.firstName} {item.approvedBy.lastName}
+                </Text>
               </View>
+
+              {item.approvalDate && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Date:</Text>
+                  <Text style={styles.detailValue}>{item.approvalDate}</Text>
+                </View>
+              )}
             </>
           )}
 
@@ -175,9 +175,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             </TouchableOpacity>
           )}
         </View>
-      </ListItem.Content>
-      <ListItem.Chevron />
-    </ListItem>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -244,30 +243,36 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         </View>
 
         {/* Documents Section */}
-        <View style={styles.documentsContainer}>
-          <Text style={styles.sectionTitle}>
-            Documents{' '}
-            {selectedCode !== 'all' ? `(Code: ${selectedCode})` : '(All)'}
-          </Text>
-          {loading ? (
-            <View style={styles.centerContent}>
-              <Text style={styles.loadingText}>Loading documents...</Text>
-            </View>
-          ) : filteredItems.length > 0 ? (
-            <FlatList
-              data={filteredItems}
-              renderItem={renderItem}
-              keyExtractor={item => item._id}
-              scrollEnabled={false}
-              contentContainerStyle={styles.listContainer}
-            />
-          ) : (
-            <View style={styles.centerContent}>
-              <Text style={styles.emptyText}>No documents found</Text>
-            </View>
-          )}
-        </View>
+        <View style={styles.container}>
+          <ScrollView
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.scrollContent}>
+            {/* Profile Card and other content... */}
 
+            {/* Documents Section */}
+            <View style={styles.documentsContainer}>
+              <Text style={styles.sectionTitle}>
+                Documents{' '}
+                {selectedCode !== 'all' ? `(Code: ${selectedCode})` : '(All)'}
+              </Text>
+              {loading ? (
+                <View style={styles.centerContent}>
+                  <Text style={styles.loadingText}>Loading documents...</Text>
+                </View>
+              ) : filteredItems.length > 0 ? (
+                <View style={styles.listContainer}>
+                  {filteredItems.map(item => renderItem({item}))}
+                </View>
+              ) : (
+                <View style={styles.centerContent}>
+                  <Text style={styles.emptyText}>No documents found</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
         {/* Logout Button */}
         <View style={styles.buttonContainer}>
           <Button
@@ -292,87 +297,26 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
+  // Container and Layout
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  modalStyle: {
-    margin: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
-  overlayStyle: {
+  cardContainer: {
     backgroundColor: 'white',
-    width: '80%',
-    maxHeight: '60%',
     borderRadius: 10,
-    overflow: 'hidden',
-  },
-  listItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#000',
-    marginBottom: 4,
-  },
-  dropdownContainer: {
-    flex: 1,
-  },
-  dropdownTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#f8f8f8',
-  },
-  dropdownScrollView: {
-    flex: 1,
-  },
-  dropdownItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  selectedDropdownItem: {
-    backgroundColor: '#f0f9ff',
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  selectedDropdownItemText: {
-    color: '#2196F3',
-    fontWeight: 'bold',
-  },
-  dropdownTrigger: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  dropdownLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  dropdownValue: {
-    fontSize: 16,
-    color: '#2196F3',
-    fontWeight: 'bold',
-  },
-  dropdownArrow: {
-    fontSize: 16,
-    color: '#666',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   documentsContainer: {
     backgroundColor: 'white',
@@ -386,6 +330,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+
+  // Profile Section
   profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -404,10 +350,8 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
-  divider: {
-    marginVertical: 15,
-    backgroundColor: '#E0E0E0',
-  },
+
+  // Stats Section
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -426,46 +370,8 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontWeight: 'bold',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#000',
-  },
-  listContainer: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  subtitle: {
-    color: '#666',
-    marginTop: 4,
-  },
-  centerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  emptyText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  buttonContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
-  },
-  logoutButton: {
-    backgroundColor: '#f44336',
-    borderRadius: 10,
-    paddingVertical: 12,
-  },
-  buttonTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
+  // Picker Styles
   pickerContainer: {
     marginVertical: 8,
   },
@@ -496,66 +402,78 @@ const styles = StyleSheet.create({
     }),
   },
 
-  scrollContent: {
-    paddingBottom: 20,
+  // Item List Styles
+  listContainer: {
+    width: '100%',
   },
-  cardContainer: {
+  itemContainer: {
     backgroundColor: 'white',
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  itemDetailsContainer: {
-    marginTop: 8,
+  itemContent: {
+    padding: 16,
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 8,
+  },
+  detailsContainer: {
+    marginTop: 4,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    paddingVertical: 4,
   },
   detailLabel: {
+    width: 90,
     color: '#666',
     fontSize: 14,
-    width: 85, // Increased width to accommodate longer labels
-    marginRight: 8,
   },
   detailValue: {
+    flex: 1,
     color: '#000',
     fontSize: 14,
-    flex: 1,
   },
+
+  // Status Styles
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#e0e0e0',
+    alignSelf: 'flex-start',
   },
   statusApproved: {
     backgroundColor: '#e6f4ea',
   },
-  statusRejected: {
-    backgroundColor: '#fce8e8',
-  },
   statusPending: {
     backgroundColor: '#fff3e0',
+  },
+  statusRejected: {
+    backgroundColor: '#fce8e8',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#000',
   },
+
+  // Button Styles
+  buttonContainer: {
+    marginHorizontal: 16,
+    marginVertical: 16,
+  },
   approveButton: {
     backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 4,
-    marginTop: 8,
+    marginTop: 12,
     alignSelf: 'flex-start',
   },
   approveButtonText: {
@@ -563,10 +481,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  logoutButton: {
+    backgroundColor: '#f44336',
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  buttonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Utility Styles
+  divider: {
+    marginVertical: 15,
+    backgroundColor: '#E0E0E0',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#000',
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+  },
+
+  // Modal Styles
+  modalStyle: {
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayStyle: {
+    backgroundColor: 'white',
+    width: '80%',
+    maxHeight: '60%',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+
+  // Approval Section
   approvalInfoContainer: {
     marginTop: 8,
     paddingTop: 8,
-    borderTopWidth: 1,
+    borderTopWidth: 0.5,
     borderTopColor: '#e0e0e0',
   },
 });
