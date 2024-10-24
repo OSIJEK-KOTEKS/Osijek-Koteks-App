@@ -18,6 +18,21 @@ export interface User {
   phoneNumber?: string;
 }
 
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+export interface RegistrationData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  role: 'admin' | 'user' | 'bot';
+  codes: string[];
+}
+
 export interface Item {
   _id: string;
   title: string;
@@ -33,18 +48,11 @@ export interface Item {
   };
 }
 
-export interface LoginResponse {
-  token: string;
-  user: User;
-}
-export interface RegistrationData extends Omit<User, '_id' | 'isVerified'> {
-  password: string; // Make password required for registration
-}
-
 const api = axios.create({
   baseURL: API_URL,
 });
 
+// Request interceptor for adding auth token
 api.interceptors.request.use(
   async config => {
     const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
@@ -60,7 +68,7 @@ api.interceptors.request.use(
   },
 );
 
-// Response interceptor
+// Response interceptor for error handling
 api.interceptors.response.use(
   response => response,
   error => {
@@ -74,40 +82,11 @@ api.interceptors.response.use(
   },
 );
 
-const saveAuthData = async (token: string, userId: string) => {
-  try {
-    if (!token || !userId) {
-      throw new Error('Token or userId is missing');
-    }
-
-    console.log('Saving auth data:', {token, userId});
-
-    await AsyncStorage.multiSet([
-      [AUTH_TOKEN_KEY, token],
-      [USER_ID_KEY, userId],
-    ]);
-  } catch (error) {
-    console.error('Error saving auth data:', error);
-    throw error;
-  }
-};
-
-const removeAuthData = async () => {
-  try {
-    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_ID_KEY);
-  } catch (error) {
-    console.error('Error removing auth data:', error);
-    throw error;
-  }
-};
-
 export const apiService = {
   // Auth methods
   login: async (email: string, password: string): Promise<LoginResponse> => {
     try {
       console.log('Attempting login for:', email);
-
       const response = await api.post<LoginResponse>('/api/auth/login', {
         email,
         password,
@@ -120,15 +99,8 @@ export const apiService = {
       });
 
       const {token, user} = response.data;
-
-      if (!token || !user._id) {
-        throw new Error(
-          'Invalid response from server: missing token or user ID',
-        );
-      }
-
-      await saveAuthData(token, user._id.toString());
-
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+      await AsyncStorage.setItem(USER_ID_KEY, user._id);
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
@@ -136,16 +108,26 @@ export const apiService = {
     }
   },
 
-  register: async (
-    userData: Omit<User, '_id' | 'isVerified'> & {password: string},
-  ): Promise<User> => {
+  register: async (userData: RegistrationData): Promise<User> => {
     try {
+      console.log('Registering user:', {
+        ...userData,
+        password: '[REDACTED]',
+      });
+
       const response = await api.post<{token: string; user: User}>(
         '/api/auth/register',
         userData,
       );
+
+      console.log('Registration successful:', {
+        userId: response.data.user._id,
+        email: response.data.user.email,
+      });
+
       const {token, user} = response.data;
-      await saveAuthData(token, user._id);
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+      await AsyncStorage.setItem(USER_ID_KEY, user._id);
       return user;
     } catch (error) {
       console.error('Registration error:', error);
@@ -153,9 +135,38 @@ export const apiService = {
     }
   },
 
+  createUser: async (userData: RegistrationData): Promise<User> => {
+    try {
+      console.log('Creating new user:', {
+        ...userData,
+        password: '[REDACTED]',
+      });
+
+      const response = await api.post<User>('/api/users', userData);
+
+      console.log('User creation successful:', {
+        userId: response.data._id,
+        email: response.data.email,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('User creation error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Creation error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  },
+
   logout: async () => {
     try {
-      await removeAuthData();
+      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      await AsyncStorage.removeItem(USER_ID_KEY);
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -204,20 +215,8 @@ export const apiService = {
     userData: Partial<Omit<User, '_id'>>,
   ): Promise<User> => {
     try {
-      console.log('Updating user:', id, 'with data:', userData);
-
-      // If codes are being updated, validate them first
-      if (userData.codes) {
-        console.log('Updating codes:', userData.codes);
-        // First try to update codes specifically
-        await api.patch(`/api/users/${id}/codes`, {codes: userData.codes});
-      }
-
-      // Then update other user data
-      const {codes, ...otherData} = userData;
-      const response = await api.patch<User>(`/api/users/${id}`, otherData);
-
-      console.log('User update response:', response.data);
+      console.log('Updating user:', id, userData);
+      const response = await api.patch<User>(`/api/users/${id}`, userData);
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -236,9 +235,7 @@ export const apiService = {
 
   updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
     try {
-      console.log('Updating user codes:', {id, codes});
       const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
-      console.log('Code update response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error updating user codes:', error);
@@ -330,3 +327,5 @@ export const apiService = {
     }
   },
 };
+
+export default apiService;

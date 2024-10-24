@@ -13,7 +13,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Modal from 'react-native-modal';
 import {Picker} from '@react-native-picker/picker';
 import axios from 'axios';
-import {apiService, User} from '../utils/api';
+import {apiService, User, RegistrationData} from '../utils/api';
 import CustomAvatar from '../components/CustomAvatar';
 
 interface UserFormData {
@@ -201,16 +201,26 @@ export const UserManagementScreen: React.FC = () => {
           Alert.alert('Error', 'Password is required for new users');
           return;
         }
-        const registrationData = {
+
+        console.log('Creating new user:', {
+          ...formData,
+          password: '[REDACTED]',
+        });
+
+        const registrationData: RegistrationData = {
           email: formData.email,
+          password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
           company: formData.company,
           role: formData.role,
           codes: formData.codes,
-          password: formData.password,
         };
-        await apiService.register(registrationData);
+
+        // Use createUser instead of register to maintain admin session
+        await apiService.createUser(registrationData);
+
+        console.log('User created successfully');
       } else if (selectedUser?._id) {
         const {password, _id, ...updateData} = formData;
         await apiService.updateUser(selectedUser._id, updateData);
