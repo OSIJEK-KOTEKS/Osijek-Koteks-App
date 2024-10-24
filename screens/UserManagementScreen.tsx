@@ -8,15 +8,14 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import {Text, Input, ListItem} from 'react-native-elements';
+import {Text, Input, ListItem, CheckBox} from 'react-native-elements';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Modal from 'react-native-modal';
 import {Picker} from '@react-native-picker/picker';
-import axios from 'axios'; // Add this import
+import axios from 'axios';
 import {apiService, User} from '../utils/api';
 import CustomAvatar from '../components/CustomAvatar';
 
-// Define form data interface
 interface UserFormData {
   _id?: string;
   email: string;
@@ -34,8 +33,12 @@ export const UserManagementScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [isCodesModalVisible, setCodesModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [availableCodes, setAvailableCodes] = useState<string[]>([]);
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [newCode, setNewCode] = useState('');
 
   const initialUserState: UserFormData = {
     email: '',
@@ -50,6 +53,24 @@ export const UserManagementScreen: React.FC = () => {
 
   const [formData, setFormData] = useState<UserFormData>(initialUserState);
 
+  useEffect(() => {
+    fetchUsers();
+    fetchAllCodes();
+  }, []);
+
+  const fetchAllCodes = async () => {
+    try {
+      const users = await apiService.getUsers();
+      const uniqueCodes = Array.from(
+        new Set(users.flatMap(user => user.codes)),
+      ).sort();
+      setAvailableCodes(uniqueCodes);
+    } catch (error) {
+      console.error('Error fetching codes:', error);
+      Alert.alert('Error', 'Failed to fetch available codes');
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -63,19 +84,17 @@ export const UserManagementScreen: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUsers();
+    await fetchAllCodes();
     setRefreshing(false);
   };
 
   const handleCreateUser = () => {
     setModalMode('create');
     setSelectedUser(null);
+    setSelectedCodes([]);
     setFormData(initialUserState);
     setModalVisible(true);
   };
@@ -83,6 +102,7 @@ export const UserManagementScreen: React.FC = () => {
   const handleEditUser = (user: User) => {
     setModalMode('edit');
     setSelectedUser(user);
+    setSelectedCodes(user.codes);
     setFormData({
       _id: user._id,
       email: user.email,
@@ -121,6 +141,35 @@ export const UserManagementScreen: React.FC = () => {
         },
       ],
     );
+  };
+
+  const handleAddNewCode = () => {
+    if (!/^\d{5}$/.test(newCode)) {
+      Alert.alert('Invalid Code', 'Code must be exactly 5 digits');
+      return;
+    }
+
+    if (selectedCodes.includes(newCode)) {
+      Alert.alert('Duplicate Code', 'This code is already selected');
+      return;
+    }
+
+    const updatedCodes = [...selectedCodes, newCode].sort();
+    setSelectedCodes(updatedCodes);
+    if (!availableCodes.includes(newCode)) {
+      setAvailableCodes([...availableCodes, newCode].sort());
+    }
+    setFormData({...formData, codes: updatedCodes});
+    setNewCode('');
+  };
+
+  const toggleCodeSelection = (code: string) => {
+    const updatedCodes = selectedCodes.includes(code)
+      ? selectedCodes.filter(c => c !== code)
+      : [...selectedCodes, code].sort();
+
+    setSelectedCodes(updatedCodes);
+    setFormData({...formData, codes: updatedCodes});
   };
 
   const validateForm = () => {
@@ -163,39 +212,93 @@ export const UserManagementScreen: React.FC = () => {
         };
         await apiService.register(registrationData);
       } else if (selectedUser?._id) {
-        // For updates, handle codes separately if they've changed
         const {password, _id, ...updateData} = formData;
-        const originalUser = users.find(u => u._id === selectedUser._id);
-
-        // Check if codes have changed
-        if (
-          originalUser &&
-          JSON.stringify(originalUser.codes) !== JSON.stringify(formData.codes)
-        ) {
-          console.log('Codes have changed, updating codes first');
-          await apiService.updateUserCodes(selectedUser._id, formData.codes);
-        }
-
-        // Update other user data
-        const {codes, ...otherData} = updateData;
-        await apiService.updateUser(selectedUser._id, otherData);
+        await apiService.updateUser(selectedUser._id, updateData);
       }
 
       setModalVisible(false);
-      await fetchUsers(); // Refresh the user list
+      await fetchUsers();
       Alert.alert(
         'Success',
         `User ${modalMode === 'create' ? 'created' : 'updated'} successfully`,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error submitting user:', error);
       let errorMessage = 'An error occurred while saving the user.';
+
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
+
       Alert.alert('Error', errorMessage);
     }
   };
+
+  const renderCodesModal = () => (
+    <Modal
+      isVisible={isCodesModalVisible}
+      onBackdropPress={() => setCodesModalVisible(false)}
+      style={styles.modalStyle}
+      animationIn="slideInUp"
+      animationOut="slideOutDown">
+      <View style={styles.modalContent}>
+        <Text h4 style={styles.modalTitle}>
+          Select Codes
+        </Text>
+        <ScrollView style={styles.codesScrollView}>
+          <View style={styles.newCodeContainer}>
+            <Input
+              placeholder="Add new code (5 digits)"
+              value={newCode}
+              onChangeText={setNewCode}
+              keyboardType="numeric"
+              maxLength={5}
+              rightIcon={
+                <TouchableOpacity onPress={handleAddNewCode}>
+                  <MaterialIcons name="add" size={24} color="#2196F3" />
+                </TouchableOpacity>
+              }
+            />
+          </View>
+
+          {[...new Set([...availableCodes, ...selectedCodes])]
+            .sort()
+            .map(code => (
+              <CheckBox
+                key={code}
+                title={code}
+                checked={selectedCodes.includes(code)}
+                onPress={() => toggleCodeSelection(code)}
+                containerStyle={styles.checkboxContainer}
+              />
+            ))}
+
+          {availableCodes.length === 0 && (
+            <Text style={styles.noCodesText}>No codes available</Text>
+          )}
+        </ScrollView>
+
+        <View style={styles.modalButtons}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelButton]}
+            onPress={() => setCodesModalVisible(false)}>
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.submitButton]}
+            onPress={() => {
+              setFormData({...formData, codes: selectedCodes});
+              setCodesModalVisible(false);
+            }}>
+            <Text style={styles.buttonText}>Apply</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderUserModal = () => (
     <Modal
       isVisible={isModalVisible}
@@ -251,16 +354,21 @@ export const UserManagementScreen: React.FC = () => {
               </Picker>
             </View>
           </View>
-          <Input
-            placeholder="Codes (comma-separated)"
-            value={formData.codes.join(',')}
-            onChangeText={text =>
-              setFormData({
-                ...formData,
-                codes: text.split(',').map(code => code.trim()),
-              })
-            }
-          />
+
+          <TouchableOpacity
+            style={styles.codesButton}
+            onPress={() => {
+              console.log('Opening codes modal');
+              setCodesModalVisible(true);
+            }}>
+            <Text style={styles.codesButtonText}>
+              Select Codes ({formData.codes.length})
+            </Text>
+            <Text style={styles.codesPreview}>
+              {formData.codes.join(', ') || 'No codes selected'}
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.modalButtons}>
             <TouchableOpacity
               style={[styles.modalButton, styles.cancelButton]}
@@ -344,6 +452,7 @@ export const UserManagementScreen: React.FC = () => {
         </>
       )}
       {renderUserModal()}
+      {renderCodesModal()}
     </View>
   );
 };
@@ -461,5 +570,75 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  codesScrollView: {
+    maxHeight: 400,
+  },
+  checkboxContainer: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 8,
+    marginLeft: 0,
+    marginRight: 0,
+  },
+  newCodeContainer: {
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  codesButton: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+    marginHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  codesButtonText: {
+    fontSize: 16,
+    color: '#2196F3',
+    marginBottom: 5,
+    fontWeight: '500',
+  },
+  codesPreview: {
+    fontSize: 14,
+    color: '#666',
+  },
+  codesList: {
+    marginTop: 10,
+  },
+  codeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  selectedCode: {
+    backgroundColor: '#e3f2fd',
+  },
+  codeText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  noCodesText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+  },
+  addCodeButton: {
+    backgroundColor: '#e0e0e0',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  addCodeButtonText: {
+    color: '#2196F3',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
