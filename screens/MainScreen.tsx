@@ -6,6 +6,8 @@ import {
   RefreshControl,
   ScrollView,
   Platform,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 import {Text, Button, ListItem, Divider} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
@@ -14,6 +16,7 @@ import {RootStackParamList} from '../types';
 import {apiService, Item, User} from '../utils/api';
 import {AuthContext} from '../AuthContext';
 import CustomAvatar from '../components/CustomAvatar';
+import PhotoCaptureModal from '../components/PhotoCaptureModal';
 
 type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -30,6 +33,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [selectedCode, setSelectedCode] = useState<string>('all');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const {signOut} = useContext(AuthContext);
+  const [isPhotoModalVisible, setPhotoModalVisible] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -85,7 +90,32 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       console.error('Logout error:', error);
     }
   };
+  const handleApproveItem = async (photoUri: string) => {
+    if (!selectedItemId) return;
 
+    try {
+      // Create form data for the photo
+      const formData = new FormData();
+      formData.append('photo', {
+        uri: photoUri,
+        type: 'image/jpeg',
+        name: 'approval_photo.jpg',
+      });
+      formData.append('itemId', selectedItemId);
+
+      // Update the item status
+      await apiService.updateItemApproval(selectedItemId, 'approved');
+
+      // Refresh the items list
+      await fetchData();
+
+      // Show success message
+      Alert.alert('Success', 'Item approved successfully');
+    } catch (error) {
+      console.error('Error approving item:', error);
+      Alert.alert('Error', 'Failed to approve item');
+    }
+  };
   const renderItem = ({item}: {item: Item}) => (
     <ListItem
       bottomDivider
@@ -122,6 +152,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
               <Text style={styles.detailLabel}>Approved:</Text>
               <Text style={styles.detailValue}>{item.approvalDate}</Text>
             </View>
+          )}
+          {item.approvalStatus === 'pending' && (
+            <TouchableOpacity
+              style={styles.approveButton}
+              onPress={() => {
+                setSelectedItemId(item._id);
+                setPhotoModalVisible(true);
+              }}>
+              <Text style={styles.approveButtonText}>Approve</Text>
+            </TouchableOpacity>
           )}
         </View>
       </ListItem.Content>
@@ -228,6 +268,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           />
         </View>
       </ScrollView>
+      <PhotoCaptureModal
+        isVisible={isPhotoModalVisible}
+        onClose={() => {
+          setPhotoModalVisible(false);
+          setSelectedItemId(null);
+        }}
+        onConfirm={handleApproveItem}
+      />
     </View>
   );
 };
@@ -489,5 +537,17 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  approveButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginTop: 8,
+  },
+  approveButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
