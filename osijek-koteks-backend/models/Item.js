@@ -40,6 +40,21 @@ const ItemSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    approvalPhoto: {
+      url: {
+        type: String,
+        default: null,
+      },
+      uploadDate: {
+        type: Date,
+        default: null,
+      },
+      mimeType: {
+        type: String,
+        default: null,
+        enum: [null, 'image/jpeg', 'image/png', 'image/heic'],
+      },
+    },
   },
   {
     timestamps: true,
@@ -73,7 +88,33 @@ ItemSchema.methods.toJSON = function () {
     });
   }
 
+  // Format photo upload date if exists
+  if (obj.approvalPhoto && obj.approvalPhoto.uploadDate) {
+    obj.approvalPhoto.uploadDate =
+      obj.approvalPhoto.uploadDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+  }
+
   return obj;
 };
+
+// Pre-save middleware to enforce approval photo requirement
+ItemSchema.pre('save', function (next) {
+  if (this.approvalStatus === 'approved' && !this.isNew) {
+    // Check if this is an update to 'approved' status
+    if (this.isModified('approvalStatus') && !this.approvalPhoto.url) {
+      const err = new Error(
+        'Approval photo is required when approving an item',
+      );
+      return next(err);
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model('Item', ItemSchema);

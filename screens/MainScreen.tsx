@@ -90,21 +90,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       console.error('Logout error:', error);
     }
   };
+  // In MainScreen.tsx, update the approval handling:
+
   const handleApproveItem = async (photoUri: string) => {
     if (!selectedItemId) return;
 
     try {
-      // Create form data for the photo
-      const formData = new FormData();
-      formData.append('photo', {
-        uri: photoUri,
-        type: 'image/jpeg',
-        name: 'approval_photo.jpg',
-      });
-      formData.append('itemId', selectedItemId);
+      console.log('Starting approval process for item:', selectedItemId);
 
       // Update the item status
-      await apiService.updateItemApproval(selectedItemId, 'approved');
+      await apiService.updateItemApproval(selectedItemId, 'approved', photoUri);
 
       // Refresh the items list
       await fetchData();
@@ -113,9 +108,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       Alert.alert('Success', 'Item approved successfully');
     } catch (error) {
       console.error('Error approving item:', error);
-      Alert.alert('Error', 'Failed to approve item');
+      Alert.alert('Error', 'Failed to approve item. Please try again.');
     }
   };
+
   const renderItem = ({item}: {item: Item}) => (
     <ListItem
       bottomDivider
@@ -147,12 +143,27 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
               </Text>
             </View>
           </View>
-          {item.approvalDate && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Approved:</Text>
-              <Text style={styles.detailValue}>{item.approvalDate}</Text>
-            </View>
+
+          {/* Show approval information if item is approved */}
+          {item.approvalStatus === 'approved' && item.approvedBy && (
+            <>
+              <View style={styles.approvalInfoContainer}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Approved by:</Text>
+                  <Text style={styles.detailValue}>
+                    {item.approvedBy.firstName} {item.approvedBy.lastName}
+                  </Text>
+                </View>
+                {item.approvalDate && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Approved on:</Text>
+                    <Text style={styles.detailValue}>{item.approvalDate}</Text>
+                  </View>
+                )}
+              </View>
+            </>
           )}
+
           {item.approvalStatus === 'pending' && (
             <TouchableOpacity
               style={styles.approveButton}
@@ -296,44 +307,6 @@ const styles = StyleSheet.create({
     maxHeight: '60%',
     borderRadius: 10,
     overflow: 'hidden',
-  },
-  itemDetailsContainer: {
-    marginTop: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  detailLabel: {
-    color: '#666',
-    fontSize: 14,
-    width: 70, // Fixed width for labels to align values
-    marginRight: 8,
-  },
-  detailValue: {
-    color: '#000',
-    fontSize: 14,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    backgroundColor: '#e0e0e0',
-  },
-  statusApproved: {
-    backgroundColor: '#e6f4ea',
-  },
-  statusRejected: {
-    backgroundColor: '#fce8e8',
-  },
-  statusPending: {
-    backgroundColor: '#fff3e0',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#000',
   },
   listItem: {
     paddingVertical: 12,
@@ -538,16 +511,62 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  itemDetailsContainer: {
+    marginTop: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  detailLabel: {
+    color: '#666',
+    fontSize: 14,
+    width: 85, // Increased width to accommodate longer labels
+    marginRight: 8,
+  },
+  detailValue: {
+    color: '#000',
+    fontSize: 14,
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+  },
+  statusApproved: {
+    backgroundColor: '#e6f4ea',
+  },
+  statusRejected: {
+    backgroundColor: '#fce8e8',
+  },
+  statusPending: {
+    backgroundColor: '#fff3e0',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#000',
+  },
   approveButton: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
     marginTop: 8,
+    alignSelf: 'flex-start',
   },
   approveButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
+  },
+  approvalInfoContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
 });

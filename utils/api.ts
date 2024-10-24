@@ -306,11 +306,38 @@ export const apiService = {
   updateItemApproval: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
+    photoUri?: string,
   ): Promise<Item> => {
     try {
-      const response = await api.patch<Item>(`/api/items/${id}/approval`, {
+      const formData = new FormData();
+
+      // Make sure we're sending the correct status
+      formData.append('approvalStatus', 'approved');
+
+      if (photoUri) {
+        formData.append('photo', {
+          uri: photoUri,
+          type: 'image/jpeg',
+          name: 'approval_photo.jpg',
+        } as any); // Type assertion needed for React Native FormData
+      }
+
+      console.log('Sending approval request:', {
+        id,
         approvalStatus,
+        hasPhoto: !!photoUri,
       });
+
+      const response = await api.patch<Item>(
+        `/api/items/${id}/approval`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
       return response.data;
     } catch (error) {
       console.error('Error updating item approval:', error);
