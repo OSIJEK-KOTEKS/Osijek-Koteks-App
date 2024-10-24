@@ -12,6 +12,7 @@ import {Text, Input, ListItem} from 'react-native-elements';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Modal from 'react-native-modal';
 import {Picker} from '@react-native-picker/picker';
+import axios from 'axios'; // Add this import
 import {apiService, User} from '../utils/api';
 import CustomAvatar from '../components/CustomAvatar';
 
@@ -151,8 +152,6 @@ export const UserManagementScreen: React.FC = () => {
           Alert.alert('Error', 'Password is required for new users');
           return;
         }
-
-        // Prepare registration data
         const registrationData = {
           email: formData.email,
           firstName: formData.firstName,
@@ -162,26 +161,41 @@ export const UserManagementScreen: React.FC = () => {
           codes: formData.codes,
           password: formData.password,
         };
-
         await apiService.register(registrationData);
       } else if (selectedUser?._id) {
-        // For updates, we omit password and use the existing _id
-        const {password, _id, isVerified, ...updateData} = formData;
-        await apiService.updateUser(selectedUser._id, updateData);
+        // For updates, handle codes separately if they've changed
+        const {password, _id, ...updateData} = formData;
+        const originalUser = users.find(u => u._id === selectedUser._id);
+
+        // Check if codes have changed
+        if (
+          originalUser &&
+          JSON.stringify(originalUser.codes) !== JSON.stringify(formData.codes)
+        ) {
+          console.log('Codes have changed, updating codes first');
+          await apiService.updateUserCodes(selectedUser._id, formData.codes);
+        }
+
+        // Update other user data
+        const {codes, ...otherData} = updateData;
+        await apiService.updateUser(selectedUser._id, otherData);
       }
 
       setModalVisible(false);
-      await fetchUsers();
+      await fetchUsers(); // Refresh the user list
       Alert.alert(
         'Success',
         `User ${modalMode === 'create' ? 'created' : 'updated'} successfully`,
       );
     } catch (error) {
       console.error('Error submitting user:', error);
-      Alert.alert('Error', `Failed to ${modalMode} user`);
+      let errorMessage = 'An error occurred while saving the user.';
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      Alert.alert('Error', errorMessage);
     }
   };
-
   const renderUserModal = () => (
     <Modal
       isVisible={isModalVisible}

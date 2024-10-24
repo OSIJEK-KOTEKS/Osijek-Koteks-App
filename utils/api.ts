@@ -204,7 +204,20 @@ export const apiService = {
     userData: Partial<Omit<User, '_id'>>,
   ): Promise<User> => {
     try {
-      const response = await api.patch<User>(`/api/users/${id}`, userData);
+      console.log('Updating user:', id, 'with data:', userData);
+
+      // If codes are being updated, validate them first
+      if (userData.codes) {
+        console.log('Updating codes:', userData.codes);
+        // First try to update codes specifically
+        await api.patch(`/api/users/${id}/codes`, {codes: userData.codes});
+      }
+
+      // Then update other user data
+      const {codes, ...otherData} = userData;
+      const response = await api.patch<User>(`/api/users/${id}`, otherData);
+
+      console.log('User update response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -223,7 +236,9 @@ export const apiService = {
 
   updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
     try {
+      console.log('Updating user codes:', {id, codes});
       const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
+      console.log('Code update response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error updating user codes:', error);
