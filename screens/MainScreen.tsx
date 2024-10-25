@@ -282,19 +282,25 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
                 </>
               )}
 
-              {item.approvalStatus === 'pending' && (
-                <TouchableOpacity
-                  style={styles.approveButton}
-                  onPress={() => {
-                    setSelectedItemId(item._id);
-                    setPhotoModalVisible(true);
-                  }}>
-                  <MaterialIcons name="check-circle" size={20} color="white" />
-                  <Text style={styles.approveButtonText}>
-                    Approve with Photo
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {item.approvalStatus === 'pending' &&
+                (userProfile?.role === 'admin' ||
+                  userProfile?.role === 'user') && (
+                  <TouchableOpacity
+                    style={styles.approveButton}
+                    onPress={() => {
+                      setSelectedItemId(item._id);
+                      setPhotoModalVisible(true);
+                    }}>
+                    <MaterialIcons
+                      name="check-circle"
+                      size={20}
+                      color="white"
+                    />
+                    <Text style={styles.approveButtonText}>
+                      Approve with Photo
+                    </Text>
+                  </TouchableOpacity>
+                )}
             </View>
           </TouchableOpacity>
         </View>
