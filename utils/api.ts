@@ -33,6 +33,8 @@ export interface RegistrationData {
   codes: string[];
 }
 
+// In api.ts
+// In api.ts
 export interface Item {
   _id: string;
   title: string;
@@ -46,6 +48,11 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
+  approvalPhoto: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+  } | null;
 }
 
 const api = axios.create({

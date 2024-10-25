@@ -1,9 +1,12 @@
-import type {StackNavigationProp} from '@react-navigation/stack';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
+import {CompositeNavigationProp, RouteProp} from '@react-navigation/native';
 
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   PDFViewer: {pdfUrl: string};
+  PhotoViewer: {photoUrl: string; token: string};
 };
 
 export type AdminTabParamList = {
@@ -11,17 +14,24 @@ export type AdminTabParamList = {
   Users: undefined;
 };
 
-export type MainScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'Main'
+export type RootStackNavigationProp = StackNavigationProp<RootStackParamList>;
+
+export type MainStackNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<AdminTabParamList, 'Items'>,
+  StackNavigationProp<RootStackParamList>
 >;
 
-export interface MainScreenProps {
-  navigation: MainScreenNavigationProp;
-}
+export type MainTabScreenProps = {
+  navigation: MainStackNavigationProp;
+};
+
+export type TabNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<AdminTabParamList>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 export interface User {
-  _id: string; // Change this from 'id' to '_id'
+  _id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -45,4 +55,9 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
+  approvalPhoto?: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+  } | null;
 }

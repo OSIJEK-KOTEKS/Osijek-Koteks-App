@@ -1,30 +1,56 @@
-import React, {useEffect, useState, useContext} from 'react';
+import React, {useEffect, useState, useContext, useCallback} from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   RefreshControl,
-  ScrollView,
   Platform,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import {Text, Button, ListItem, Divider} from 'react-native-elements';
+import {Text, Button, Divider, Image} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
-import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList} from '../types';
+import {MainTabScreenProps} from '../types';
 import {apiService, Item, User} from '../utils/api';
 import {AuthContext} from '../AuthContext';
 import CustomAvatar from '../components/CustomAvatar';
 import PhotoCaptureModal from '../components/PhotoCaptureModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// Error Boundary Component
+class ErrorBoundary extends React.Component<
+  {children: React.ReactNode},
+  {hasError: boolean}
+> {
+  state = {hasError: false};
 
-type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
+  static getDerivedStateFromError() {
+    return {hasError: true};
+  }
 
-interface MainScreenProps {
-  navigation: MainScreenNavigationProp;
+  componentDidCatch(error: Error) {
+    console.error('Error caught by boundary:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Something went wrong.</Text>
+          <Button
+            title="Try Again"
+            onPress={() => this.setState({hasError: false})}
+          />
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
-export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
+export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
+  // State Management
   const [items, setItems] = useState<Item[]>([]);
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +58,33 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [selectedCode, setSelectedCode] = useState<string>('all');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
-  const {signOut} = useContext(AuthContext);
   const [isPhotoModalVisible, setPhotoModalVisible] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const {signOut} = useContext(AuthContext);
 
-  const fetchData = async () => {
+  // Token Management
+  useEffect(() => {
+    const getToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        setUserToken(token);
+      } catch (error) {
+        console.error('Error getting token:', error);
+      }
+    };
+    getToken();
+
+    // Cleanup function
+    return () => {
+      setItems([]);
+      setFilteredItems([]);
+      setUserProfile(null);
+    };
+  }, []);
+
+  // Data Fetching
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const profile = await apiService.getUserProfile();
@@ -46,27 +94,31 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       setItems(fetchedItems);
       setFilteredItems(fetchedItems);
 
-      // If user is admin, collect all unique codes from items
       if (profile.role === 'admin') {
         const uniqueCodes = Array.from(
           new Set(fetchedItems.map(item => item.code)),
         ).sort();
         setAvailableCodes(uniqueCodes);
       } else {
-        // For regular users, use their assigned codes
         setAvailableCodes(profile.codes.sort());
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load data. Please check your connection and try again.',
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
+  // Initial Data Load
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Filter Items based on Selected Code
   useEffect(() => {
     if (selectedCode === 'all') {
       setFilteredItems(items);
@@ -76,117 +128,152 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   }, [selectedCode, items]);
 
-  const onRefresh = async () => {
+  // Refresh Handler
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
-  };
+  }, [fetchData]);
 
-  const handleLogout = async () => {
+  // Logout Handler
+  const handleLogout = useCallback(async () => {
     try {
       await apiService.logout();
       await signOut();
     } catch (error) {
       console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
     }
-  };
-  // In MainScreen.tsx, update the approval handling:
+  }, [signOut]);
 
-  const handleApproveItem = async (photoUri: string) => {
-    if (!selectedItemId) return;
+  // Approval Handler
+  const handleApproveItem = useCallback(
+    async (photoUri: string) => {
+      if (!selectedItemId) return;
 
-    try {
-      console.log('Starting approval process for item:', selectedItemId);
-
-      // Update the item status
-      await apiService.updateItemApproval(selectedItemId, 'approved', photoUri);
-
-      // Refresh the items list
-      await fetchData();
-
-      // Show success message
-      Alert.alert('Success', 'Item approved successfully');
-    } catch (error) {
-      console.error('Error approving item:', error);
-      Alert.alert('Error', 'Failed to approve item. Please try again.');
-    }
-  };
-
-  const renderItem = ({item}: {item: Item}) => (
-    <View style={styles.itemContainer}>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})}
-        style={styles.itemContent}>
-        <Text style={styles.itemTitle}>{item.title}</Text>
-
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Code:</Text>
-            <Text style={styles.detailValue}>{item.code}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Created:</Text>
-            <Text style={styles.detailValue}>{item.creationDate}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status:</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                item.approvalStatus === 'approved' && styles.statusApproved,
-                item.approvalStatus === 'rejected' && styles.statusRejected,
-                item.approvalStatus === 'pending' && styles.statusPending,
-              ]}>
-              <Text style={styles.statusText}>
-                {item.approvalStatus.charAt(0).toUpperCase() +
-                  item.approvalStatus.slice(1)}
-              </Text>
-            </View>
-          </View>
-
-          {item.approvalStatus === 'approved' && item.approvedBy && (
-            <>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Approved by:</Text>
-                <Text style={styles.detailValue}>
-                  {item.approvedBy.firstName} {item.approvedBy.lastName}
-                </Text>
-              </View>
-
-              {item.approvalDate && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Date:</Text>
-                  <Text style={styles.detailValue}>{item.approvalDate}</Text>
-                </View>
-              )}
-            </>
-          )}
-
-          {item.approvalStatus === 'pending' && (
-            <TouchableOpacity
-              style={styles.approveButton}
-              onPress={() => {
-                setSelectedItemId(item._id);
-                setPhotoModalVisible(true);
-              }}>
-              <Text style={styles.approveButtonText}>Approve</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </TouchableOpacity>
-    </View>
+      try {
+        await apiService.updateItemApproval(
+          selectedItemId,
+          'approved',
+          photoUri,
+        );
+        await fetchData();
+        Alert.alert('Success', 'Item approved successfully');
+      } catch (error) {
+        console.error('Error approving item:', error);
+        Alert.alert('Error', 'Failed to approve item. Please try again.');
+      } finally {
+        setPhotoModalVisible(false);
+        setSelectedItemId(null);
+      }
+    },
+    [selectedItemId, fetchData],
   );
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={styles.scrollContent}>
-        {/* Profile Card */}
+  // Image Error Handler
+  const handleImageError = useCallback((error: any) => {
+    console.error('Image loading error:', error?.nativeEvent?.error || error);
+    // Optional: Show error UI
+    Alert.alert(
+      'Image Load Error',
+      'Failed to load image. Please try again later.',
+    );
+  }, []);
+
+  // Render Item Component
+  const renderItem = useCallback(
+    ({item}: {item: Item}) => {
+      const photoUrl = item.approvalPhoto?.url || null;
+
+      return (
+        <View style={styles.itemContainer}>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})
+            }
+            style={styles.itemContent}>
+            <Text style={styles.itemTitle}>{item.title}</Text>
+
+            <View style={styles.detailsContainer}>
+              {item.approvalStatus === 'approved' && item.approvedBy && (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Approved by:</Text>
+                    <Text style={styles.detailValue}>
+                      {item.approvedBy.firstName} {item.approvedBy.lastName}
+                    </Text>
+                  </View>
+
+                  {item.approvalDate && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Date:</Text>
+                      <Text style={styles.detailValue}>
+                        {item.approvalDate}
+                      </Text>
+                    </View>
+                  )}
+
+                  {photoUrl && userToken && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        navigation.navigate('PhotoViewer', {
+                          photoUrl: photoUrl,
+                          token: userToken,
+                        });
+                      }}
+                      style={styles.photoPreviewContainer}>
+                      <View style={styles.previewImageWrapper}>
+                        <Image
+                          source={{
+                            uri: `http://192.168.1.130:5000${photoUrl}`,
+                            headers: {
+                              Authorization: `Bearer ${userToken}`,
+                            },
+                            width: 60,
+                            height: 60,
+                          }}
+                          style={styles.photoPreview}
+                          resizeMode="cover"
+                          resizeMethod="resize"
+                          progressiveRenderingEnabled={false}
+                          fadeDuration={0}
+                          PlaceholderContent={
+                            <ActivityIndicator size="small" color="#2196F3" />
+                          }
+                          onError={handleImageError}
+                        />
+                      </View>
+                      <Text style={styles.viewPhotoText}>
+                        View Approval Photo
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
+              {item.approvalStatus === 'pending' &&
+                userProfile?.role === 'admin' && (
+                  <TouchableOpacity
+                    style={styles.approveButton}
+                    onPress={() => {
+                      setSelectedItemId(item._id);
+                      setPhotoModalVisible(true);
+                    }}>
+                    <Text style={styles.approveButtonText}>Approve</Text>
+                  </TouchableOpacity>
+                )}
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [navigation, userToken, handleImageError],
+  );
+
+  // Header Component
+  const ListHeaderComponent = useCallback(() => {
+    return (
+      <>
         <View style={styles.cardContainer}>
           <View style={styles.profileContainer}>
             <CustomAvatar
@@ -208,7 +295,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
           <Divider style={styles.divider} />
 
-          {/* Code Selection Picker */}
           <View style={styles.pickerContainer}>
             <Text style={styles.pickerLabel}>Selected Code</Text>
             <View style={styles.pickerWrapper}>
@@ -227,7 +313,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
           <Divider style={styles.divider} />
 
-          {/* Stats Section */}
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Documents</Text>
@@ -242,48 +327,61 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           </View>
         </View>
 
-        {/* Documents Section */}
-        <View style={styles.container}>
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            contentContainerStyle={styles.scrollContent}>
-            {/* Profile Card and other content... */}
-
-            {/* Documents Section */}
-            <View style={styles.documentsContainer}>
-              <Text style={styles.sectionTitle}>
-                Documents{' '}
-                {selectedCode !== 'all' ? `(Code: ${selectedCode})` : '(All)'}
-              </Text>
-              {loading ? (
-                <View style={styles.centerContent}>
-                  <Text style={styles.loadingText}>Loading documents...</Text>
-                </View>
-              ) : filteredItems.length > 0 ? (
-                <View style={styles.listContainer}>
-                  {filteredItems.map(item => renderItem({item}))}
-                </View>
-              ) : (
-                <View style={styles.centerContent}>
-                  <Text style={styles.emptyText}>No documents found</Text>
-                </View>
-              )}
+        <View style={styles.documentsContainer}>
+          <Text style={styles.sectionTitle}>
+            Documents{' '}
+            {selectedCode !== 'all' ? `(Code: ${selectedCode})` : '(All)'}
+          </Text>
+        </View>
+      </>
+    );
+  }, [userProfile, selectedCode, availableCodes, filteredItems.length]);
+  // Main Render
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={filteredItems}
+        renderItem={renderItem}
+        keyExtractor={item => item._id}
+        ListHeaderComponent={ListHeaderComponent}
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.centerContent}>
+              <Text style={styles.loadingText}>Loading documents...</Text>
             </View>
-          </ScrollView>
-        </View>
-        {/* Logout Button */}
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Logout"
-            onPress={handleLogout}
-            buttonStyle={styles.logoutButton}
-            titleStyle={styles.buttonTitle}
-            raised
-          />
-        </View>
-      </ScrollView>
+          ) : (
+            <View style={styles.centerContent}>
+              <Text style={styles.emptyText}>No documents found</Text>
+            </View>
+          )
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListFooterComponent={
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Logout"
+              onPress={handleLogout}
+              buttonStyle={styles.logoutButton}
+              titleStyle={styles.buttonTitle}
+              raised
+            />
+          </View>
+        }
+        contentContainerStyle={styles.listContentContainer}
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={3}
+        removeClippedSubviews={true}
+        updateCellsBatchingPeriod={100}
+        onEndReachedThreshold={0.5}
+        getItemLayout={(data, index) => ({
+          length: 200,
+          offset: 200 * index,
+          index,
+        })}
+      />
       <PhotoCaptureModal
         isVisible={isPhotoModalVisible}
         onClose={() => {
@@ -296,15 +394,34 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   );
 };
 
+// Wrap MainScreen with ErrorBoundary
+export const MainScreenWithErrorBoundary: React.FC<
+  MainTabScreenProps
+> = props => (
+  <ErrorBoundary>
+    <MainScreen {...props} />
+  </ErrorBoundary>
+);
+
+// Styles
 const styles = StyleSheet.create({
-  // Container and Layout
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  scrollContent: {
-    flexGrow: 1,
+  listContentContainer: {
     paddingBottom: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
   },
   cardContainer: {
     backgroundColor: 'white',
@@ -330,8 +447,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-
-  // Profile Section
   profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -350,8 +465,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
-
-  // Stats Section
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -370,8 +483,6 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontWeight: 'bold',
   },
-
-  // Picker Styles
   pickerContainer: {
     marginVertical: 8,
   },
@@ -401,15 +512,11 @@ const styles = StyleSheet.create({
       },
     }),
   },
-
-  // Item List Styles
-  listContainer: {
-    width: '100%',
-  },
   itemContainer: {
     backgroundColor: 'white',
     borderRadius: 8,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
@@ -440,8 +547,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
   },
-
-  // Status Styles
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -462,11 +567,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#000',
   },
-
-  // Button Styles
   buttonContainer: {
     marginHorizontal: 16,
-    marginVertical: 16,
+    marginTop: 16,
+    marginBottom: 20,
   },
   approveButton: {
     backgroundColor: '#4CAF50',
@@ -490,8 +594,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // Utility Styles
   divider: {
     marginVertical: 15,
     backgroundColor: '#E0E0E0',
@@ -506,6 +608,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   loadingText: {
     color: '#666',
@@ -515,26 +623,32 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
   },
-
-  // Modal Styles
-  modalStyle: {
-    margin: 0,
-    justifyContent: 'center',
+  photoPreviewContainer: {
+    marginTop: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  overlayStyle: {
-    backgroundColor: 'white',
-    width: '80%',
-    maxHeight: '60%',
-    borderRadius: 10,
+  previewImageWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 4,
     overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
   },
-
-  // Approval Section
-  approvalInfoContainer: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 0.5,
-    borderTopColor: '#e0e0e0',
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f5f5f5',
+  },
+  viewPhotoText: {
+    color: '#2196F3',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 10,
   },
 });

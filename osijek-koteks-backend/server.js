@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path'); // Add this import
 require('dotenv').config();
 
 const app = express();
@@ -10,12 +11,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Routes
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const itemsRouter = require('./routes/items');
 
-app.use('/api/auth', authRouter); // Make sure this line exists
+app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/items', itemsRouter);
 
