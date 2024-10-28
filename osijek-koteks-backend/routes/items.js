@@ -178,7 +178,6 @@ router.patch(
           mimeType: null,
         };
       }
-
       const updatedItem = await item.save();
       await updatedItem.populate('approvedBy', 'firstName lastName');
 
