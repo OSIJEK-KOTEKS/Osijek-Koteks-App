@@ -11,13 +11,22 @@ import {
 } from 'react-native';
 import {Text, Button, Divider, Image} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
-import {MainTabScreenProps} from '../types';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {RootStackParamList} from '../types';
 import {apiService, Item, User} from '../utils/api';
 import {AuthContext} from '../AuthContext';
 import CustomAvatar from '../components/CustomAvatar';
 import PhotoCaptureModal from '../components/PhotoCaptureModal';
+import {CreateItemModal} from '../components/CreateItemModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
+type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
+
+interface MainScreenProps {
+  navigation: MainScreenNavigationProp;
+}
+
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
   {children: React.ReactNode},
@@ -50,7 +59,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
+export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   // State Management
   const [items, setItems] = useState<Item[]>([]);
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
@@ -60,6 +69,7 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
   const [selectedCode, setSelectedCode] = useState<string>('all');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [isPhotoModalVisible, setPhotoModalVisible] = useState(false);
+  const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
   const {signOut} = useContext(AuthContext);
@@ -173,32 +183,63 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
 
   // Image Error Handler
   const handleImageError = useCallback((error: any) => {
-    console.error('Image loading error:', error?.nativeEvent?.error || error);
-    // Optional: Show error UI
-    Alert.alert(
-      'Image Load Error',
-      'Failed to load image. Please try again later.',
-    );
+    console.error('Image loading error:', error);
   }, []);
 
+  const RenderImage = useCallback(
+    ({photoUrl}: {photoUrl: string}) => {
+      const [imageError, setImageError] = useState(false);
+
+      return (
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('PhotoViewer', {
+              photoUrl: photoUrl,
+            })
+          }
+          style={styles.photoPreviewContainer}>
+          <View style={styles.previewImageWrapper}>
+            {!imageError ? (
+              <Image
+                source={{
+                  uri: `http://192.168.1.130:5000${photoUrl}`,
+                  headers: {
+                    Authorization: `Bearer ${userToken}`,
+                  },
+                  cache: 'reload', // Changed from force-cache
+                }}
+                style={styles.photoPreview}
+                resizeMode="cover"
+                resizeMethod="resize" // Add this
+                progressiveRenderingEnabled={false} // Changed from true
+                fadeDuration={0}
+                onError={error => {
+                  console.error('Image error:', error?.nativeEvent?.error);
+                  setImageError(true);
+                }}
+                PlaceholderContent={
+                  <ActivityIndicator size="small" color="#2196F3" />
+                }
+              />
+            ) : (
+              <View style={[styles.photoPreview, styles.errorContainer]}>
+                <MaterialIcons name="error-outline" size={24} color="#f44336" />
+                <Text style={styles.errorText}>Failed to load image</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.viewPhotoText}>
+            {imageError ? 'Image Unavailable' : 'View Approval Photo'}
+          </Text>
+        </TouchableOpacity>
+      );
+    },
+    [navigation, userToken],
+  );
   // Render Item Component
   const renderItem = useCallback(
     ({item}: {item: Item}) => {
       const photoUrl = item.approvalPhoto?.url || null;
-
-      // Helper function to get status style
-      const getStatusStyle = (status: Item['approvalStatus']) => {
-        switch (status) {
-          case 'approved':
-            return styles.statusApproved;
-          case 'pending':
-            return styles.statusPending;
-          case 'rejected':
-            return styles.statusRejected;
-          default:
-            return {};
-        }
-      };
 
       return (
         <View style={styles.itemContainer}>
@@ -207,23 +248,33 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
               navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})
             }
             style={styles.itemContent}>
-            <View style={styles.headerRow}>
-              <Text style={styles.itemTitle}>{item.title}</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  getStatusStyle(item.approvalStatus),
-                ]}>
-                <Text style={styles.statusText}>
-                  {item.approvalStatus.toUpperCase()}
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.itemTitle}>{item.title}</Text>
 
             <View style={styles.detailsContainer}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Code:</Text>
                 <Text style={styles.detailValue}>{item.code}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Created:</Text>
+                <Text style={styles.detailValue}>{item.creationDate}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Status:</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    item.approvalStatus === 'approved' && styles.statusApproved,
+                    item.approvalStatus === 'rejected' && styles.statusRejected,
+                    item.approvalStatus === 'pending' && styles.statusPending,
+                  ]}>
+                  <Text style={styles.statusText}>
+                    {item.approvalStatus.charAt(0).toUpperCase() +
+                      item.approvalStatus.slice(1)}
+                  </Text>
+                </View>
               </View>
 
               {item.approvalStatus === 'approved' && item.approvedBy && (
@@ -244,61 +295,19 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
                     </View>
                   )}
 
-                  {photoUrl && userToken && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        navigation.navigate('PhotoViewer', {
-                          photoUrl: photoUrl,
-                          token: userToken,
-                        });
-                      }}
-                      style={styles.photoPreviewContainer}>
-                      <View style={styles.previewImageWrapper}>
-                        <Image
-                          source={{
-                            uri: `http://192.168.1.130:5000${photoUrl}`,
-                            headers: {
-                              Authorization: `Bearer ${userToken}`,
-                            },
-                            width: 60,
-                            height: 60,
-                          }}
-                          style={styles.photoPreview}
-                          resizeMode="cover"
-                          resizeMethod="resize"
-                          progressiveRenderingEnabled={false}
-                          fadeDuration={0}
-                          PlaceholderContent={
-                            <ActivityIndicator size="small" color="#2196F3" />
-                          }
-                          onError={handleImageError}
-                        />
-                      </View>
-                      <Text style={styles.viewPhotoText}>
-                        View Approval Photo
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                  {photoUrl && userToken && <RenderImage photoUrl={photoUrl} />}
                 </>
               )}
 
               {item.approvalStatus === 'pending' &&
-                (userProfile?.role === 'admin' ||
-                  userProfile?.role === 'user') && (
+                userProfile?.role === 'admin' && (
                   <TouchableOpacity
                     style={styles.approveButton}
                     onPress={() => {
                       setSelectedItemId(item._id);
                       setPhotoModalVisible(true);
                     }}>
-                    <MaterialIcons
-                      name="check-circle"
-                      size={20}
-                      color="white"
-                    />
-                    <Text style={styles.approveButtonText}>
-                      Approve with Photo
-                    </Text>
+                    <Text style={styles.approveButtonText}>Approve</Text>
                   </TouchableOpacity>
                 )}
             </View>
@@ -306,7 +315,7 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
         </View>
       );
     },
-    [navigation, userToken, handleImageError, userProfile?.role],
+    [navigation, userToken, userProfile?.role, RenderImage],
   );
 
   // Header Component
@@ -375,6 +384,7 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
       </>
     );
   }, [userProfile, selectedCode, availableCodes, filteredItems.length]);
+
   // Main Render
   return (
     <View style={styles.container}>
@@ -421,6 +431,17 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
           index,
         })}
       />
+
+      {/* Add Item FAB for admin and bot users */}
+      {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
+        <TouchableOpacity
+          style={[styles.fab, styles.addItemFab]}
+          onPress={() => setCreateModalVisible(true)}>
+          <MaterialIcons name="add" size={24} color="white" />
+        </TouchableOpacity>
+      )}
+
+      {/* Modals */}
       <PhotoCaptureModal
         isVisible={isPhotoModalVisible}
         onClose={() => {
@@ -429,20 +450,23 @@ export const MainScreen: React.FC<MainTabScreenProps> = ({navigation}) => {
         }}
         onConfirm={handleApproveItem}
       />
+
+      <CreateItemModal
+        isVisible={isCreateModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onSuccess={fetchData}
+      />
     </View>
   );
 };
 
 // Wrap MainScreen with ErrorBoundary
-export const MainScreenWithErrorBoundary: React.FC<
-  MainTabScreenProps
-> = props => (
+export const MainScreenWithErrorBoundary: React.FC<MainScreenProps> = props => (
   <ErrorBoundary>
     <MainScreen {...props} />
   </ErrorBoundary>
 );
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -586,12 +610,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -600,22 +618,16 @@ const styles = StyleSheet.create({
   },
   statusApproved: {
     backgroundColor: '#e6f4ea',
-    borderColor: '#34a853',
-    borderWidth: 1,
   },
   statusPending: {
     backgroundColor: '#fff3e0',
-    borderColor: '#fbbc04',
-    borderWidth: 1,
   },
   statusRejected: {
     backgroundColor: '#fce8e8',
-    borderColor: '#ea4335',
-    borderWidth: 1,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#000',
   },
   buttonContainer: {
@@ -630,9 +642,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginTop: 12,
     alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   approveButtonText: {
     color: 'white',
@@ -697,7 +706,6 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f5f5f5',
   },
   viewPhotoText: {
     color: '#2196F3',
@@ -705,4 +713,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 10,
   },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  addItemFab: {
+    bottom: 80,
+    right: 16,
+  },
 });
+
+export default MainScreenWithErrorBoundary;

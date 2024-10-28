@@ -86,11 +86,14 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Create a new item (admin only)
+// Create a new item
 router.post('/', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+    // Allow both admin and bot users to create items
+    if (req.user.role !== 'admin' && req.user.role !== 'bot') {
+      return res
+        .status(403)
+        .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
     const {title, code, pdfUrl, creationDate} = req.body;

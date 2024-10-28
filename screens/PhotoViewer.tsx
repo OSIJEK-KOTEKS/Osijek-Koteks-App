@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Alert,
+  Text,
 } from 'react-native';
 import {Image} from 'react-native-elements';
 import {RouteProp} from '@react-navigation/native';
@@ -36,31 +36,18 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
   const [error, setError] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const getToken = async () => {
-      try {
-        const authToken = await AsyncStorage.getItem('userToken');
-        console.log('Retrieved token:', authToken ? 'exists' : 'not found');
-        setToken(authToken);
-      } catch (error) {
-        console.error('Error getting token:', error);
-        Alert.alert('Error', 'Failed to load authentication token');
-        navigation.goBack();
-      }
+      const authToken = await AsyncStorage.getItem('userToken');
+      setToken(authToken);
     };
     getToken();
-  }, [navigation]);
+  }, []);
 
-  const handleError = () => {
-    console.error('Image loading error for URL:', photoUrl);
+  const handleImageError = (error: any) => {
+    console.error('Image loading error:', error?.nativeEvent?.error);
     setError(true);
     setLoading(false);
-    Alert.alert('Error', 'Failed to load image', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
   };
 
   if (!token) {
@@ -70,9 +57,6 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
       </View>
     );
   }
-
-  const imageUrl = `http://192.168.1.130:5000${photoUrl}`;
-  console.log('Loading image from URL:', imageUrl);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,34 +69,33 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
       </TouchableOpacity>
 
       <View style={styles.imageContainer}>
-        <Image
-          source={{
-            uri: `http://192.168.1.130:5000${photoUrl}`,
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            // Add cache control
-            cache: 'force-cache',
-          }}
-          style={[
-            styles.image,
-            {
-              width: Dimensions.get('window').width,
-              height: Dimensions.get('window').height * 0.8, // Limit height
-            },
-          ]}
-          resizeMode="contain"
-          resizeMethod="resize"
-          progressiveRenderingEnabled={false}
-          onLoadStart={() => setLoading(true)}
-          onLoadEnd={() => setLoading(false)}
-          onError={handleError}
-          PlaceholderContent={
-            <ActivityIndicator size="large" color="#2196F3" />
-          }
-        />
+        {!error ? (
+          <Image
+            source={{
+              uri: `http://192.168.1.130:5000${photoUrl}`,
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              cache: 'reload',
+            }}
+            style={styles.image}
+            resizeMode="contain"
+            resizeMethod="resize"
+            onLoadStart={() => setLoading(true)}
+            onLoadEnd={() => setLoading(false)}
+            onError={handleImageError}
+            PlaceholderContent={
+              <ActivityIndicator size="large" color="#2196F3" />
+            }
+          />
+        ) : (
+          <View style={styles.errorContainer}>
+            <MaterialIcons name="error-outline" size={48} color="#f44336" />
+            <Text style={styles.errorText}>Failed to load image</Text>
+          </View>
+        )}
 
-        {loading && (
+        {loading && !error && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2196F3" />
           </View>
@@ -134,7 +117,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    height: Dimensions.get('window').height * 0.8,
   },
   closeButton: {
     position: 'absolute',
@@ -150,5 +133,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000000',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginTop: 12,
   },
 });

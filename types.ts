@@ -6,7 +6,8 @@ export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   PDFViewer: {pdfUrl: string};
-  PhotoViewer: {photoUrl: string; token: string};
+  PhotoViewer: {photoUrl: string};
+  CreateItem: undefined; // Add this new route
 };
 
 export type AdminTabParamList = {
@@ -14,6 +15,12 @@ export type AdminTabParamList = {
   Users: undefined;
 };
 
+export interface CreateItemFormData {
+  title: string;
+  code: string;
+  pdfUrl: string;
+  creationDate?: string;
+}
 export type RootStackNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export type MainStackNavigationProp = CompositeNavigationProp<

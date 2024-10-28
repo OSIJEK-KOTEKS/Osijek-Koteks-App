@@ -54,6 +54,12 @@ export interface Item {
     mimeType: string | null;
   } | null;
 }
+export interface CreateItemInput {
+  title: string;
+  code: string;
+  pdfUrl: string;
+  creationDate?: string;
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -280,17 +286,20 @@ export const apiService = {
     }
   },
 
-  createItem: async (
-    itemData: Omit<
-      Item,
-      '_id' | 'creationDate' | 'approvalStatus' | 'approvalDate' | 'approvedBy'
-    >,
-  ): Promise<Item> => {
+  createItem: async (itemData: CreateItemInput): Promise<Item> => {
     try {
+      console.log('Creating new item:', itemData);
       const response = await api.post<Item>('/api/items', itemData);
       return response.data;
     } catch (error) {
       console.error('Error creating item:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Creation error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+      }
       throw error;
     }
   },
