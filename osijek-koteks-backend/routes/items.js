@@ -122,15 +122,17 @@ router.post('/', auth, async (req, res) => {
 });
 
 /// Update approval status (admin only)
+// Update approval status (allow both admin and regular users)
 router.patch(
   '/:id/approval',
   auth,
   upload.single('photo'),
   async (req, res) => {
     try {
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({message: 'Access denied. Admin only.'});
-      }
+      // Remove the admin-only check
+      // if (req.user.role !== 'admin') {
+      //   return res.status(403).json({message: 'Access denied. Admin only.'});
+      // }
 
       const {approvalStatus} = req.body;
 

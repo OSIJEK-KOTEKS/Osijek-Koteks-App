@@ -299,17 +299,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 </>
               )}
 
-              {item.approvalStatus === 'pending' &&
-                userProfile?.role === 'admin' && (
-                  <TouchableOpacity
-                    style={styles.approveButton}
-                    onPress={() => {
-                      setSelectedItemId(item._id);
-                      setPhotoModalVisible(true);
-                    }}>
-                    <Text style={styles.approveButtonText}>Approve</Text>
-                  </TouchableOpacity>
-                )}
+              {item.approvalStatus === 'pending' && (
+                <TouchableOpacity
+                  style={styles.approveButton}
+                  onPress={() => {
+                    setSelectedItemId(item._id);
+                    setPhotoModalVisible(true);
+                  }}>
+                  <Text style={styles.approveButtonText}>Approve</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </TouchableOpacity>
         </View>
