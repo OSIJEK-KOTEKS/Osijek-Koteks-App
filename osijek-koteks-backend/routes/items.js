@@ -121,7 +121,6 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-/// Update approval status (admin only)
 // Update approval status (allow both admin and regular users)
 router.patch(
   '/:id/approval',
