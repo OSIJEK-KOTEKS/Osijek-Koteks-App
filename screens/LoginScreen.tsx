@@ -101,7 +101,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             containerStyle={styles.inputContainer}
           />
           <Input
-            placeholder="Password"
+            placeholder="Lozinka"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -116,20 +116,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             <ActivityIndicator size="large" color="#0000ff" />
           ) : (
             <Button
-              title="Login"
+              title="Prijava"
               onPress={handleLogin}
               buttonStyle={styles.loginButton}
               containerStyle={styles.buttonContainer}
             />
           )}
-          <Button
-            title="Forgot Password?"
-            type="clear"
-            titleStyle={styles.forgotPasswordText}
-            onPress={() => {
-              /* Handle forgot password */
-            }}
-          />
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

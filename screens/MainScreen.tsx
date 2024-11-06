@@ -350,7 +350,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 onValueChange={itemValue => setSelectedCode(itemValue)}
                 style={styles.picker}
                 dropdownIconColor="#666">
-                <Picker.Item label="All Documents" value="all" />
+                <Picker.Item label="Svi Dokumenti" value="all" />
                 {availableCodes.map(code => (
                   <Picker.Item key={code} label={code} value={code} />
                 ))}
@@ -367,7 +367,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             </View>
             {userProfile?.role === 'admin' && (
               <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Ukupan broj RN</Text>
+                <Text style={styles.statLabel}>RN kojima imam pristup</Text>
                 <Text style={styles.statValue}>{availableCodes.length}</Text>
               </View>
             )}
@@ -409,7 +409,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         ListFooterComponent={
           <View style={styles.buttonContainer}>
             <Button
-              title="Logout"
+              title="Odjava"
               onPress={handleLogout}
               buttonStyle={styles.logoutButton}
               titleStyle={styles.buttonTitle}
