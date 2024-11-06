@@ -377,8 +377,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
         <View style={styles.documentsContainer}>
           <Text style={styles.sectionTitle}>
-            Documents{' '}
-            {selectedCode !== 'all' ? `(Code: ${selectedCode})` : '(All)'}
+            RN {selectedCode !== 'all' ? `(${selectedCode})` : '(Svi)'}
           </Text>
         </View>
       </>

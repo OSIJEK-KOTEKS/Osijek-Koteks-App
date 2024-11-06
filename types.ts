@@ -11,8 +11,8 @@ export type RootStackParamList = {
 };
 
 export type AdminTabParamList = {
-  Items: undefined;
-  Users: undefined;
+  Dokumenti: undefined;
+  Korisnici: undefined;
 };
 
 export interface CreateItemFormData {
@@ -24,7 +24,7 @@ export interface CreateItemFormData {
 export type RootStackNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export type MainStackNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<AdminTabParamList, 'Items'>,
+  BottomTabNavigationProp<AdminTabParamList, 'Dokumenti'>,
   StackNavigationProp<RootStackParamList>
 >;
 

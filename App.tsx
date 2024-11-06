@@ -70,7 +70,7 @@ const AdminTabs = () => (
       tabBarInactiveTintColor: 'gray',
     }}>
     <Tab.Screen
-      name="Items"
+      name="Dokumenti"
       component={MainScreen}
       options={{
         tabBarIcon: ({color}) => (
@@ -80,7 +80,7 @@ const AdminTabs = () => (
       }}
     />
     <Tab.Screen
-      name="Users"
+      name="Korisnici"
       component={UserManagementScreen}
       options={{
         tabBarIcon: ({color}) => (
