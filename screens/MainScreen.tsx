@@ -229,7 +229,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             )}
           </View>
           <Text style={styles.viewPhotoText}>
-            {imageError ? 'Image Unavailable' : 'View Approval Photo'}
+            {imageError ? 'Slika nije dostupna' : 'Pogledaj sliku'}
           </Text>
         </TouchableOpacity>
       );
@@ -280,7 +280,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
               {item.approvalStatus === 'approved' && item.approvedBy && (
                 <>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Approved by:</Text>
+                    <Text style={styles.detailLabel}>Potvrdio:</Text>
                     <Text style={styles.detailValue}>
                       {item.approvedBy.firstName} {item.approvedBy.lastName}
                     </Text>
@@ -288,7 +288,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
                   {item.approvalDate && (
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Date:</Text>
+                      <Text style={styles.detailLabel}>Datum:</Text>
                       <Text style={styles.detailValue}>
                         {item.approvalDate}
                       </Text>
@@ -306,7 +306,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                     setSelectedItemId(item._id);
                     setPhotoModalVisible(true);
                   }}>
-                  <Text style={styles.approveButtonText}>Approve</Text>
+                  <Text style={styles.approveButtonText}>Odobri</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -343,7 +343,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           <Divider style={styles.divider} />
 
           <View style={styles.pickerContainer}>
-            <Text style={styles.pickerLabel}>Selected Code</Text>
+            <Text style={styles.pickerLabel}>Radni nalog</Text>
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={selectedCode}
@@ -362,12 +362,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Documents</Text>
+              <Text style={styles.statLabel}>Dokumenti</Text>
               <Text style={styles.statValue}>{filteredItems.length}</Text>
             </View>
             {userProfile?.role === 'admin' && (
               <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Total Codes</Text>
+                <Text style={styles.statLabel}>Ukupan broj RN</Text>
                 <Text style={styles.statValue}>{availableCodes.length}</Text>
               </View>
             )}
@@ -395,11 +395,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         ListEmptyComponent={
           loading ? (
             <View style={styles.centerContent}>
-              <Text style={styles.loadingText}>Loading documents...</Text>
+              <Text style={styles.loadingText}>Učitavam dokumente...</Text>
             </View>
           ) : (
             <View style={styles.centerContent}>
-              <Text style={styles.emptyText}>No documents found</Text>
+              <Text style={styles.emptyText}>Nema dokumenata</Text>
             </View>
           )
         }
