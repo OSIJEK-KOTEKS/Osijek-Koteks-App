@@ -107,7 +107,7 @@ router.post('/', auth, async (req, res) => {
       code,
       pdfUrl,
       creationDate: creationDate ? new Date(creationDate) : new Date(),
-      approvalStatus: 'pending',
+      approvalStatus: 'na čekanju',
     });
 
     const newItem = await item.save();
@@ -137,7 +137,7 @@ router.patch(
 
       if (
         !approvalStatus ||
-        !['pending', 'approved', 'rejected'].includes(approvalStatus)
+        !['na čekanju', 'odobreno', 'odbijen'].includes(approvalStatus)
       ) {
         return res.status(400).json({message: 'Invalid approval status'});
       }
@@ -148,7 +148,7 @@ router.patch(
       }
 
       // Handle photo upload for approval
-      if (approvalStatus === 'approved') {
+      if (approvalStatus === 'odobreno') {
         if (!req.file) {
           return res
             .status(400)
@@ -165,7 +165,7 @@ router.patch(
 
       // Update approval status and related fields
       item.approvalStatus = approvalStatus;
-      if (approvalStatus === 'approved') {
+      if (approvalStatus === 'odobreno') {
         item.approvalDate = new Date();
         item.approvedBy = req.user._id;
       } else {

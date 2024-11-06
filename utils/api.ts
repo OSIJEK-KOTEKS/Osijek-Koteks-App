@@ -41,7 +41,7 @@ export interface Item {
   code: string;
   pdfUrl: string;
   creationDate: string;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
   approvedBy?: {
     _id: string;
@@ -328,7 +328,7 @@ export const apiService = {
       const formData = new FormData();
 
       // Make sure we're sending the correct status
-      formData.append('approvalStatus', 'approved');
+      formData.append('approvalStatus', 'odobreno');
 
       if (photoUri) {
         formData.append('photo', {

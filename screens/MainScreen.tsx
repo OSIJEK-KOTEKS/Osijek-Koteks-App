@@ -165,7 +165,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       try {
         await apiService.updateItemApproval(
           selectedItemId,
-          'approved',
+          'odobreno',
           photoUri,
         );
         await fetchData();
@@ -266,9 +266,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 <View
                   style={[
                     styles.statusBadge,
-                    item.approvalStatus === 'approved' && styles.statusApproved,
-                    item.approvalStatus === 'rejected' && styles.statusRejected,
-                    item.approvalStatus === 'pending' && styles.statusPending,
+                    item.approvalStatus === 'odobreno' && styles.statusApproved,
+                    item.approvalStatus === 'odbijen' && styles.statusRejected,
+                    item.approvalStatus === 'na čekanju' &&
+                      styles.statusPending,
                   ]}>
                   <Text style={styles.statusText}>
                     {item.approvalStatus.charAt(0).toUpperCase() +
@@ -277,7 +278,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 </View>
               </View>
 
-              {item.approvalStatus === 'approved' && item.approvedBy && (
+              {item.approvalStatus === 'odobreno' && item.approvedBy && (
                 <>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Potvrdio:</Text>
@@ -299,7 +300,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 </>
               )}
 
-              {item.approvalStatus === 'pending' && (
+              {item.approvalStatus === 'na čekanju' && (
                 <TouchableOpacity
                   style={styles.approveButton}
                   onPress={() => {

@@ -55,7 +55,7 @@ export interface Item {
   code: string;
   pdfUrl: string;
   creationDate: string;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
   approvedBy?: {
     _id: string;

@@ -27,8 +27,8 @@ const ItemSchema = new mongoose.Schema(
     },
     approvalStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
+      enum: ['na čekanju', 'odobreno', 'odbijen'],
+      default: 'na čekanju',
       required: true,
     },
     approvalDate: {
@@ -105,7 +105,7 @@ ItemSchema.methods.toJSON = function () {
 
 // Pre-save middleware to enforce approval photo requirement
 ItemSchema.pre('save', function (next) {
-  if (this.approvalStatus === 'approved' && !this.isNew) {
+  if (this.approvalStatus === 'odobreno' && !this.isNew) {
     // Check if this is an update to 'approved' status
     if (this.isModified('approvalStatus') && !this.approvalPhoto.url) {
       const err = new Error(
