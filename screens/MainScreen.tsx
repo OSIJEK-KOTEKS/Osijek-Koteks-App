@@ -252,12 +252,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
             <View style={styles.detailsContainer}>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Code:</Text>
+                <Text style={styles.detailLabel}>Radni Nalog:</Text>
                 <Text style={styles.detailValue}>{item.code}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Created:</Text>
+                <Text style={styles.detailLabel}>Kreiran:</Text>
                 <Text style={styles.detailValue}>{item.creationDate}</Text>
               </View>
 
@@ -350,7 +350,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 onValueChange={itemValue => setSelectedCode(itemValue)}
                 style={styles.picker}
                 dropdownIconColor="#666">
-                <Picker.Item label="Svi Dokumenti" value="all" />
+                <Picker.Item label="Svi Radni Nalozi" value="all" />
                 {availableCodes.map(code => (
                   <Picker.Item key={code} label={code} value={code} />
                 ))}
