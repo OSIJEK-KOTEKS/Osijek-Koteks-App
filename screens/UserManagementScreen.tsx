@@ -255,12 +255,12 @@ export const UserManagementScreen: React.FC = () => {
       animationOut="slideOutDown">
       <View style={styles.modalContent}>
         <Text h4 style={styles.modalTitle}>
-          Select Codes
+          Odabir radnih naloga
         </Text>
         <ScrollView style={styles.codesScrollView}>
           <View style={styles.newCodeContainer}>
             <Input
-              placeholder="Add new code (5 digits)"
+              placeholder="Dodaj novi RN (5 brojeva)"
               value={newCode}
               onChangeText={setNewCode}
               keyboardType="numeric"
@@ -294,7 +294,7 @@ export const UserManagementScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.modalButton, styles.cancelButton]}
             onPress={() => setCodesModalVisible(false)}>
-            <Text style={styles.buttonText}>Cancel</Text>
+            <Text style={styles.buttonText}>Odustani</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalButton, styles.submitButton]}
@@ -302,7 +302,7 @@ export const UserManagementScreen: React.FC = () => {
               setFormData({...formData, codes: selectedCodes});
               setCodesModalVisible(false);
             }}>
-            <Text style={styles.buttonText}>Apply</Text>
+            <Text style={styles.buttonText}>Primjeni</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -316,7 +316,9 @@ export const UserManagementScreen: React.FC = () => {
       style={styles.modalStyle}>
       <View style={styles.modalContent}>
         <Text h4 style={styles.modalTitle}>
-          {modalMode === 'create' ? 'Create New User' : 'Edit User'}
+          {modalMode === 'create'
+            ? 'Kreiraj novog korisnika'
+            : 'Ažuriraj korisnika'}
         </Text>
         <ScrollView>
           <Input
@@ -329,29 +331,29 @@ export const UserManagementScreen: React.FC = () => {
           />
           {modalMode === 'create' && (
             <Input
-              placeholder="Password"
+              placeholder="Lozinka"
               value={formData.password}
               onChangeText={text => setFormData({...formData, password: text})}
               secureTextEntry
             />
           )}
           <Input
-            placeholder="First Name"
+            placeholder="Ime"
             value={formData.firstName}
             onChangeText={text => setFormData({...formData, firstName: text})}
           />
           <Input
-            placeholder="Last Name"
+            placeholder="Prezime"
             value={formData.lastName}
             onChangeText={text => setFormData({...formData, lastName: text})}
           />
           <Input
-            placeholder="Company"
+            placeholder="Firma"
             value={formData.company}
             onChangeText={text => setFormData({...formData, company: text})}
           />
           <View style={styles.pickerContainer}>
-            <Text style={styles.pickerLabel}>Role</Text>
+            <Text style={styles.pickerLabel}>Tip korisnika</Text>
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={formData.role}
@@ -372,10 +374,10 @@ export const UserManagementScreen: React.FC = () => {
               setCodesModalVisible(true);
             }}>
             <Text style={styles.codesButtonText}>
-              Select Codes ({formData.codes.length})
+              Odabir RN ({formData.codes.length})
             </Text>
             <Text style={styles.codesPreview}>
-              {formData.codes.join(', ') || 'No codes selected'}
+              {formData.codes.join(', ') || 'Nije odabran RN'}
             </Text>
           </TouchableOpacity>
 
@@ -383,13 +385,13 @@ export const UserManagementScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.modalButton, styles.cancelButton]}
               onPress={() => setModalVisible(false)}>
-              <Text style={styles.buttonText}>Cancel</Text>
+              <Text style={styles.buttonText}>Odustani</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.submitButton]}
               onPress={handleSubmit}>
               <Text style={styles.buttonText}>
-                {modalMode === 'create' ? 'Create' : 'Update'}
+                {modalMode === 'create' ? 'Kreiraj' : 'Ažuriraj'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -411,10 +413,10 @@ export const UserManagementScreen: React.FC = () => {
         </ListItem.Title>
         <ListItem.Subtitle>{item.email}</ListItem.Subtitle>
         <View style={styles.userDetails}>
-          <Text style={styles.detailText}>Company: {item.company}</Text>
-          <Text style={styles.detailText}>Role: {item.role}</Text>
+          <Text style={styles.detailText}>Firma: {item.company}</Text>
+          <Text style={styles.detailText}>Uloga: {item.role}</Text>
           <Text style={styles.detailText}>
-            Codes: {item.codes.join(', ') || 'None'}
+            Radni nalozi: {item.codes.join(', ') || 'None'}
           </Text>
         </View>
       </ListItem.Content>
@@ -423,13 +425,13 @@ export const UserManagementScreen: React.FC = () => {
           style={[styles.actionButton, styles.editButton]}
           onPress={() => handleEditUser(item)}>
           <MaterialIcons name="edit" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Edit</Text>
+          <Text style={styles.actionButtonText}>Uredi</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, styles.deleteButton]}
           onPress={() => handleDeleteUser(item._id)}>
           <MaterialIcons name="delete" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Delete</Text>
+          <Text style={styles.actionButtonText}>Obriši</Text>
         </TouchableOpacity>
       </View>
     </ListItem>

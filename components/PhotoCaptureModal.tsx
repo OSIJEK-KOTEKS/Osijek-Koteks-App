@@ -133,7 +133,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       style={styles.modal}>
       <View style={styles.container}>
         <Text h4 style={styles.title}>
-          Approve Item
+          Odobri
         </Text>
 
         {!photo ? (
@@ -141,7 +141,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
             <TouchableOpacity
               style={styles.captureButton}
               onPress={handleTakePhoto}>
-              <Text style={styles.captureButtonText}>Take Photo</Text>
+              <Text style={styles.captureButtonText}>Uslikaj kamion</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -149,13 +149,13 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
             <Image source={{uri: photo}} style={styles.preview} />
             <View style={styles.buttonContainer}>
               <Button
-                title="Retake"
+                title="Uslikaj ponovno"
                 onPress={() => setPhoto(null)}
                 type="outline"
                 containerStyle={styles.button}
               />
               <Button
-                title="Confirm & Approve"
+                title="Potvrdi"
                 onPress={handleConfirm}
                 loading={loading}
                 containerStyle={styles.button}

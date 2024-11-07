@@ -71,23 +71,23 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       style={styles.modal}>
       <View style={styles.container}>
         <Text h4 style={styles.title}>
-          Create New Item
+          Kreiraj novi dokument
         </Text>
         <ScrollView>
           <Input
-            placeholder="Title"
+            placeholder="Naziv"
             value={formData.title}
             onChangeText={text => setFormData({...formData, title: text})}
           />
           <Input
-            placeholder="Code (5 digits)"
+            placeholder="RN (5 brojeva)"
             value={formData.code}
             onChangeText={text => setFormData({...formData, code: text})}
             keyboardType="numeric"
             maxLength={5}
           />
           <Input
-            placeholder="PDF URL"
+            placeholder="PDF link"
             value={formData.pdfUrl}
             onChangeText={text => setFormData({...formData, pdfUrl: text})}
             autoCapitalize="none"
@@ -97,14 +97,14 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}>
-              <Text style={styles.buttonText}>Cancel</Text>
+              <Text style={styles.buttonText}>Odustani</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
               disabled={loading}>
               <Text style={styles.buttonText}>
-                {loading ? 'Creating...' : 'Create'}
+                {loading ? 'Kreiram...' : 'Kreiraj'}
               </Text>
             </TouchableOpacity>
           </View>
