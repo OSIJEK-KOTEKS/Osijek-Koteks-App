@@ -12,11 +12,11 @@ import {
 import {Text, Button, Divider, Image} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList} from '../types';
+import {RootStackParamList, AdminTabParamList, LocationData} from '../types';
 import {apiService, Item, User} from '../utils/api';
 import {AuthContext} from '../AuthContext';
 import CustomAvatar from '../components/CustomAvatar';
-import PhotoCaptureModal from '../components/PhotoCaptureModal';
+import PhotoCaptureModal from '../components/PhotoCaptureModal'; // Make sure the path is correct
 import {CreateItemModal} from '../components/CreateItemModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -159,7 +159,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
   // Approval Handler
   const handleApproveItem = useCallback(
-    async (photoUri: string) => {
+    async (photoUri: string, locationData: LocationData) => {
       if (!selectedItemId) return;
 
       try {
@@ -167,6 +167,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           selectedItemId,
           'odobreno',
           photoUri,
+          locationData,
         );
         await fetchData();
         Alert.alert('Success', 'Item approved successfully');

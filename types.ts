@@ -67,4 +67,24 @@ export interface Item {
     uploadDate: string | null;
     mimeType: string | null;
   } | null;
+  approvalLocation?: {
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+    accuracy: number;
+    timestamp: Date;
+  };
+}
+export interface LocationData {
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  accuracy: number;
+  timestamp: Date;
+}
+export interface PhotoCaptureResult {
+  uri: string;
+  location: LocationData;
 }

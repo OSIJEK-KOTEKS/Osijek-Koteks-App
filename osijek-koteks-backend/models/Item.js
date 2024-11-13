@@ -55,6 +55,26 @@ const ItemSchema = new mongoose.Schema(
         enum: [null, 'image/jpeg', 'image/png', 'image/heic'],
       },
     },
+    approvalLocation: {
+      coordinates: {
+        latitude: {
+          type: Number,
+          default: null,
+        },
+        longitude: {
+          type: Number,
+          default: null,
+        },
+      },
+      accuracy: {
+        type: Number,
+        default: null,
+      },
+      timestamp: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
@@ -107,11 +127,20 @@ ItemSchema.methods.toJSON = function () {
 ItemSchema.pre('save', function (next) {
   if (this.approvalStatus === 'odobreno' && !this.isNew) {
     // Check if this is an update to 'approved' status
-    if (this.isModified('approvalStatus') && !this.approvalPhoto.url) {
-      const err = new Error(
-        'Approval photo is required when approving an item',
-      );
-      return next(err);
+    if (this.isModified('approvalStatus')) {
+      if (!this.approvalPhoto.url) {
+        const err = new Error(
+          'Approval photo is required when approving an item',
+        );
+        return next(err);
+      }
+      if (
+        !this.approvalLocation.coordinates.latitude ||
+        !this.approvalLocation.coordinates.longitude
+      ) {
+        const err = new Error('Location is required when approving an item');
+        return next(err);
+      }
     }
   }
   next();

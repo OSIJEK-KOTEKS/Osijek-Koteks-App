@@ -323,6 +323,14 @@ export const apiService = {
     id: string,
     approvalStatus: Item['approvalStatus'],
     photoUri?: string,
+    locationData?: {
+      coordinates: {
+        latitude: number;
+        longitude: number;
+      };
+      accuracy: number;
+      timestamp: Date;
+    },
   ): Promise<Item> => {
     try {
       const formData = new FormData();
@@ -338,10 +346,22 @@ export const apiService = {
         } as any); // Type assertion needed for React Native FormData
       }
 
+      if (locationData) {
+        formData.append('locationData', JSON.stringify(locationData));
+      }
+
       console.log('Sending approval request:', {
         id,
         approvalStatus,
         hasPhoto: !!photoUri,
+        hasLocation: !!locationData,
+        location: locationData
+          ? {
+              lat: locationData.coordinates.latitude,
+              lng: locationData.coordinates.longitude,
+              accuracy: locationData.accuracy,
+            }
+          : null,
       });
 
       const response = await api.patch<Item>(
