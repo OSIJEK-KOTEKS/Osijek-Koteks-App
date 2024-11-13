@@ -11,7 +11,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import {Button, Text} from '@rneui/themed'; // Change this import
+import {Button, Text} from '@rneui/themed';
 import Modal from 'react-native-modal';
 import {
   launchCamera,
@@ -21,9 +21,11 @@ import {
 import Geolocation from '@react-native-community/geolocation';
 import {LocationData} from '../types';
 
-const LOCATION_TIMEOUT = 30000; // 30 seconds
-const LOCATION_UPDATE_INTERVAL = 1000; // 1 second
-const REQUIRED_ACCURACY = 150; // 150 meters
+// Optimized constants
+const LOCATION_TIMEOUT = 15000; // Reduced from 30000 to 15000
+const QUICK_LOCATION_TIMEOUT = 5000; // New constant for quick initial position
+const LOCATION_UPDATE_INTERVAL = 1000;
+const REQUIRED_ACCURACY = 200; // Increased from 150 to 200 meters
 const MAX_RETRIES = 2;
 
 interface PhotoCaptureModalProps {
@@ -45,29 +47,26 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
   >('idle');
   const [retryCount, setRetryCount] = useState(0);
   const [accuracyReading, setAccuracyReading] = useState<number | null>(null);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
 
   const clearLocationWatchers = () => {
-    if (timeoutId) clearTimeout(timeoutId);
-    if (watchId !== null) Geolocation.clearWatch(watchId);
-    setTimeoutId(null);
-    setWatchId(null);
+    if (watchId !== null) {
+      Geolocation.clearWatch(watchId);
+      setWatchId(null);
+    }
   };
 
   const ensureLocationPermission = async (): Promise<boolean> => {
     if (Platform.OS === 'ios') {
       try {
         return new Promise<boolean>(resolve => {
-          const handleAuthorization = () => {
+          Geolocation.requestAuthorization(() => {
             Geolocation.getCurrentPosition(
               () => resolve(true),
               () => resolve(false),
-              {timeout: 5000},
+              {timeout: QUICK_LOCATION_TIMEOUT},
             );
-          };
-
-          Geolocation.requestAuthorization(handleAuthorization);
+          });
         });
       } catch (error) {
         console.error('iOS location permission error:', error);
@@ -96,14 +95,12 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
   const getAccurateLocation = (): Promise<LocationData> => {
     return new Promise((resolve, reject) => {
       let bestLocation: LocationData | null = null;
-      let initialLocationReceived = false;
+      let hasInitialLocation = false;
 
-      clearLocationWatchers();
-
-      // First, try to get a quick initial position
+      // First, try to get a quick position with lower accuracy
       Geolocation.getCurrentPosition(
         position => {
-          initialLocationReceived = true;
+          hasInitialLocation = true;
           const locationData: LocationData = {
             coordinates: {
               latitude: position.coords.latitude,
@@ -114,32 +111,25 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           };
           bestLocation = locationData;
           setAccuracyReading(locationData.accuracy);
-          console.log('Got initial location:', locationData);
+
+          // If accuracy is already good enough, resolve immediately
+          if (locationData.accuracy <= REQUIRED_ACCURACY) {
+            resolve(locationData);
+            return;
+          }
         },
         error => {
-          console.log('Initial position error:', error);
+          console.log('Quick position error:', error);
         },
         {
           enableHighAccuracy: false,
-          timeout: 10000,
+          timeout: QUICK_LOCATION_TIMEOUT,
           maximumAge: 10000,
         },
       );
 
-      const newTimeoutId = setTimeout(() => {
-        clearLocationWatchers();
-        if (bestLocation) {
-          console.log('Using best available location:', bestLocation);
-          resolve(bestLocation);
-        } else if (!initialLocationReceived) {
-          console.log('Location timeout - no location received');
-          reject(new Error('Location timeout'));
-        }
-      }, LOCATION_TIMEOUT);
-
-      setTimeoutId(newTimeoutId);
-
-      const newWatchId = Geolocation.watchPosition(
+      // Start watching for better accuracy after quick position
+      const watchId = Geolocation.watchPosition(
         position => {
           const locationData: LocationData = {
             coordinates: {
@@ -151,34 +141,44 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           };
 
           setAccuracyReading(locationData.accuracy);
-          console.log('Location update:', locationData);
 
           if (!bestLocation || locationData.accuracy < bestLocation.accuracy) {
             bestLocation = locationData;
+          }
 
-            if (locationData.accuracy <= REQUIRED_ACCURACY) {
-              clearLocationWatchers();
-              resolve(locationData);
-            }
+          if (locationData.accuracy <= REQUIRED_ACCURACY) {
+            Geolocation.clearWatch(watchId);
+            resolve(locationData);
           }
         },
         error => {
           console.error('Watch position error:', error);
-          if (!bestLocation && !initialLocationReceived) {
-            clearLocationWatchers();
+          if (bestLocation) {
+            resolve(bestLocation);
+          } else if (!hasInitialLocation) {
             reject(error);
           }
         },
         {
           enableHighAccuracy: true,
-          timeout: LOCATION_TIMEOUT,
-          maximumAge: 1000,
+          timeout: LOCATION_TIMEOUT - QUICK_LOCATION_TIMEOUT,
+          maximumAge: 0,
           distanceFilter: 0,
           interval: LOCATION_UPDATE_INTERVAL,
         },
       );
 
-      setWatchId(newWatchId);
+      setWatchId(watchId);
+
+      // Set timeout to resolve with best available location
+      setTimeout(() => {
+        Geolocation.clearWatch(watchId);
+        if (bestLocation) {
+          resolve(bestLocation);
+        } else {
+          reject(new Error('Location timeout'));
+        }
+      }, LOCATION_TIMEOUT);
     });
   };
 
@@ -421,6 +421,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
     </Modal>
   );
 };
+
 const styles = StyleSheet.create({
   modal: {
     margin: 0,
