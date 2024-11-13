@@ -274,11 +274,41 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
         presentationStyle: 'fullScreen',
       };
 
+      // Launch camera without checking permissions - the library handles this internally
       const response = await launchCamera(options);
 
+      if (response.errorCode === 'camera_unavailable') {
+        Alert.alert(
+          'Kamera nije dostupna',
+          'Molimo provjerite postavke kamere i pokušajte ponovno.',
+        );
+        return;
+      }
+
+      if (response.errorCode === 'permission') {
+        Alert.alert(
+          'Potrebna dozvola',
+          'Za fotografiranje je potrebna dozvola za pristup kameri. Molimo omogućite pristup kameri u postavkama.',
+          [
+            {
+              text: 'Odustani',
+              style: 'cancel',
+            },
+            {
+              text: 'Otvori postavke',
+              onPress: () => Linking.openSettings(),
+            },
+          ],
+        );
+        return;
+      }
+
       if (response.didCancel) return;
-      if (response.errorCode)
+
+      if (response.errorCode) {
         throw new Error(response.errorMessage || 'Failed to take photo');
+      }
+
       if (response.assets?.[0]?.uri) {
         setPhoto(response.assets[0].uri);
       }
@@ -286,11 +316,10 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       console.error('Camera error:', error);
       Alert.alert(
         'Greška',
-        'Greška pri fotografiranju. Molimo pokušajte ponovno.',
+        'Došlo je do greške prilikom fotografiranja. Molimo pokušajte ponovno.',
       );
     }
   };
-
   const handleConfirm = async () => {
     if (!photo || !location) {
       Alert.alert('Greška', 'Potrebna je i fotografija i lokacija');
