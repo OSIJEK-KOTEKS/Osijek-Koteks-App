@@ -7,6 +7,9 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
+  Share,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {Text, Input, ListItem, CheckBox} from 'react-native-elements';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -28,12 +31,33 @@ interface UserFormData {
   isVerified?: boolean;
 }
 
+interface DataExportFormat {
+  personalData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    company: string;
+    role: string;
+  };
+  activityData: {
+    lastLogin?: string;
+    documentsProcessed?: number;
+    lastActivity?: string;
+  };
+  accessHistory: Array<{
+    date: string;
+    action: string;
+    details: string;
+  }>;
+}
+
 export const UserManagementScreen: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
   const [isCodesModalVisible, setCodesModalVisible] = useState(false);
+  const [isPrivacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
@@ -67,7 +91,7 @@ export const UserManagementScreen: React.FC = () => {
       setAvailableCodes(uniqueCodes);
     } catch (error) {
       console.error('Error fetching codes:', error);
-      Alert.alert('Error', 'Failed to fetch available codes');
+      Alert.alert('Greška', 'Greška pri dohvaćanju kodova');
     }
   };
 
@@ -78,10 +102,92 @@ export const UserManagementScreen: React.FC = () => {
       setUsers(fetchedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
-      Alert.alert('Error', 'Failed to fetch users');
+      Alert.alert('Greška', 'Greška pri dohvaćanju korisnika');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDataExport = async (user: User) => {
+    try {
+      // Format user data according to GDPR requirements
+      const exportData: DataExportFormat = {
+        personalData: {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          company: user.company,
+          role: user.role,
+        },
+        activityData: {
+          // Add relevant activity data
+          lastLogin: new Date().toISOString(), // Replace with actual last login
+          documentsProcessed: 0, // Replace with actual count
+          lastActivity: new Date().toISOString(), // Replace with actual last activity
+        },
+        accessHistory: [
+          // Add relevant access history
+          {
+            date: new Date().toISOString(),
+            action: 'Data Export',
+            details: 'User requested data export',
+          },
+        ],
+      };
+
+      const exportString = JSON.stringify(exportData, null, 2);
+
+      try {
+        await Share.share({
+          message: exportString,
+          title: `Korisnički podaci - ${user.firstName} ${user.lastName}`,
+        });
+      } catch (error) {
+        console.error('Error sharing data:', error);
+        Alert.alert('Greška', 'Nije moguće podijeliti podatke');
+      }
+    } catch (error) {
+      console.error('Error exporting user data:', error);
+      Alert.alert('Greška', 'Greška pri izvozu podataka');
+    }
+  };
+
+  const handleDataDeletion = async (userId: string) => {
+    Alert.alert(
+      'Brisanje podataka',
+      'Ova akcija će trajno izbrisati sve korisničke podatke i ne može se poništiti. Želite li nastaviti?',
+      [
+        {
+          text: 'Odustani',
+          style: 'cancel',
+        },
+        {
+          text: 'Izbriši',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deleteUser(userId);
+              await fetchUsers(); // Refresh the list
+              Alert.alert(
+                'Uspjeh',
+                'Korisnički podaci su uspješno i trajno izbrisani.',
+              );
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              Alert.alert(
+                'Greška',
+                'Došlo je do greške prilikom brisanja podataka',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const showPrivacySettings = (user: User) => {
+    setSelectedUser(user);
+    setPrivacyModalVisible(true);
   };
 
   const onRefresh = async () => {
@@ -174,19 +280,19 @@ export const UserManagementScreen: React.FC = () => {
 
   const validateForm = () => {
     if (!formData.email?.trim()) {
-      Alert.alert('Error', 'Email is required');
+      Alert.alert('Greška', 'Email je obavezan');
       return false;
     }
     if (modalMode === 'create' && !formData.password?.trim()) {
-      Alert.alert('Error', 'Password is required for new users');
+      Alert.alert('Greška', 'Lozinka je obavezna za nove korisnike');
       return false;
     }
     if (!formData.firstName?.trim() || !formData.lastName?.trim()) {
-      Alert.alert('Error', 'First name and last name are required');
+      Alert.alert('Greška', 'Ime i prezime su obavezni');
       return false;
     }
     if (!formData.company?.trim()) {
-      Alert.alert('Error', 'Company is required');
+      Alert.alert('Greška', 'Firma je obavezna');
       return false;
     }
     return true;
@@ -198,14 +304,9 @@ export const UserManagementScreen: React.FC = () => {
     try {
       if (modalMode === 'create') {
         if (!formData.password) {
-          Alert.alert('Error', 'Password is required for new users');
+          Alert.alert('Greška', 'Lozinka je obavezna za nove korisnike');
           return;
         }
-
-        console.log('Creating new user:', {
-          ...formData,
-          password: '[REDACTED]',
-        });
 
         const registrationData: RegistrationData = {
           email: formData.email,
@@ -217,10 +318,7 @@ export const UserManagementScreen: React.FC = () => {
           codes: formData.codes,
         };
 
-        // Use createUser instead of register to maintain admin session
         await apiService.createUser(registrationData);
-
-        console.log('User created successfully');
       } else if (selectedUser?._id) {
         const {password, _id, ...updateData} = formData;
         await apiService.updateUser(selectedUser._id, updateData);
@@ -229,12 +327,12 @@ export const UserManagementScreen: React.FC = () => {
       setModalVisible(false);
       await fetchUsers();
       Alert.alert(
-        'Success',
-        `User ${modalMode === 'create' ? 'created' : 'updated'} successfully`,
+        'Uspjeh',
+        `Korisnik uspješno ${modalMode === 'create' ? 'kreiran' : 'ažuriran'}`,
       );
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error submitting user:', error);
-      let errorMessage = 'An error occurred while saving the user.';
+      let errorMessage = 'Došlo je do greške prilikom spremanja korisnika.';
 
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -242,7 +340,7 @@ export const UserManagementScreen: React.FC = () => {
         errorMessage = error.message;
       }
 
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Greška', errorMessage);
     }
   };
 
@@ -309,11 +407,106 @@ export const UserManagementScreen: React.FC = () => {
     </Modal>
   );
 
+  const renderUserPrivacyModal = () => (
+    <Modal
+      isVisible={isPrivacyModalVisible}
+      onBackdropPress={() => setPrivacyModalVisible(false)}
+      style={styles.modal}>
+      <View style={styles.modalContent}>
+        <Text h4 style={styles.modalTitle}>
+          Postavke privatnosti
+        </Text>
+        <ScrollView>
+          <Text style={styles.privacyHeader}>
+            Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
+            {selectedUser?.lastName}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.privacyButton}
+            onPress={() => selectedUser && handleDataExport(selectedUser)}>
+            <MaterialIcons name="download" size={24} color="#2196F3" />
+            <Text style={styles.privacyButtonText}>Izvezi sve podatke</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.privacyButton, styles.deleteButton]}
+            onPress={() =>
+              selectedUser && handleDataDeletion(selectedUser._id)
+            }>
+            <MaterialIcons name="delete-forever" size={24} color="#f44336" />
+            <Text style={[styles.privacyButtonText, styles.deleteText]}>
+              Izbriši sve podatke
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.privacyInfo}>
+            <Text style={styles.privacyInfoHeader}>Informacije o pravima:</Text>
+            <Text style={styles.privacyInfoText}>
+              • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
+              {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
+              podataka
+              {'\n'}• Pravo na ograničenje obrade
+            </Text>
+          </View>
+        </ScrollView>
+
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => setPrivacyModalVisible(false)}>
+          <Text style={styles.closeButtonText}>Zatvori</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+
+  const renderItem = ({item}: {item: User}) => (
+    <ListItem bottomDivider>
+      <CustomAvatar
+        firstName={item.firstName}
+        lastName={item.lastName}
+        size={40}
+      />
+      <ListItem.Content>
+        <ListItem.Title style={styles.userName}>
+          {item.firstName} {item.lastName}
+        </ListItem.Title>
+        <ListItem.Subtitle>{item.email}</ListItem.Subtitle>
+        <View style={styles.userDetails}>
+          <Text style={styles.detailText}>Firma: {item.company}</Text>
+          <Text style={styles.detailText}>Uloga: {item.role}</Text>
+          <Text style={styles.detailText}>
+            Radni nalozi: {item.codes.join(', ') || 'Nema'}
+          </Text>
+        </View>
+      </ListItem.Content>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.privacyButton]}
+          onPress={() => showPrivacySettings(item)}>
+          <MaterialIcons name="security" size={20} color="white" />
+          <Text style={styles.actionButtonText}>Privatnost</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.editButton]}
+          onPress={() => handleEditUser(item)}>
+          <MaterialIcons name="edit" size={20} color="white" />
+          <Text style={styles.actionButtonText}>Uredi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => handleDeleteUser(item._id)}>
+          <MaterialIcons name="delete" size={20} color="white" />
+          <Text style={styles.actionButtonText}>Obriši</Text>
+        </TouchableOpacity>
+      </View>
+    </ListItem>
+  );
   const renderUserModal = () => (
     <Modal
       isVisible={isModalVisible}
       onBackdropPress={() => setModalVisible(false)}
-      style={styles.modalStyle}>
+      style={styles.modal}>
       <View style={styles.modalContent}>
         <Text h4 style={styles.modalTitle}>
           {modalMode === 'create'
@@ -360,8 +553,8 @@ export const UserManagementScreen: React.FC = () => {
                 onValueChange={(value: User['role']) =>
                   setFormData({...formData, role: value})
                 }>
-                <Picker.Item label="User" value="user" />
-                <Picker.Item label="Admin" value="admin" />
+                <Picker.Item label="Korisnik" value="user" />
+                <Picker.Item label="Administrator" value="admin" />
                 <Picker.Item label="Bot" value="bot" />
               </Picker>
             </View>
@@ -370,7 +563,6 @@ export const UserManagementScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.codesButton}
             onPress={() => {
-              console.log('Opening codes modal');
               setCodesModalVisible(true);
             }}>
             <Text style={styles.codesButtonText}>
@@ -399,49 +591,12 @@ export const UserManagementScreen: React.FC = () => {
       </View>
     </Modal>
   );
-
-  const renderItem = ({item}: {item: User}) => (
-    <ListItem bottomDivider>
-      <CustomAvatar
-        firstName={item.firstName}
-        lastName={item.lastName}
-        size={40}
-      />
-      <ListItem.Content>
-        <ListItem.Title style={styles.userName}>
-          {item.firstName} {item.lastName}
-        </ListItem.Title>
-        <ListItem.Subtitle>{item.email}</ListItem.Subtitle>
-        <View style={styles.userDetails}>
-          <Text style={styles.detailText}>Firma: {item.company}</Text>
-          <Text style={styles.detailText}>Uloga: {item.role}</Text>
-          <Text style={styles.detailText}>
-            Radni nalozi: {item.codes.join(', ') || 'None'}
-          </Text>
-        </View>
-      </ListItem.Content>
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => handleEditUser(item)}>
-          <MaterialIcons name="edit" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Uredi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteUser(item._id)}>
-          <MaterialIcons name="delete" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Obriši</Text>
-        </TouchableOpacity>
-      </View>
-    </ListItem>
-  );
-
   return (
     <View style={styles.container}>
       {loading && !refreshing ? (
         <View style={styles.centerContent}>
-          <Text>Loading users...</Text>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text>Učitavanje korisnika...</Text>
         </View>
       ) : (
         <>
@@ -454,7 +609,7 @@ export const UserManagementScreen: React.FC = () => {
             }
             ListEmptyComponent={
               <View style={styles.centerContent}>
-                <Text>No users found</Text>
+                <Text>Nema pronađenih korisnika</Text>
               </View>
             }
           />
@@ -465,6 +620,7 @@ export const UserManagementScreen: React.FC = () => {
       )}
       {renderUserModal()}
       {renderCodesModal()}
+      {renderUserPrivacyModal()}
     </View>
   );
 };
@@ -473,6 +629,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  modal: {
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: 10,
+    padding: 20,
   },
   centerContent: {
     flex: 1,
@@ -517,13 +685,6 @@ const styles = StyleSheet.create({
     margin: 0,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    width: '90%',
-    maxHeight: '80%',
-    borderRadius: 10,
-    padding: 20,
   },
   modalTitle: {
     textAlign: 'center',
@@ -616,6 +777,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  privacyButton: {
+    backgroundColor: '#e3f2fd',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 5,
+  },
+  privacyButtonText: {
+    color: '#2196F3',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  deleteText: {
+    color: '#f44336',
+  },
+  privacyInfo: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+  },
+  privacyInfoHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  privacyInfoText: {
+    fontSize: 14,
+    lineHeight: 24,
+    color: '#666',
+  },
+  privacyHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  closeButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  closeButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  noCodesText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+  },
   codesList: {
     marginTop: 10,
   },
@@ -634,11 +850,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#333',
-  },
-  noCodesText: {
-    textAlign: 'center',
-    color: '#666',
-    marginTop: 10,
   },
   addCodeButton: {
     backgroundColor: '#e0e0e0',
