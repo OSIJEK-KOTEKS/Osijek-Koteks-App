@@ -128,12 +128,7 @@ router.patch(
   upload.single('photo'),
   async (req, res) => {
     try {
-      // Remove the admin-only check
-      // if (req.user.role !== 'admin') {
-      //   return res.status(403).json({message: 'Access denied. Admin only.'});
-      // }
-
-      const {approvalStatus} = req.body;
+      const {approvalStatus, locationData} = req.body;
 
       if (
         !approvalStatus ||
@@ -155,11 +150,32 @@ router.patch(
             .json({message: 'Photo is required for approval'});
         }
 
+        // Parse location data from the form
+        let parsedLocationData;
+        try {
+          parsedLocationData = JSON.parse(locationData);
+        } catch (error) {
+          return res.status(400).json({
+            message: 'Invalid location data format',
+            error: error.message,
+          });
+        }
+
         // Update approval photo info
         item.approvalPhoto = {
-          url: `/${req.file.path.replace(/\\/g, '/')}`, // Convert Windows path to URL format
+          url: `/${req.file.path.replace(/\\/g, '/')}`,
           uploadDate: new Date(),
           mimeType: req.file.mimetype,
+        };
+
+        // Update location data
+        item.approvalLocation = {
+          coordinates: {
+            latitude: parsedLocationData.coordinates.latitude,
+            longitude: parsedLocationData.coordinates.longitude,
+          },
+          accuracy: parsedLocationData.accuracy,
+          timestamp: new Date(parsedLocationData.timestamp),
         };
       }
 
@@ -176,7 +192,16 @@ router.patch(
           uploadDate: null,
           mimeType: null,
         };
+        item.approvalLocation = {
+          coordinates: {
+            latitude: null,
+            longitude: null,
+          },
+          accuracy: null,
+          timestamp: null,
+        };
       }
+
       const updatedItem = await item.save();
       await updatedItem.populate('approvedBy', 'firstName lastName');
 
