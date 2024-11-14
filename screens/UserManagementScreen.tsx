@@ -1,7 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {
   View,
-  StyleSheet,
   FlatList,
   RefreshControl,
   Alert,
@@ -10,6 +9,7 @@ import {
   Share,
   Platform,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import {Text, Input, ListItem, CheckBox} from 'react-native-elements';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -18,6 +18,7 @@ import {Picker} from '@react-native-picker/picker';
 import axios from 'axios';
 import {apiService, User, RegistrationData} from '../utils/api';
 import CustomAvatar from '../components/CustomAvatar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserFormData {
   _id?: string;
@@ -54,6 +55,7 @@ interface DataExportFormat {
 export const UserManagementScreen: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
   const [isCodesModalVisible, setCodesModalVisible] = useState(false);
@@ -77,123 +79,52 @@ export const UserManagementScreen: React.FC = () => {
 
   const [formData, setFormData] = useState<UserFormData>(initialUserState);
 
-  useEffect(() => {
-    fetchUsers();
-    fetchAllCodes();
-  }, []);
-
-  const fetchAllCodes = async () => {
-    try {
-      const users = await apiService.getUsers();
-      const uniqueCodes = Array.from(
-        new Set(users.flatMap(user => user.codes)),
-      ).sort();
-      setAvailableCodes(uniqueCodes);
-    } catch (error) {
-      console.error('Error fetching codes:', error);
-      Alert.alert('Greška', 'Greška pri dohvaćanju kodova');
-    }
-  };
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem('userToken');
+      console.log('Auth token available:', !!token);
+
       const fetchedUsers = await apiService.getUsers();
+      console.log('Fetched users count:', fetchedUsers.length);
       setUsers(fetchedUsers);
+
+      // Update available codes
+      const uniqueCodes = Array.from(
+        new Set(fetchedUsers.flatMap(user => user.codes)),
+      ).sort();
+      setAvailableCodes(uniqueCodes);
     } catch (error) {
       console.error('Error fetching users:', error);
-      Alert.alert('Greška', 'Greška pri dohvaćanju korisnika');
+      let errorMessage = 'Došlo je do greške pri dohvaćanju korisnika.';
+
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+
+        if (error.response?.status === 403) {
+          errorMessage = 'Nemate ovlasti za pregled korisnika.';
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Niste prijavljeni. Molimo prijavite se ponovno.';
+        }
+      }
+
+      setError(errorMessage);
+      Alert.alert('Greška', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDataExport = async (user: User) => {
-    try {
-      // Format user data according to GDPR requirements
-      const exportData: DataExportFormat = {
-        personalData: {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          company: user.company,
-          role: user.role,
-        },
-        activityData: {
-          // Add relevant activity data
-          lastLogin: new Date().toISOString(), // Replace with actual last login
-          documentsProcessed: 0, // Replace with actual count
-          lastActivity: new Date().toISOString(), // Replace with actual last activity
-        },
-        accessHistory: [
-          // Add relevant access history
-          {
-            date: new Date().toISOString(),
-            action: 'Data Export',
-            details: 'User requested data export',
-          },
-        ],
-      };
-
-      const exportString = JSON.stringify(exportData, null, 2);
-
-      try {
-        await Share.share({
-          message: exportString,
-          title: `Korisnički podaci - ${user.firstName} ${user.lastName}`,
-        });
-      } catch (error) {
-        console.error('Error sharing data:', error);
-        Alert.alert('Greška', 'Nije moguće podijeliti podatke');
-      }
-    } catch (error) {
-      console.error('Error exporting user data:', error);
-      Alert.alert('Greška', 'Greška pri izvozu podataka');
-    }
-  };
-
-  const handleDataDeletion = async (userId: string) => {
-    Alert.alert(
-      'Brisanje podataka',
-      'Ova akcija će trajno izbrisati sve korisničke podatke i ne može se poništiti. Želite li nastaviti?',
-      [
-        {
-          text: 'Odustani',
-          style: 'cancel',
-        },
-        {
-          text: 'Izbriši',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.deleteUser(userId);
-              await fetchUsers(); // Refresh the list
-              Alert.alert(
-                'Uspjeh',
-                'Korisnički podaci su uspješno i trajno izbrisani.',
-              );
-            } catch (error) {
-              console.error('Error deleting user:', error);
-              Alert.alert(
-                'Greška',
-                'Došlo je do greške prilikom brisanja podataka',
-              );
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const showPrivacySettings = (user: User) => {
-    setSelectedUser(user);
-    setPrivacyModalVisible(true);
-  };
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUsers();
-    await fetchAllCodes();
     setRefreshing(false);
   };
 
@@ -224,24 +155,21 @@ export const UserManagementScreen: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this user?',
+      'Potvrda brisanja',
+      'Jeste li sigurni da želite izbrisati ovog korisnika?',
       [
+        {text: 'Odustani', style: 'cancel'},
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
+          text: 'Izbriši',
           style: 'destructive',
           onPress: async () => {
             try {
               await apiService.deleteUser(userId);
               await fetchUsers();
-              Alert.alert('Success', 'User deleted successfully');
+              Alert.alert('Uspjeh', 'Korisnik uspješno izbrisan');
             } catch (error) {
               console.error('Error deleting user:', error);
-              Alert.alert('Error', 'Failed to delete user');
+              Alert.alert('Greška', 'Greška pri brisanju korisnika');
             }
           },
         },
@@ -251,12 +179,12 @@ export const UserManagementScreen: React.FC = () => {
 
   const handleAddNewCode = () => {
     if (!/^\d{5}$/.test(newCode)) {
-      Alert.alert('Invalid Code', 'Code must be exactly 5 digits');
+      Alert.alert('Neispravan kod', 'Kod mora sadržavati točno 5 znamenki');
       return;
     }
 
     if (selectedCodes.includes(newCode)) {
-      Alert.alert('Duplicate Code', 'This code is already selected');
+      Alert.alert('Duplikat', 'Ovaj kod je već odabran');
       return;
     }
 
@@ -303,14 +231,9 @@ export const UserManagementScreen: React.FC = () => {
 
     try {
       if (modalMode === 'create') {
-        if (!formData.password) {
-          Alert.alert('Greška', 'Lozinka je obavezna za nove korisnike');
-          return;
-        }
-
         const registrationData: RegistrationData = {
           email: formData.email,
-          password: formData.password,
+          password: formData.password!,
           firstName: formData.firstName,
           lastName: formData.lastName,
           company: formData.company,
@@ -344,121 +267,68 @@ export const UserManagementScreen: React.FC = () => {
     }
   };
 
-  const renderCodesModal = () => (
-    <Modal
-      isVisible={isCodesModalVisible}
-      onBackdropPress={() => setCodesModalVisible(false)}
-      style={styles.modalStyle}
-      animationIn="slideInUp"
-      animationOut="slideOutDown">
-      <View style={styles.modalContent}>
-        <Text h4 style={styles.modalTitle}>
-          Odabir radnih naloga
-        </Text>
-        <ScrollView style={styles.codesScrollView}>
-          <View style={styles.newCodeContainer}>
-            <Input
-              placeholder="Dodaj novi RN (5 brojeva)"
-              value={newCode}
-              onChangeText={setNewCode}
-              keyboardType="numeric"
-              maxLength={5}
-              rightIcon={
-                <TouchableOpacity onPress={handleAddNewCode}>
-                  <MaterialIcons name="add" size={24} color="#2196F3" />
-                </TouchableOpacity>
-              }
-            />
-          </View>
+  const handleDataExport = async (user: User) => {
+    try {
+      const exportData: DataExportFormat = {
+        personalData: {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          company: user.company,
+          role: user.role,
+        },
+        activityData: {
+          lastLogin: new Date().toISOString(),
+          documentsProcessed: 0,
+          lastActivity: new Date().toISOString(),
+        },
+        accessHistory: [
+          {
+            date: new Date().toISOString(),
+            action: 'Data Export',
+            details: 'User requested data export',
+          },
+        ],
+      };
 
-          {[...new Set([...availableCodes, ...selectedCodes])]
-            .sort()
-            .map(code => (
-              <CheckBox
-                key={code}
-                title={code}
-                checked={selectedCodes.includes(code)}
-                onPress={() => toggleCodeSelection(code)}
-                containerStyle={styles.checkboxContainer}
-              />
-            ))}
+      await Share.share({
+        message: JSON.stringify(exportData, null, 2),
+        title: `Korisnički podaci - ${user.firstName} ${user.lastName}`,
+      });
+    } catch (error) {
+      console.error('Error exporting user data:', error);
+      Alert.alert('Greška', 'Greška pri izvozu podataka');
+    }
+  };
 
-          {availableCodes.length === 0 && (
-            <Text style={styles.noCodesText}>No codes available</Text>
-          )}
-        </ScrollView>
+  const handleDataDeletion = async (userId: string) => {
+    Alert.alert(
+      'Brisanje podataka',
+      'Ova akcija će trajno izbrisati sve korisničke podatke. Želite li nastaviti?',
+      [
+        {text: 'Odustani', style: 'cancel'},
+        {
+          text: 'Izbriši',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deleteUser(userId);
+              await fetchUsers();
+              Alert.alert('Uspjeh', 'Korisnički podaci uspješno izbrisani');
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              Alert.alert('Greška', 'Greška pri brisanju podataka');
+            }
+          },
+        },
+      ],
+    );
+  };
 
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            style={[styles.modalButton, styles.cancelButton]}
-            onPress={() => setCodesModalVisible(false)}>
-            <Text style={styles.buttonText}>Odustani</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalButton, styles.submitButton]}
-            onPress={() => {
-              setFormData({...formData, codes: selectedCodes});
-              setCodesModalVisible(false);
-            }}>
-            <Text style={styles.buttonText}>Primjeni</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderUserPrivacyModal = () => (
-    <Modal
-      isVisible={isPrivacyModalVisible}
-      onBackdropPress={() => setPrivacyModalVisible(false)}
-      style={styles.modal}>
-      <View style={styles.modalContent}>
-        <Text h4 style={styles.modalTitle}>
-          Postavke privatnosti
-        </Text>
-        <ScrollView>
-          <Text style={styles.privacyHeader}>
-            Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
-            {selectedUser?.lastName}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.privacyButton}
-            onPress={() => selectedUser && handleDataExport(selectedUser)}>
-            <MaterialIcons name="download" size={24} color="#2196F3" />
-            <Text style={styles.privacyButtonText}>Izvezi sve podatke</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.privacyButton, styles.deleteButton]}
-            onPress={() =>
-              selectedUser && handleDataDeletion(selectedUser._id)
-            }>
-            <MaterialIcons name="delete-forever" size={24} color="#f44336" />
-            <Text style={[styles.privacyButtonText, styles.deleteText]}>
-              Izbriši sve podatke
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.privacyInfo}>
-            <Text style={styles.privacyInfoHeader}>Informacije o pravima:</Text>
-            <Text style={styles.privacyInfoText}>
-              • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
-              {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
-              podataka
-              {'\n'}• Pravo na ograničenje obrade
-            </Text>
-          </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => setPrivacyModalVisible(false)}>
-          <Text style={styles.closeButtonText}>Zatvori</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
-  );
+  const showPrivacySettings = (user: User) => {
+    setSelectedUser(user);
+    setPrivacyModalVisible(true);
+  };
 
   const renderItem = ({item}: {item: User}) => (
     <ListItem bottomDivider>
@@ -468,50 +338,37 @@ export const UserManagementScreen: React.FC = () => {
         size={40}
       />
       <ListItem.Content>
-        <ListItem.Title style={styles.userName}>
+        <ListItem.Title>
           {item.firstName} {item.lastName}
         </ListItem.Title>
         <ListItem.Subtitle>{item.email}</ListItem.Subtitle>
-        <View style={styles.userDetails}>
-          <Text style={styles.detailText}>Firma: {item.company}</Text>
-          <Text style={styles.detailText}>Uloga: {item.role}</Text>
-          <Text style={styles.detailText}>
-            Radni nalozi: {item.codes.join(', ') || 'Nema'}
-          </Text>
+        <View>
+          <Text>Firma: {item.company}</Text>
+          <Text>Uloga: {item.role}</Text>
+          <Text>Radni nalozi: {item.codes.join(', ') || 'Nema'}</Text>
         </View>
       </ListItem.Content>
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.privacyButton]}
-          onPress={() => showPrivacySettings(item)}>
-          <MaterialIcons name="security" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Privatnost</Text>
+      <View>
+        <TouchableOpacity onPress={() => showPrivacySettings(item)}>
+          <MaterialIcons name="security" size={24} color="#2196F3" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => handleEditUser(item)}>
-          <MaterialIcons name="edit" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Uredi</Text>
+        <TouchableOpacity onPress={() => handleEditUser(item)}>
+          <MaterialIcons name="edit" size={24} color="#2196F3" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteUser(item._id)}>
-          <MaterialIcons name="delete" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Obriši</Text>
+        <TouchableOpacity onPress={() => handleDeleteUser(item._id)}>
+          <MaterialIcons name="delete" size={24} color="#f44336" />
         </TouchableOpacity>
       </View>
     </ListItem>
   );
+
   const renderUserModal = () => (
     <Modal
       isVisible={isModalVisible}
-      onBackdropPress={() => setModalVisible(false)}
-      style={styles.modal}>
-      <View style={styles.modalContent}>
-        <Text h4 style={styles.modalTitle}>
-          {modalMode === 'create'
-            ? 'Kreiraj novog korisnika'
-            : 'Ažuriraj korisnika'}
+      onBackdropPress={() => setModalVisible(false)}>
+      <View>
+        <Text h4>
+          {modalMode === 'create' ? 'Kreiraj korisnika' : 'Uredi korisnika'}
         </Text>
         <ScrollView>
           <Input
@@ -519,8 +376,6 @@ export const UserManagementScreen: React.FC = () => {
             value={formData.email}
             onChangeText={text => setFormData({...formData, email: text})}
             disabled={modalMode === 'edit'}
-            autoCapitalize="none"
-            keyboardType="email-address"
           />
           {modalMode === 'create' && (
             <Input
@@ -545,33 +400,292 @@ export const UserManagementScreen: React.FC = () => {
             value={formData.company}
             onChangeText={text => setFormData({...formData, company: text})}
           />
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerLabel}>Tip korisnika</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={formData.role}
-                onValueChange={(value: User['role']) =>
-                  setFormData({...formData, role: value})
-                }>
-                <Picker.Item label="Korisnik" value="user" />
-                <Picker.Item label="Administrator" value="admin" />
-                <Picker.Item label="Bot" value="bot" />
-              </Picker>
-            </View>
+          <View>
+            <Text>Tip korisnika</Text>
+            <Picker
+              selectedValue={formData.role}
+              onValueChange={value =>
+                setFormData({...formData, role: value as User['role']})
+              }>
+              <Picker.Item label="Korisnik" value="user" />
+              <Picker.Item label="Administrator" value="admin" />
+              <Picker.Item label="Bot" value="bot" />
+            </Picker>
           </View>
 
-          <TouchableOpacity
-            style={styles.codesButton}
-            onPress={() => {
-              setCodesModalVisible(true);
-            }}>
-            <Text style={styles.codesButtonText}>
-              Odabir RN ({formData.codes.length})
-            </Text>
-            <Text style={styles.codesPreview}>
-              {formData.codes.join(', ') || 'Nije odabran RN'}
-            </Text>
+          <TouchableOpacity onPress={() => setCodesModalVisible(true)}>
+            <Text>Odabir RN ({formData.codes.length})</Text>
+            <Text>{formData.codes.join(', ') || 'Nije odabran RN'}</Text>
           </TouchableOpacity>
+
+          <View>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Text>Odustani</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSubmit}>
+              <Text>{modalMode === 'create' ? 'Kreiraj' : 'Ažuriraj'}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+
+  const renderCodesModal = () => (
+    <Modal
+      isVisible={isCodesModalVisible}
+      onBackdropPress={() => setCodesModalVisible(false)}>
+      <View>
+        <Text h4>Odabir radnih naloga</Text>
+        <ScrollView>
+          <View>
+            <Input
+              placeholder="Dodaj novi RN (5 brojeva)"
+              value={newCode}
+              onChangeText={setNewCode}
+              keyboardType="numeric"
+              maxLength={5}
+              rightIcon={
+                <TouchableOpacity onPress={handleAddNewCode}>
+                  <MaterialIcons name="add" size={24} color="#2196F3" />
+                </TouchableOpacity>
+              }
+            />
+          </View>
+
+          {[...new Set([...availableCodes, ...selectedCodes])]
+            .sort()
+            .map(code => (
+              <CheckBox
+                key={code}
+                title={code}
+                checked={selectedCodes.includes(code)}
+                onPress={() => toggleCodeSelection(code)}
+              />
+            ))}
+
+          {availableCodes.length === 0 && (
+            <Text>Nema dostupnih radnih naloga</Text>
+          )}
+        </ScrollView>
+
+        <View>
+          <TouchableOpacity onPress={() => setCodesModalVisible(false)}>
+            <Text>Odustani</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setFormData({...formData, codes: selectedCodes});
+              setCodesModalVisible(false);
+            }}>
+            <Text>Primjeni</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderPrivacyModal = () => (
+    <Modal
+      isVisible={isPrivacyModalVisible}
+      onBackdropPress={() => setPrivacyModalVisible(false)}>
+      <View>
+        <Text h4>Postavke privatnosti</Text>
+        <ScrollView>
+          <Text>
+            Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
+            {selectedUser?.lastName}
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => selectedUser && handleDataExport(selectedUser)}>
+            <MaterialIcons name="download" size={24} color="#2196F3" />
+            <Text>Izvezi sve podatke</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() =>
+              selectedUser && handleDataDeletion(selectedUser._id)
+            }>
+            <MaterialIcons name="delete-forever" size={24} color="#f44336" />
+            <Text>Izbriši sve podatke</Text>
+          </TouchableOpacity>
+
+          <View>
+            <Text>Informacije o pravima:</Text>
+            <Text>
+              • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
+              {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
+              podataka{'\n'}• Pravo na ograničenje obrade
+            </Text>
+          </View>
+        </ScrollView>
+
+        <TouchableOpacity onPress={() => setPrivacyModalVisible(false)}>
+          <Text>Zatvori</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+
+  if (loading && !refreshing) {
+    return (
+      <View>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text>Učitavanje korisnika...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View>
+        <MaterialIcons name="error-outline" size={48} color="#f44336" />
+        <Text>{error}</Text>
+        <TouchableOpacity onPress={fetchUsers}>
+          <Text>Pokušaj ponovno</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {loading && !refreshing ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={styles.loadingText}>Učitavanje korisnika...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContent}>
+          <MaterialIcons name="error-outline" size={48} color="#f44336" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchUsers}>
+            <Text style={styles.retryButtonText}>Pokušaj ponovno</Text>
+          </TouchableOpacity>
+        </View>
+      ) : users.length === 0 ? (
+        <View style={styles.centerContent}>
+          <Text style={styles.emptyText}>Nema pronađenih korisnika</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={users}
+          renderItem={renderItem}
+          keyExtractor={item => item._id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
+
+      <TouchableOpacity style={styles.fab} onPress={handleCreateUser}>
+        <MaterialIcons name="add" size={28} color="white" />
+      </TouchableOpacity>
+
+      {/* User Create/Edit Modal */}
+      <Modal
+        isVisible={isModalVisible}
+        onBackdropPress={() => setModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown">
+        <View style={styles.modalContent}>
+          <Text h4 style={styles.modalTitle}>
+            {modalMode === 'create' ? 'Kreiraj korisnika' : 'Uredi korisnika'}
+          </Text>
+          <ScrollView style={styles.modalScrollView}>
+            <Input
+              placeholder="Email"
+              value={formData.email}
+              onChangeText={text => setFormData({...formData, email: text})}
+              disabled={modalMode === 'edit'}
+              containerStyle={styles.inputContainer}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            {modalMode === 'create' && (
+              <Input
+                placeholder="Lozinka"
+                value={formData.password}
+                onChangeText={text =>
+                  setFormData({...formData, password: text})
+                }
+                secureTextEntry
+                containerStyle={styles.inputContainer}
+              />
+            )}
+            <Input
+              placeholder="Ime"
+              value={formData.firstName}
+              onChangeText={text => setFormData({...formData, firstName: text})}
+              containerStyle={styles.inputContainer}
+            />
+            <Input
+              placeholder="Prezime"
+              value={formData.lastName}
+              onChangeText={text => setFormData({...formData, lastName: text})}
+              containerStyle={styles.inputContainer}
+            />
+            <Input
+              placeholder="Firma"
+              value={formData.company}
+              onChangeText={text => setFormData({...formData, company: text})}
+              containerStyle={styles.inputContainer}
+            />
+
+            <View style={styles.pickerContainer}>
+              <Text style={styles.pickerLabel}>Tip korisnika</Text>
+              {Platform.OS === 'ios' ? (
+                <Picker
+                  selectedValue={formData.role}
+                  onValueChange={value =>
+                    setFormData({...formData, role: value as User['role']})
+                  }
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}>
+                  <Picker.Item label="Korisnik" value="user" />
+                  <Picker.Item label="Administrator" value="admin" />
+                  <Picker.Item label="Bot" value="bot" />
+                </Picker>
+              ) : (
+                <View style={styles.androidPickerContainer}>
+                  <Picker
+                    selectedValue={formData.role}
+                    onValueChange={value =>
+                      setFormData({...formData, role: value as User['role']})
+                    }
+                    style={styles.androidPicker}
+                    dropdownIconColor="#2196F3">
+                    <Picker.Item
+                      label="Korisnik"
+                      value="user"
+                      color="#000000"
+                    />
+                    <Picker.Item
+                      label="Administrator"
+                      value="admin"
+                      color="#000000"
+                    />
+                    <Picker.Item label="Bot" value="bot" color="#000000" />
+                  </Picker>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.codesButton}
+              onPress={() => setCodesModalVisible(true)}>
+              <Text style={styles.codesButtonText}>
+                Odabir RN ({formData.codes.length})
+              </Text>
+              <Text style={styles.codesPreview}>
+                {formData.codes.join(', ') || 'Nije odabran RN'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
 
           <View style={styles.modalButtons}>
             <TouchableOpacity
@@ -587,40 +701,126 @@ export const UserManagementScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-  return (
-    <View style={styles.container}>
-      {loading && !refreshing ? (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#2196F3" />
-          <Text>Učitavanje korisnika...</Text>
         </View>
-      ) : (
-        <>
-          <FlatList
-            data={users}
-            renderItem={renderItem}
-            keyExtractor={item => item._id}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            ListEmptyComponent={
-              <View style={styles.centerContent}>
-                <Text>Nema pronađenih korisnika</Text>
-              </View>
-            }
-          />
-          <TouchableOpacity style={styles.fab} onPress={handleCreateUser}>
-            <MaterialIcons name="add" size={24} color="white" />
+      </Modal>
+
+      {/* Codes Selection Modal */}
+      <Modal
+        isVisible={isCodesModalVisible}
+        onBackdropPress={() => setCodesModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown">
+        <View style={styles.modalContent}>
+          <Text h4 style={styles.modalTitle}>
+            Odabir radnih naloga
+          </Text>
+          <View style={styles.newCodeContainer}>
+            <Input
+              placeholder="Dodaj novi RN (5 brojeva)"
+              value={newCode}
+              onChangeText={setNewCode}
+              keyboardType="numeric"
+              maxLength={5}
+              containerStyle={styles.inputContainer}
+              rightIcon={
+                <TouchableOpacity onPress={handleAddNewCode}>
+                  <MaterialIcons name="add" size={24} color="#2196F3" />
+                </TouchableOpacity>
+              }
+            />
+          </View>
+          <ScrollView style={styles.codesScrollView}>
+            {[...new Set([...availableCodes, ...selectedCodes])]
+              .sort()
+              .map(code => (
+                <CheckBox
+                  key={code}
+                  title={code}
+                  checked={selectedCodes.includes(code)}
+                  onPress={() => toggleCodeSelection(code)}
+                  containerStyle={styles.checkboxContainer}
+                  textStyle={styles.checkboxText}
+                />
+              ))}
+            {availableCodes.length === 0 && (
+              <Text style={styles.noCodesText}>
+                Nema dostupnih radnih naloga
+              </Text>
+            )}
+          </ScrollView>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => setCodesModalVisible(false)}>
+              <Text style={styles.buttonText}>Odustani</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.submitButton]}
+              onPress={() => {
+                setFormData({...formData, codes: selectedCodes});
+                setCodesModalVisible(false);
+              }}>
+              <Text style={styles.buttonText}>Primjeni</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Settings Modal */}
+      <Modal
+        isVisible={isPrivacyModalVisible}
+        onBackdropPress={() => setPrivacyModalVisible(false)}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown">
+        <View style={styles.modalContent}>
+          <Text h4 style={styles.modalTitle}>
+            Postavke privatnosti
+          </Text>
+          <Text style={styles.privacyHeader}>
+            Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
+            {selectedUser?.lastName}
+          </Text>
+          <ScrollView style={styles.privacyScrollView}>
+            <TouchableOpacity
+              style={styles.privacyButton}
+              onPress={() => selectedUser && handleDataExport(selectedUser)}>
+              <MaterialIcons name="download" size={24} color="#2196F3" />
+              <Text style={styles.privacyButtonText}>Izvezi sve podatke</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.privacyButton, styles.deleteButton]}
+              onPress={() =>
+                selectedUser && handleDataDeletion(selectedUser._id)
+              }>
+              <MaterialIcons name="delete-forever" size={24} color="#f44336" />
+              <Text style={[styles.privacyButtonText, styles.deleteText]}>
+                Izbriši sve podatke
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.privacyInfo}>
+              <Text style={styles.privacyInfoHeader}>
+                Informacije o pravima:
+              </Text>
+              <Text style={styles.privacyInfoText}>
+                • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
+                {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
+                podataka{'\n'}• Pravo na ograničenje obrade
+              </Text>
+            </View>
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setPrivacyModalVisible(false)}>
+            <Text style={styles.closeButtonText}>Zatvori</Text>
           </TouchableOpacity>
-        </>
-      )}
-      {renderUserModal()}
-      {renderCodesModal()}
-      {renderUserPrivacyModal()}
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -641,81 +841,101 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     borderRadius: 10,
     padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalScrollView: {
+    flexGrow: 0,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#000',
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  userName: {
-    fontWeight: 'bold',
+  emptyText: {
     fontSize: 16,
-  },
-  userDetails: {
-    marginTop: 5,
-  },
-  detailText: {
-    fontSize: 12,
     color: '#666',
-    marginVertical: 1,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
+  listContainer: {
+    paddingBottom: 80, // Space for FAB
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    minWidth: 80,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
-  actionButtonText: {
-    color: 'white',
-    marginLeft: 4,
-    fontSize: 12,
+  errorText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#f44336',
+    textAlign: 'center',
   },
-  editButton: {
+  retryButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     backgroundColor: '#2196F3',
+    borderRadius: 8,
+    elevation: 2,
   },
-  deleteButton: {
-    backgroundColor: '#f44336',
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
-  modalStyle: {
-    margin: 0,
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2196F3',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalTitle: {
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  pickerContainer: {
-    marginBottom: 15,
-    paddingHorizontal: 10,
-  },
-  pickerLabel: {
-    fontSize: 16,
-    color: '#86939e',
-    marginBottom: 5,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 4,
-    backgroundColor: '#f9f9f9',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    zIndex: 1,
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginTop: 20,
-    paddingBottom: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   modalButton: {
+    flex: 1,
     padding: 12,
     borderRadius: 8,
-    minWidth: 120,
+    marginHorizontal: 5,
     alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
   },
   submitButton: {
     backgroundColor: '#2196F3',
@@ -723,40 +943,26 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#666',
   },
+  deleteButton: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ffcdd2',
+    borderWidth: 1,
+  },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+  deleteText: {
+    color: '#f44336',
   },
-  codesScrollView: {
-    maxHeight: 400,
-  },
-  checkboxContainer: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    padding: 8,
-    marginLeft: 0,
-    marginRight: 0,
-  },
-  newCodeContainer: {
+  inputContainer: {
+    paddingHorizontal: 0,
     marginBottom: 15,
-    paddingHorizontal: 10,
+  },
+  picker: {
+    height: 50,
+    backgroundColor: '#f9f9f9',
   },
   codesButton: {
     backgroundColor: '#f5f5f5',
@@ -777,6 +983,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  codesScrollView: {
+    maxHeight: 400,
+  },
+  checkboxContainer: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    margin: 0,
+    padding: 8,
+  },
+  checkboxText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  newCodeContainer: {
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  noCodesText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+  },
+  // Privacy Modal Styles
+  privacyScrollView: {
+    maxHeight: '60%',
+  },
+  privacyHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+  },
   privacyButton: {
     backgroundColor: '#e3f2fd',
     flexDirection: 'row',
@@ -790,9 +1029,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 10,
   },
-  deleteText: {
-    color: '#f44336',
-  },
   privacyInfo: {
     marginTop: 20,
     padding: 15,
@@ -803,65 +1039,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: '#333',
   },
   privacyInfoText: {
     fontSize: 14,
     lineHeight: 24,
     color: '#666',
   },
-  privacyHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
   closeButton: {
     backgroundColor: '#2196F3',
     padding: 15,
     borderRadius: 8,
     marginTop: 20,
+    alignItems: 'center',
   },
   closeButtonText: {
     color: 'white',
-    textAlign: 'center',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  noCodesText: {
-    textAlign: 'center',
-    color: '#666',
-    marginTop: 10,
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  codesList: {
-    marginTop: 10,
-  },
-  codeItem: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    padding: 8,
+    borderRadius: 8,
+    minWidth: 80,
   },
-  selectedCode: {
-    backgroundColor: '#e3f2fd',
+  actionButtonText: {
+    color: 'white',
+    marginLeft: 4,
+    fontSize: 12,
   },
-  codeText: {
-    flex: 1,
+  pickerContainer: {
+    marginBottom: 15,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+  },
+  pickerLabel: {
     fontSize: 16,
-    color: '#333',
+    color: '#86939e',
+    marginBottom: 5,
+    paddingHorizontal: 10,
+    paddingTop: 10,
   },
-  addCodeButton: {
-    backgroundColor: '#e0e0e0',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    marginTop: 10,
-    alignItems: 'center',
+  pickerItem: {
+    fontSize: 16,
+    color: '#000000',
+    height: 120, // iOS picker item height
   },
-  addCodeButtonText: {
-    color: '#2196F3',
-    fontSize: 14,
-    fontWeight: '500',
+  androidPickerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  androidPicker: {
+    height: 50,
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    fontSize: 16,
   },
 });
