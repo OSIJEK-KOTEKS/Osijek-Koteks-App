@@ -1,59 +1,18 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {
+  Item,
+  User,
+  LoginResponse,
+  RegistrationData,
+  LocationData,
+} from '../types';
 
 const API_URL = 'http://192.168.1.130:5000';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
 
-export interface User {
-  _id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  company: string;
-  codes: string[];
-  role: 'admin' | 'user' | 'bot';
-  isVerified: boolean;
-  phoneNumber?: string;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: User;
-}
-
-export interface RegistrationData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  company: string;
-  role: 'admin' | 'user' | 'bot';
-  codes: string[];
-}
-
-// In api.ts
-// In api.ts
-export interface Item {
-  _id: string;
-  title: string;
-  code: string;
-  pdfUrl: string;
-  creationDate: string;
-  approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
-  approvalDate?: string;
-  approvedBy?: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-  };
-  approvalPhoto: {
-    url: string | null;
-    uploadDate: string | null;
-    mimeType: string | null;
-  } | null;
-}
 export interface CreateItemInput {
   title: string;
   code: string;
@@ -323,14 +282,7 @@ export const apiService = {
     id: string,
     approvalStatus: Item['approvalStatus'],
     photoUri?: string,
-    locationData?: {
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-      accuracy: number;
-      timestamp: Date;
-    },
+    locationData?: LocationData,
   ): Promise<Item> => {
     try {
       const formData = new FormData();

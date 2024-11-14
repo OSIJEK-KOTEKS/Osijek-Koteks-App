@@ -1,13 +1,13 @@
 import {StackNavigationProp} from '@react-navigation/stack';
 import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
-import {CompositeNavigationProp, RouteProp} from '@react-navigation/native';
+import {CompositeNavigationProp} from '@react-navigation/native';
 
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   PDFViewer: {pdfUrl: string};
   PhotoViewer: {photoUrl: string};
-  CreateItem: undefined; // Add this new route
+  CreateItem: undefined;
 };
 
 export type AdminTabParamList = {
@@ -21,6 +21,7 @@ export interface CreateItemFormData {
   pdfUrl: string;
   creationDate?: string;
 }
+
 export type RootStackNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export type MainStackNavigationProp = CompositeNavigationProp<
@@ -49,6 +50,21 @@ export interface User {
   phoneNumber?: string;
 }
 
+export interface LocationData {
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  accuracy: number;
+  timestamp: Date;
+}
+
+export interface ApprovalPhoto {
+  url: string | null;
+  uploadDate: string | null;
+  mimeType: string | null;
+}
+
 export interface Item {
   _id: string;
   title: string;
@@ -67,6 +83,7 @@ export interface Item {
     uploadDate: string | null;
     mimeType: string | null;
   } | null;
+  // Add this new property
   approvalLocation?: {
     coordinates: {
       latitude: number;
@@ -76,15 +93,34 @@ export interface Item {
     timestamp: Date;
   };
 }
-export interface LocationData {
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
-  accuracy: number;
-  timestamp: Date;
-}
+
 export interface PhotoCaptureResult {
   uri: string;
   location: LocationData;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+export interface RegistrationData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  role: 'admin' | 'user' | 'bot';
+  codes: string[];
+}
+
+export interface ApiError {
+  message: string;
+  status?: number;
+  details?: string;
 }

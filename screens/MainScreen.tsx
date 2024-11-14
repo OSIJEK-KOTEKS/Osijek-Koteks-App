@@ -1,25 +1,35 @@
 import React, {useEffect, useState, useContext, useCallback} from 'react';
 import {
   View,
-  StyleSheet,
   FlatList,
   RefreshControl,
   Platform,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Dimensions,
+  StyleSheet,
+  Image,
 } from 'react-native';
-import {Text, Button, Divider, Image} from 'react-native-elements';
+import {Text, Button, Divider} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
+import {GestureHandlerRootView, Swipeable} from 'react-native-gesture-handler';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList, AdminTabParamList, LocationData} from '../types';
-import {apiService, Item, User} from '../utils/api';
+import {apiService} from '../utils/api';
+import {
+  User,
+  Item,
+  LocationData,
+  RootStackParamList,
+  AdminTabParamList,
+} from '../types';
 import {AuthContext} from '../AuthContext';
 import CustomAvatar from '../components/CustomAvatar';
-import PhotoCaptureModal from '../components/PhotoCaptureModal'; // Make sure the path is correct
+import PhotoCaptureModal from '../components/PhotoCaptureModal';
 import {CreateItemModal} from '../components/CreateItemModal';
+import LocationDetailView from '../components/LocationDetailView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -27,7 +37,6 @@ interface MainScreenProps {
   navigation: MainScreenNavigationProp;
 }
 
-// Error Boundary Component
 class ErrorBoundary extends React.Component<
   {children: React.ReactNode},
   {hasError: boolean}
@@ -54,13 +63,11 @@ class ErrorBoundary extends React.Component<
         </View>
       );
     }
-
     return this.props.children;
   }
 }
 
 export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
-  // State Management
   const [items, setItems] = useState<Item[]>([]);
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +81,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const {signOut} = useContext(AuthContext);
 
-  // Token Management
   useEffect(() => {
     const getToken = async () => {
       try {
@@ -86,7 +92,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     };
     getToken();
 
-    // Cleanup function
     return () => {
       setItems([]);
       setFilteredItems([]);
@@ -94,7 +99,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     };
   }, []);
 
-  // Data Fetching
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -124,12 +128,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   }, []);
 
-  // Initial Data Load
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Filter Items based on Selected Code
   useEffect(() => {
     if (selectedCode === 'all') {
       setFilteredItems(items);
@@ -139,14 +141,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   }, [selectedCode, items]);
 
-  // Refresh Handler
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
   }, [fetchData]);
 
-  // Logout Handler
   const handleLogout = useCallback(async () => {
     try {
       await apiService.logout();
@@ -157,7 +157,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   }, [signOut]);
 
-  // Approval Handler
   const handleApproveItem = useCallback(
     async (photoUri: string, locationData: LocationData) => {
       if (!selectedItemId) return;
@@ -182,144 +181,135 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     [selectedItemId, fetchData],
   );
 
-  // Image Error Handler
-  const handleImageError = useCallback((error: any) => {
-    console.error('Image loading error:', error);
-  }, []);
-
-  const RenderImage = useCallback(
-    ({photoUrl}: {photoUrl: string}) => {
-      const [imageError, setImageError] = useState(false);
+  const renderItem = useCallback(
+    ({item}: {item: Item}) => {
+      const renderRightActions = () => {
+        if (item.approvalStatus === 'odobreno' && item.approvalLocation) {
+          return (
+            <View style={styles.rightActionContainer}>
+              <LocationDetailView
+                location={item.approvalLocation}
+                approvalDate={item.approvalDate}
+              />
+            </View>
+          );
+        }
+        return null;
+      };
 
       return (
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('PhotoViewer', {
-              photoUrl: photoUrl,
-            })
-          }
-          style={styles.photoPreviewContainer}>
-          <View style={styles.previewImageWrapper}>
-            {!imageError ? (
-              <Image
-                source={{
-                  uri: `http://192.168.1.130:5000${photoUrl}`,
-                  headers: {
-                    Authorization: `Bearer ${userToken}`,
-                  },
-                  cache: 'reload', // Changed from force-cache
-                }}
-                style={styles.photoPreview}
-                resizeMode="cover"
-                resizeMethod="resize" // Add this
-                progressiveRenderingEnabled={false} // Changed from true
-                fadeDuration={0}
-                onError={error => {
-                  console.error('Image error:', error?.nativeEvent?.error);
-                  setImageError(true);
-                }}
-                PlaceholderContent={
-                  <ActivityIndicator size="small" color="#2196F3" />
-                }
-              />
-            ) : (
-              <View style={[styles.photoPreview, styles.errorContainer]}>
-                <MaterialIcons name="error-outline" size={24} color="#f44336" />
-                <Text style={styles.errorText}>Failed to load image</Text>
+        <Swipeable
+          renderRightActions={renderRightActions}
+          overshootRight={false}
+          rightThreshold={40}>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})
+            }>
+            <View style={styles.itemContainer}>
+              <View style={styles.itemContent}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+
+                <View style={styles.detailsContainer}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Radni Nalog:</Text>
+                    <Text style={styles.detailValue}>{item.code}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Kreiran:</Text>
+                    <Text style={styles.detailValue}>{item.creationDate}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Status:</Text>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        item.approvalStatus === 'odobreno' &&
+                          styles.statusApproved,
+                        item.approvalStatus === 'odbijen' &&
+                          styles.statusRejected,
+                        item.approvalStatus === 'na čekanju' &&
+                          styles.statusPending,
+                      ]}>
+                      <Text style={styles.statusText}>
+                        {item.approvalStatus.charAt(0).toUpperCase() +
+                          item.approvalStatus.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {item.approvalStatus === 'odobreno' && item.approvedBy && (
+                    <>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Potvrdio:</Text>
+                        <Text style={styles.detailValue}>
+                          {item.approvedBy.firstName} {item.approvedBy.lastName}
+                        </Text>
+                      </View>
+
+                      {item.approvalDate && (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Datum:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.approvalDate}
+                          </Text>
+                        </View>
+                      )}
+
+                      {item.approvalPhoto?.url && userToken && (
+                        <TouchableOpacity
+                          style={styles.photoPreviewContainer}
+                          onPress={() =>
+                            navigation.navigate('PhotoViewer', {
+                              photoUrl: item.approvalPhoto!.url!,
+                            })
+                          }>
+                          <View style={styles.previewImageWrapper}>
+                            <Image
+                              source={{
+                                uri: `http://192.168.1.130:5000${item.approvalPhoto.url}`,
+                                headers: {
+                                  Authorization: `Bearer ${userToken}`,
+                                },
+                                cache: 'reload',
+                              }}
+                              style={styles.photoPreview}
+                              resizeMode="cover"
+                              resizeMethod="resize"
+                              progressiveRenderingEnabled={false}
+                              fadeDuration={0}
+                            />
+                          </View>
+                          <Text style={styles.viewPhotoText}>
+                            Pogledaj sliku
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
+
+                  {item.approvalStatus === 'na čekanju' && (
+                    <TouchableOpacity
+                      style={styles.approveButton}
+                      onPress={() => {
+                        setSelectedItemId(item._id);
+                        setPhotoModalVisible(true);
+                      }}>
+                      <Text style={styles.approveButtonText}>Odobri</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            )}
-          </View>
-          <Text style={styles.viewPhotoText}>
-            {imageError ? 'Slika nije dostupna' : 'Pogledaj sliku'}
-          </Text>
-        </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Swipeable>
       );
     },
     [navigation, userToken],
   );
-  // Render Item Component
-  const renderItem = useCallback(
-    ({item}: {item: Item}) => {
-      const photoUrl = item.approvalPhoto?.url || null;
 
-      return (
-        <View style={styles.itemContainer}>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})
-            }
-            style={styles.itemContent}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Radni Nalog:</Text>
-                <Text style={styles.detailValue}>{item.code}</Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Kreiran:</Text>
-                <Text style={styles.detailValue}>{item.creationDate}</Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Status:</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    item.approvalStatus === 'odobreno' && styles.statusApproved,
-                    item.approvalStatus === 'odbijen' && styles.statusRejected,
-                    item.approvalStatus === 'na čekanju' &&
-                      styles.statusPending,
-                  ]}>
-                  <Text style={styles.statusText}>
-                    {item.approvalStatus.charAt(0).toUpperCase() +
-                      item.approvalStatus.slice(1)}
-                  </Text>
-                </View>
-              </View>
-
-              {item.approvalStatus === 'odobreno' && item.approvedBy && (
-                <>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Potvrdio:</Text>
-                    <Text style={styles.detailValue}>
-                      {item.approvedBy.firstName} {item.approvedBy.lastName}
-                    </Text>
-                  </View>
-
-                  {item.approvalDate && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Datum:</Text>
-                      <Text style={styles.detailValue}>
-                        {item.approvalDate}
-                      </Text>
-                    </View>
-                  )}
-
-                  {photoUrl && userToken && <RenderImage photoUrl={photoUrl} />}
-                </>
-              )}
-
-              {item.approvalStatus === 'na čekanju' && (
-                <TouchableOpacity
-                  style={styles.approveButton}
-                  onPress={() => {
-                    setSelectedItemId(item._id);
-                    setPhotoModalVisible(true);
-                  }}>
-                  <Text style={styles.approveButtonText}>Odobri</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
-      );
-    },
-    [navigation, userToken, userProfile?.role, RenderImage],
-  );
-
-  // Header Component
   const ListHeaderComponent = useCallback(() => {
     return (
       <>
@@ -350,8 +340,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
               <Picker
                 selectedValue={selectedCode}
                 onValueChange={itemValue => setSelectedCode(itemValue)}
-                style={styles.picker}
-                dropdownIconColor="#666">
+                style={styles.picker}>
                 <Picker.Item label="Svi Radni Nalozi" value="all" />
                 {availableCodes.map(code => (
                   <Picker.Item key={code} label={code} value={code} />
@@ -385,88 +374,67 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     );
   }, [userProfile, selectedCode, availableCodes, filteredItems.length]);
 
-  // Main Render
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={filteredItems}
-        renderItem={renderItem}
-        keyExtractor={item => item._id}
-        ListHeaderComponent={ListHeaderComponent}
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.centerContent}>
-              <Text style={styles.loadingText}>Učitavam dokumente...</Text>
+    <GestureHandlerRootView style={styles.container}>
+      <View style={styles.container}>
+        <FlatList
+          data={filteredItems}
+          renderItem={renderItem}
+          keyExtractor={item => item._id}
+          ListHeaderComponent={ListHeaderComponent}
+          ListEmptyComponent={
+            loading ? (
+              <View style={styles.centerContent}>
+                <Text style={styles.loadingText}>Učitavam dokumente...</Text>
+              </View>
+            ) : (
+              <View style={styles.centerContent}>
+                <Text style={styles.emptyText}>Nema dokumenata</Text>
+              </View>
+            )
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListFooterComponent={
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Odjava"
+                onPress={handleLogout}
+                buttonStyle={styles.logoutButton}
+                titleStyle={styles.buttonTitle}
+              />
             </View>
-          ) : (
-            <View style={styles.centerContent}>
-              <Text style={styles.emptyText}>Nema dokumenata</Text>
-            </View>
-          )
-        }
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListFooterComponent={
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Odjava"
-              onPress={handleLogout}
-              buttonStyle={styles.logoutButton}
-              titleStyle={styles.buttonTitle}
-              raised
-            />
-          </View>
-        }
-        contentContainerStyle={styles.listContentContainer}
-        initialNumToRender={5}
-        maxToRenderPerBatch={5}
-        windowSize={3}
-        removeClippedSubviews={true}
-        updateCellsBatchingPeriod={100}
-        onEndReachedThreshold={0.5}
-        getItemLayout={(data, index) => ({
-          length: 200,
-          offset: 200 * index,
-          index,
-        })}
-      />
+          }
+          contentContainerStyle={styles.listContentContainer}
+        />
 
-      {/* Add Item FAB for admin and bot users */}
-      {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
-        <TouchableOpacity
-          style={[styles.fab, styles.addItemFab]}
-          onPress={() => setCreateModalVisible(true)}>
-          <MaterialIcons name="add" size={24} color="white" />
-        </TouchableOpacity>
-      )}
+        {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
+          <TouchableOpacity
+            style={[styles.fab, styles.addItemFab]}
+            onPress={() => setCreateModalVisible(true)}>
+            <MaterialIcons name="add" size={24} color="white" />
+          </TouchableOpacity>
+        )}
 
-      {/* Modals */}
-      <PhotoCaptureModal
-        isVisible={isPhotoModalVisible}
-        onClose={() => {
-          setPhotoModalVisible(false);
-          setSelectedItemId(null);
-        }}
-        onConfirm={handleApproveItem}
-      />
+        <PhotoCaptureModal
+          isVisible={isPhotoModalVisible}
+          onClose={() => {
+            setPhotoModalVisible(false);
+            setSelectedItemId(null);
+          }}
+          onConfirm={handleApproveItem}
+        />
 
-      <CreateItemModal
-        isVisible={isCreateModalVisible}
-        onClose={() => setCreateModalVisible(false)}
-        onSuccess={fetchData}
-      />
-    </View>
+        <CreateItemModal
+          isVisible={isCreateModalVisible}
+          onClose={() => setCreateModalVisible(false)}
+          onSuccess={fetchData}
+        />
+      </View>
+    </GestureHandlerRootView>
   );
 };
-
-// Wrap MainScreen with ErrorBoundary
-export const MainScreenWithErrorBoundary: React.FC<MainScreenProps> = props => (
-  <ErrorBoundary>
-    <MainScreen {...props} />
-  </ErrorBoundary>
-);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -731,6 +699,101 @@ const styles = StyleSheet.create({
     bottom: 80,
     right: 16,
   },
+  rightActionContainer: {
+    backgroundColor: '#f5f5f5',
+    width: Dimensions.get('window').width * 0.8,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  swipeableContainer: {
+    backgroundColor: '#f5f5f5',
+  },
+  locationContainer: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+  },
+  imageError: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 60,
+    backgroundColor: '#ffebee',
+    borderRadius: 4,
+  },
+  imageErrorText: {
+    color: '#f44336',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  // Additional styles for swipe actions
+  swipeActionContainer: {
+    width: Dimensions.get('window').width * 0.8,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 20,
+  },
+  swipeActionContent: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    width: '95%',
+  },
+  swipeActionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 8,
+  },
+  coordinatesContainer: {
+    marginVertical: 8,
+  },
+  coordinateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  coordinateLabel: {
+    color: '#666',
+    fontSize: 14,
+  },
+  coordinateValue: {
+    color: '#000',
+    fontSize: 14,
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+    }),
+  },
+  timestampText: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 8,
+  },
 });
+
+export const MainScreenWithErrorBoundary: React.FC<MainScreenProps> = props => (
+  <ErrorBoundary>
+    <MainScreen {...props} />
+  </ErrorBoundary>
+);
 
 export default MainScreenWithErrorBoundary;
