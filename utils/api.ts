@@ -301,7 +301,21 @@ export const apiService = {
       throw error;
     }
   },
-
+  updateUserPassword: async (
+    userId: string,
+    newPassword: string,
+  ): Promise<User> => {
+    try {
+      console.log('Updating password for user:', userId);
+      const response = await api.patch<User>(`/api/users/${userId}/password`, {
+        password: newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+  },
   deleteItem: async (id: string): Promise<void> => {
     try {
       await api.delete(`/api/items/${id}`);

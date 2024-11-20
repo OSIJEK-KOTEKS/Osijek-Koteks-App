@@ -29,6 +29,7 @@ interface UserFormData {
   role: 'admin' | 'user' | 'bot';
   codes: string[];
   password?: string;
+  newPassword?: string;
   isVerified?: boolean;
 }
 
@@ -66,6 +67,7 @@ export const UserManagementScreen: React.FC = () => {
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [newCode, setNewCode] = useState('');
+  const [showPasswordField, setShowPasswordField] = useState(false);
 
   const initialUserState: UserFormData = {
     email: '',
@@ -144,7 +146,9 @@ export const UserManagementScreen: React.FC = () => {
       role: user.role,
       codes: user.codes,
       isVerified: user.isVerified,
+      newPassword: '', // Add this line
     });
+    setShowPasswordField(false); // Reset password field visibility
     setModalVisible(true);
   };
 
@@ -225,7 +229,6 @@ export const UserManagementScreen: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
     try {
       if (modalMode === 'create') {
         const registrationData: RegistrationData = {
@@ -240,8 +243,13 @@ export const UserManagementScreen: React.FC = () => {
 
         await apiService.createUser(registrationData);
       } else if (selectedUser?._id) {
-        const {password, _id, ...updateData} = formData;
+        const {password, newPassword, _id, ...updateData} = formData;
         await apiService.updateUser(selectedUser._id, updateData);
+
+        // Handle password update if new password is provided
+        if (newPassword) {
+          await apiService.updateUserPassword(selectedUser._id, newPassword);
+        }
       }
 
       setModalVisible(false);
@@ -296,6 +304,27 @@ export const UserManagementScreen: React.FC = () => {
     } catch (error) {
       console.error('Error exporting user data:', error);
       Alert.alert('Greška', 'Greška pri izvozu podataka');
+    }
+  };
+  const handlePasswordUpdate = async () => {
+    if (!selectedUser?._id || !formData.newPassword) return;
+
+    if (formData.newPassword.length < 6) {
+      Alert.alert('Greška', 'Lozinka mora imati najmanje 6 znakova');
+      return;
+    }
+
+    try {
+      await apiService.updateUserPassword(
+        selectedUser._id,
+        formData.newPassword,
+      );
+      Alert.alert('Uspjeh', 'Lozinka je uspješno promijenjena');
+      setFormData({...formData, newPassword: ''});
+      setShowPasswordField(false);
+    } catch (error) {
+      console.error('Error updating password:', error);
+      Alert.alert('Greška', 'Greška pri promjeni lozinke');
     }
   };
 
@@ -428,6 +457,49 @@ export const UserManagementScreen: React.FC = () => {
                     secureTextEntry
                     containerStyle={styles.inputContainer}
                   />
+                )}
+                {modalMode === 'edit' && (
+                  <View style={styles.passwordSection}>
+                    <TouchableOpacity
+                      style={styles.passwordToggle}
+                      onPress={() => setShowPasswordField(!showPasswordField)}>
+                      <MaterialIcons
+                        name={
+                          showPasswordField ? 'visibility-off' : 'visibility'
+                        }
+                        size={24}
+                        color="#2196F3"
+                      />
+                      <Text style={styles.passwordToggleText}>
+                        {showPasswordField
+                          ? 'Sakrij promjenu lozinke'
+                          : 'Promijeni lozinku'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {showPasswordField && (
+                      <View>
+                        <Input
+                          placeholder="Nova lozinka"
+                          value={formData.newPassword}
+                          onChangeText={text =>
+                            setFormData({...formData, newPassword: text})
+                          }
+                          secureTextEntry
+                          containerStyle={styles.inputContainer}
+                          rightIcon={
+                            <TouchableOpacity
+                              onPress={handlePasswordUpdate}
+                              style={styles.updatePasswordButton}>
+                              <Text style={styles.updatePasswordButtonText}>
+                                Spremi lozinku
+                              </Text>
+                            </TouchableOpacity>
+                          }
+                        />
+                      </View>
+                    )}
+                  </View>
                 )}
                 <Input
                   placeholder="Ime"
@@ -921,5 +993,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     color: '#000000',
     fontSize: 16,
+  },
+  passwordSection: {
+    marginVertical: 10,
+    paddingHorizontal: 10,
+  },
+  passwordToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  passwordToggleText: {
+    marginLeft: 8,
+    color: '#2196F3',
+    fontSize: 16,
+  },
+  updatePasswordButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  updatePasswordButtonText: {
+    color: 'white',
+    fontSize: 14,
   },
 });
