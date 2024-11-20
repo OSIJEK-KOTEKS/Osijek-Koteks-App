@@ -16,9 +16,9 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Modal from 'react-native-modal';
 import {Picker} from '@react-native-picker/picker';
 import axios from 'axios';
-import {apiService, User, RegistrationData} from '../utils/api';
+import {apiService} from '../utils/api';
+import {User, RegistrationData} from '../types';
 import CustomAvatar from '../components/CustomAvatar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserFormData {
   _id?: string;
@@ -53,6 +53,7 @@ interface DataExportFormat {
 }
 
 export const UserManagementScreen: React.FC = () => {
+  // State Management
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,16 +80,12 @@ export const UserManagementScreen: React.FC = () => {
 
   const [formData, setFormData] = useState<UserFormData>(initialUserState);
 
+  // Data Fetching
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const token = await AsyncStorage.getItem('userToken');
-      console.log('Auth token available:', !!token);
-
       const fetchedUsers = await apiService.getUsers();
-      console.log('Fetched users count:', fetchedUsers.length);
       setUsers(fetchedUsers);
 
       // Update available codes
@@ -101,9 +98,6 @@ export const UserManagementScreen: React.FC = () => {
       let errorMessage = 'Došlo je do greške pri dohvaćanju korisnika.';
 
       if (axios.isAxiosError(error)) {
-        console.error('Response status:', error.response?.status);
-        console.error('Response data:', error.response?.data);
-
         if (error.response?.status === 403) {
           errorMessage = 'Nemate ovlasti za pregled korisnika.';
         } else if (error.response?.status === 401) {
@@ -128,6 +122,7 @@ export const UserManagementScreen: React.FC = () => {
     setRefreshing(false);
   };
 
+  // User Management Handlers
   const handleCreateUser = () => {
     setModalMode('create');
     setSelectedUser(null);
@@ -177,6 +172,7 @@ export const UserManagementScreen: React.FC = () => {
     );
   };
 
+  // Code Management Handlers
   const handleAddNewCode = () => {
     if (!/^\d{5}$/.test(newCode)) {
       Alert.alert('Neispravan kod', 'Kod mora sadržavati točno 5 znamenki');
@@ -206,6 +202,7 @@ export const UserManagementScreen: React.FC = () => {
     setFormData({...formData, codes: updatedCodes});
   };
 
+  // Form Validation and Submission
   const validateForm = () => {
     if (!formData.email?.trim()) {
       Alert.alert('Greška', 'Email je obavezan');
@@ -267,6 +264,7 @@ export const UserManagementScreen: React.FC = () => {
     }
   };
 
+  // Privacy and Data Management
   const handleDataExport = async (user: User) => {
     try {
       const exportData: DataExportFormat = {
@@ -330,6 +328,7 @@ export const UserManagementScreen: React.FC = () => {
     setPrivacyModalVisible(true);
   };
 
+  // Render Methods
   const renderItem = ({item}: {item: User}) => (
     <ListItem bottomDivider>
       <CustomAvatar
@@ -362,193 +361,6 @@ export const UserManagementScreen: React.FC = () => {
     </ListItem>
   );
 
-  const renderUserModal = () => (
-    <Modal
-      isVisible={isModalVisible}
-      onBackdropPress={() => setModalVisible(false)}>
-      <View>
-        <Text h4>
-          {modalMode === 'create' ? 'Kreiraj korisnika' : 'Uredi korisnika'}
-        </Text>
-        <ScrollView>
-          <Input
-            placeholder="Email"
-            value={formData.email}
-            onChangeText={text => setFormData({...formData, email: text})}
-            disabled={modalMode === 'edit'}
-          />
-          {modalMode === 'create' && (
-            <Input
-              placeholder="Lozinka"
-              value={formData.password}
-              onChangeText={text => setFormData({...formData, password: text})}
-              secureTextEntry
-            />
-          )}
-          <Input
-            placeholder="Ime"
-            value={formData.firstName}
-            onChangeText={text => setFormData({...formData, firstName: text})}
-          />
-          <Input
-            placeholder="Prezime"
-            value={formData.lastName}
-            onChangeText={text => setFormData({...formData, lastName: text})}
-          />
-          <Input
-            placeholder="Firma"
-            value={formData.company}
-            onChangeText={text => setFormData({...formData, company: text})}
-          />
-          <View>
-            <Text>Tip korisnika</Text>
-            <Picker
-              selectedValue={formData.role}
-              onValueChange={value =>
-                setFormData({...formData, role: value as User['role']})
-              }>
-              <Picker.Item label="Korisnik" value="user" />
-              <Picker.Item label="Administrator" value="admin" />
-              <Picker.Item label="Bot" value="bot" />
-            </Picker>
-          </View>
-
-          <TouchableOpacity onPress={() => setCodesModalVisible(true)}>
-            <Text>Odabir RN ({formData.codes.length})</Text>
-            <Text>{formData.codes.join(', ') || 'Nije odabran RN'}</Text>
-          </TouchableOpacity>
-
-          <View>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text>Odustani</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit}>
-              <Text>{modalMode === 'create' ? 'Kreiraj' : 'Ažuriraj'}</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-
-  const renderCodesModal = () => (
-    <Modal
-      isVisible={isCodesModalVisible}
-      onBackdropPress={() => setCodesModalVisible(false)}>
-      <View>
-        <Text h4>Odabir radnih naloga</Text>
-        <ScrollView>
-          <View>
-            <Input
-              placeholder="Dodaj novi RN (5 brojeva)"
-              value={newCode}
-              onChangeText={setNewCode}
-              keyboardType="numeric"
-              maxLength={5}
-              rightIcon={
-                <TouchableOpacity onPress={handleAddNewCode}>
-                  <MaterialIcons name="add" size={24} color="#2196F3" />
-                </TouchableOpacity>
-              }
-            />
-          </View>
-
-          {[...new Set([...availableCodes, ...selectedCodes])]
-            .sort()
-            .map(code => (
-              <CheckBox
-                key={code}
-                title={code}
-                checked={selectedCodes.includes(code)}
-                onPress={() => toggleCodeSelection(code)}
-              />
-            ))}
-
-          {availableCodes.length === 0 && (
-            <Text>Nema dostupnih radnih naloga</Text>
-          )}
-        </ScrollView>
-
-        <View>
-          <TouchableOpacity onPress={() => setCodesModalVisible(false)}>
-            <Text>Odustani</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              setFormData({...formData, codes: selectedCodes});
-              setCodesModalVisible(false);
-            }}>
-            <Text>Primjeni</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderPrivacyModal = () => (
-    <Modal
-      isVisible={isPrivacyModalVisible}
-      onBackdropPress={() => setPrivacyModalVisible(false)}>
-      <View>
-        <Text h4>Postavke privatnosti</Text>
-        <ScrollView>
-          <Text>
-            Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
-            {selectedUser?.lastName}
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => selectedUser && handleDataExport(selectedUser)}>
-            <MaterialIcons name="download" size={24} color="#2196F3" />
-            <Text>Izvezi sve podatke</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() =>
-              selectedUser && handleDataDeletion(selectedUser._id)
-            }>
-            <MaterialIcons name="delete-forever" size={24} color="#f44336" />
-            <Text>Izbriši sve podatke</Text>
-          </TouchableOpacity>
-
-          <View>
-            <Text>Informacije o pravima:</Text>
-            <Text>
-              • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
-              {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
-              podataka{'\n'}• Pravo na ograničenje obrade
-            </Text>
-          </View>
-        </ScrollView>
-
-        <TouchableOpacity onPress={() => setPrivacyModalVisible(false)}>
-          <Text>Zatvori</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
-  );
-
-  if (loading && !refreshing) {
-    return (
-      <View>
-        <ActivityIndicator size="large" color="#2196F3" />
-        <Text>Učitavanje korisnika...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View>
-        <MaterialIcons name="error-outline" size={48} color="#f44336" />
-        <Text>{error}</Text>
-        <TouchableOpacity onPress={fetchUsers}>
-          <Text>Pokušaj ponovno</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       {loading && !refreshing ? (
@@ -564,263 +376,268 @@ export const UserManagementScreen: React.FC = () => {
             <Text style={styles.retryButtonText}>Pokušaj ponovno</Text>
           </TouchableOpacity>
         </View>
-      ) : users.length === 0 ? (
-        <View style={styles.centerContent}>
-          <Text style={styles.emptyText}>Nema pronađenih korisnika</Text>
-        </View>
       ) : (
-        <FlatList
-          data={users}
-          renderItem={renderItem}
-          keyExtractor={item => item._id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
+        <>
+          <FlatList
+            data={users}
+            renderItem={renderItem}
+            keyExtractor={item => item._id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listContainer}
+            ListEmptyComponent={
+              <View style={styles.centerContent}>
+                <Text style={styles.emptyText}>Nema pronađenih korisnika</Text>
+              </View>
+            }
+          />
 
-      <TouchableOpacity style={styles.fab} onPress={handleCreateUser}>
-        <MaterialIcons name="add" size={28} color="white" />
-      </TouchableOpacity>
-
-      {/* User Create/Edit Modal */}
-      <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={() => setModalVisible(false)}
-        style={styles.modal}
-        backdropOpacity={0.5}
-        animationIn="slideInUp"
-        animationOut="slideOutDown">
-        <View style={styles.modalContent}>
-          <Text h4 style={styles.modalTitle}>
-            {modalMode === 'create' ? 'Kreiraj korisnika' : 'Uredi korisnika'}
-          </Text>
-          <ScrollView style={styles.modalScrollView}>
-            <Input
-              placeholder="Email"
-              value={formData.email}
-              onChangeText={text => setFormData({...formData, email: text})}
-              disabled={modalMode === 'edit'}
-              containerStyle={styles.inputContainer}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            {modalMode === 'create' && (
-              <Input
-                placeholder="Lozinka"
-                value={formData.password}
-                onChangeText={text =>
-                  setFormData({...formData, password: text})
-                }
-                secureTextEntry
-                containerStyle={styles.inputContainer}
-              />
-            )}
-            <Input
-              placeholder="Ime"
-              value={formData.firstName}
-              onChangeText={text => setFormData({...formData, firstName: text})}
-              containerStyle={styles.inputContainer}
-            />
-            <Input
-              placeholder="Prezime"
-              value={formData.lastName}
-              onChangeText={text => setFormData({...formData, lastName: text})}
-              containerStyle={styles.inputContainer}
-            />
-            <Input
-              placeholder="Firma"
-              value={formData.company}
-              onChangeText={text => setFormData({...formData, company: text})}
-              containerStyle={styles.inputContainer}
-            />
-
-            <View style={styles.pickerContainer}>
-              <Text style={styles.pickerLabel}>Tip korisnika</Text>
-              {Platform.OS === 'ios' ? (
-                <Picker
-                  selectedValue={formData.role}
-                  onValueChange={value =>
-                    setFormData({...formData, role: value as User['role']})
-                  }
-                  style={styles.picker}
-                  itemStyle={styles.pickerItem}>
-                  <Picker.Item label="Korisnik" value="user" />
-                  <Picker.Item label="Administrator" value="admin" />
-                  <Picker.Item label="Bot" value="bot" />
-                </Picker>
-              ) : (
-                <View style={styles.androidPickerContainer}>
-                  <Picker
-                    selectedValue={formData.role}
-                    onValueChange={value =>
-                      setFormData({...formData, role: value as User['role']})
-                    }
-                    style={styles.androidPicker}
-                    dropdownIconColor="#2196F3">
-                    <Picker.Item
-                      label="Korisnik"
-                      value="user"
-                      color="#000000"
-                    />
-                    <Picker.Item
-                      label="Administrator"
-                      value="admin"
-                      color="#000000"
-                    />
-                    <Picker.Item label="Bot" value="bot" color="#000000" />
-                  </Picker>
-                </View>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={styles.codesButton}
-              onPress={() => setCodesModalVisible(true)}>
-              <Text style={styles.codesButtonText}>
-                Odabir RN ({formData.codes.length})
-              </Text>
-              <Text style={styles.codesPreview}>
-                {formData.codes.join(', ') || 'Nije odabran RN'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => setModalVisible(false)}>
-              <Text style={styles.buttonText}>Odustani</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.submitButton]}
-              onPress={handleSubmit}>
-              <Text style={styles.buttonText}>
-                {modalMode === 'create' ? 'Kreiraj' : 'Ažuriraj'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Codes Selection Modal */}
-      <Modal
-        isVisible={isCodesModalVisible}
-        onBackdropPress={() => setCodesModalVisible(false)}
-        style={styles.modal}
-        backdropOpacity={0.5}
-        animationIn="slideInUp"
-        animationOut="slideOutDown">
-        <View style={styles.modalContent}>
-          <Text h4 style={styles.modalTitle}>
-            Odabir radnih naloga
-          </Text>
-          <View style={styles.newCodeContainer}>
-            <Input
-              placeholder="Dodaj novi RN (5 brojeva)"
-              value={newCode}
-              onChangeText={setNewCode}
-              keyboardType="numeric"
-              maxLength={5}
-              containerStyle={styles.inputContainer}
-              rightIcon={
-                <TouchableOpacity onPress={handleAddNewCode}>
-                  <MaterialIcons name="add" size={24} color="#2196F3" />
-                </TouchableOpacity>
-              }
-            />
-          </View>
-          <ScrollView style={styles.codesScrollView}>
-            {[...new Set([...availableCodes, ...selectedCodes])]
-              .sort()
-              .map(code => (
-                <CheckBox
-                  key={code}
-                  title={code}
-                  checked={selectedCodes.includes(code)}
-                  onPress={() => toggleCodeSelection(code)}
-                  containerStyle={styles.checkboxContainer}
-                  textStyle={styles.checkboxText}
-                />
-              ))}
-            {availableCodes.length === 0 && (
-              <Text style={styles.noCodesText}>
-                Nema dostupnih radnih naloga
-              </Text>
-            )}
-          </ScrollView>
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => setCodesModalVisible(false)}>
-              <Text style={styles.buttonText}>Odustani</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.submitButton]}
-              onPress={() => {
-                setFormData({...formData, codes: selectedCodes});
-                setCodesModalVisible(false);
-              }}>
-              <Text style={styles.buttonText}>Primjeni</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Privacy Settings Modal */}
-      <Modal
-        isVisible={isPrivacyModalVisible}
-        onBackdropPress={() => setPrivacyModalVisible(false)}
-        style={styles.modal}
-        backdropOpacity={0.5}
-        animationIn="slideInUp"
-        animationOut="slideOutDown">
-        <View style={styles.modalContent}>
-          <Text h4 style={styles.modalTitle}>
-            Postavke privatnosti
-          </Text>
-          <Text style={styles.privacyHeader}>
-            Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
-            {selectedUser?.lastName}
-          </Text>
-          <ScrollView style={styles.privacyScrollView}>
-            <TouchableOpacity
-              style={styles.privacyButton}
-              onPress={() => selectedUser && handleDataExport(selectedUser)}>
-              <MaterialIcons name="download" size={24} color="#2196F3" />
-              <Text style={styles.privacyButtonText}>Izvezi sve podatke</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.privacyButton, styles.deleteButton]}
-              onPress={() =>
-                selectedUser && handleDataDeletion(selectedUser._id)
-              }>
-              <MaterialIcons name="delete-forever" size={24} color="#f44336" />
-              <Text style={[styles.privacyButtonText, styles.deleteText]}>
-                Izbriši sve podatke
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.privacyInfo}>
-              <Text style={styles.privacyInfoHeader}>
-                Informacije o pravima:
-              </Text>
-              <Text style={styles.privacyInfoText}>
-                • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
-                {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
-                podataka{'\n'}• Pravo na ograničenje obrade
-              </Text>
-            </View>
-          </ScrollView>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setPrivacyModalVisible(false)}>
-            <Text style={styles.closeButtonText}>Zatvori</Text>
+          <TouchableOpacity style={styles.fab} onPress={handleCreateUser}>
+            <MaterialIcons name="add" size={28} color="white" />
           </TouchableOpacity>
-        </View>
-      </Modal>
+
+          {/* User Create/Edit Modal */}
+          <Modal
+            isVisible={isModalVisible}
+            onBackdropPress={() => setModalVisible(false)}
+            style={styles.modal}>
+            <View style={styles.modalContent}>
+              <Text h4 style={styles.modalTitle}>
+                {modalMode === 'create'
+                  ? 'Kreiraj korisnika'
+                  : 'Uredi korisnika'}
+              </Text>
+              <ScrollView style={styles.modalScrollView}>
+                <Input
+                  placeholder="Email"
+                  value={formData.email}
+                  onChangeText={text => setFormData({...formData, email: text})}
+                  disabled={modalMode === 'edit'}
+                  containerStyle={styles.inputContainer}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                {modalMode === 'create' && (
+                  <Input
+                    placeholder="Lozinka"
+                    value={formData.password}
+                    onChangeText={text =>
+                      setFormData({...formData, password: text})
+                    }
+                    secureTextEntry
+                    containerStyle={styles.inputContainer}
+                  />
+                )}
+                <Input
+                  placeholder="Ime"
+                  value={formData.firstName}
+                  onChangeText={text =>
+                    setFormData({...formData, firstName: text})
+                  }
+                  containerStyle={styles.inputContainer}
+                />
+                <Input
+                  placeholder="Prezime"
+                  value={formData.lastName}
+                  onChangeText={text =>
+                    setFormData({...formData, lastName: text})
+                  }
+                  containerStyle={styles.inputContainer}
+                />
+                <Input
+                  placeholder="Firma"
+                  value={formData.company}
+                  onChangeText={text =>
+                    setFormData({...formData, company: text})
+                  }
+                  containerStyle={styles.inputContainer}
+                />
+
+                <View style={styles.pickerContainer}>
+                  <Text style={styles.pickerLabel}>Tip korisnika</Text>
+                  {Platform.OS === 'ios' ? (
+                    <Picker
+                      selectedValue={formData.role}
+                      onValueChange={value =>
+                        setFormData({...formData, role: value as User['role']})
+                      }
+                      style={styles.picker}
+                      itemStyle={styles.pickerItem}>
+                      <Picker.Item label="Korisnik" value="user" />
+                      <Picker.Item label="Administrator" value="admin" />
+                      <Picker.Item label="Bot" value="bot" />
+                    </Picker>
+                  ) : (
+                    <View style={styles.androidPickerContainer}>
+                      <Picker
+                        selectedValue={formData.role}
+                        onValueChange={value =>
+                          setFormData({
+                            ...formData,
+                            role: value as User['role'],
+                          })
+                        }
+                        style={styles.androidPicker}>
+                        <Picker.Item label="Korisnik" value="user" />
+                        <Picker.Item label="Administrator" value="admin" />
+                        <Picker.Item label="Bot" value="bot" />
+                      </Picker>
+                    </View>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.codesButton}
+                  onPress={() => setCodesModalVisible(true)}>
+                  <Text style={styles.codesButtonText}>
+                    Odabir RN ({formData.codes.length})
+                  </Text>
+                  <Text style={styles.codesPreview}>
+                    {formData.codes.join(', ') || 'Nije odabran RN'}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setModalVisible(false)}>
+                  <Text style={styles.buttonText}>Odustani</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.submitButton]}
+                  onPress={handleSubmit}>
+                  <Text style={styles.buttonText}>
+                    {modalMode === 'create' ? 'Kreiraj' : 'Ažuriraj'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Codes Selection Modal */}
+          <Modal
+            isVisible={isCodesModalVisible}
+            onBackdropPress={() => setCodesModalVisible(false)}
+            style={styles.modal}>
+            <View style={styles.modalContent}>
+              <Text h4 style={styles.modalTitle}>
+                Odabir radnih naloga
+              </Text>
+              <View style={styles.newCodeContainer}>
+                <Input
+                  placeholder="Dodaj novi RN (5 brojeva)"
+                  value={newCode}
+                  onChangeText={setNewCode}
+                  keyboardType="numeric"
+                  maxLength={5}
+                  containerStyle={styles.inputContainer}
+                  rightIcon={
+                    <TouchableOpacity onPress={handleAddNewCode}>
+                      <MaterialIcons name="add" size={24} color="#2196F3" />
+                    </TouchableOpacity>
+                  }
+                />
+              </View>
+              <ScrollView style={styles.codesScrollView}>
+                {[...new Set([...availableCodes, ...selectedCodes])]
+                  .sort()
+                  .map(code => (
+                    <CheckBox
+                      key={code}
+                      title={code}
+                      checked={selectedCodes.includes(code)}
+                      onPress={() => toggleCodeSelection(code)}
+                      containerStyle={styles.checkboxContainer}
+                      textStyle={styles.checkboxText}
+                    />
+                  ))}
+                {availableCodes.length === 0 && (
+                  <Text style={styles.noCodesText}>
+                    Nema dostupnih radnih naloga
+                  </Text>
+                )}
+              </ScrollView>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setCodesModalVisible(false)}>
+                  <Text style={styles.buttonText}>Odustani</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.submitButton]}
+                  onPress={() => {
+                    setFormData({...formData, codes: selectedCodes});
+                    setCodesModalVisible(false);
+                  }}>
+                  <Text style={styles.buttonText}>Primjeni</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Privacy Settings Modal */}
+          <Modal
+            isVisible={isPrivacyModalVisible}
+            onBackdropPress={() => setPrivacyModalVisible(false)}
+            style={styles.modal}>
+            <View style={styles.modalContent}>
+              <Text h4 style={styles.modalTitle}>
+                Postavke privatnosti
+              </Text>
+              <Text style={styles.privacyHeader}>
+                Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
+                {selectedUser?.lastName}
+              </Text>
+              <ScrollView style={styles.privacyScrollView}>
+                <TouchableOpacity
+                  style={styles.privacyButton}
+                  onPress={() =>
+                    selectedUser && handleDataExport(selectedUser)
+                  }>
+                  <MaterialIcons name="download" size={24} color="#2196F3" />
+                  <Text style={styles.privacyButtonText}>
+                    Izvezi sve podatke
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.privacyButton, styles.deleteButton]}
+                  onPress={() =>
+                    selectedUser && handleDataDeletion(selectedUser._id)
+                  }>
+                  <MaterialIcons
+                    name="delete-forever"
+                    size={24}
+                    color="#f44336"
+                  />
+                  <Text style={[styles.privacyButtonText, styles.deleteText]}>
+                    Izbriši sve podatke
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.privacyInfo}>
+                  <Text style={styles.privacyInfoHeader}>
+                    Informacije o pravima:
+                  </Text>
+                  <Text style={styles.privacyInfoText}>
+                    • Pravo na pristup podacima{'\n'}• Pravo na brisanje
+                    podataka
+                    {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
+                    podataka{'\n'}• Pravo na ograničenje obrade
+                  </Text>
+                </View>
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setPrivacyModalVisible(false)}>
+                <Text style={styles.closeButtonText}>Zatvori</Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+        </>
+      )}
     </View>
   );
 };

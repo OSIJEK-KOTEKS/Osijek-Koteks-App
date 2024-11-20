@@ -1,24 +1,17 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type {
-  Item,
+import {
   User,
-  LoginResponse,
   RegistrationData,
+  LoginResponse,
+  Item,
+  CreateItemInput,
   LocationData,
 } from '../types';
 
 const API_URL = 'http://192.168.1.130:5000';
-
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
-
-export interface CreateItemInput {
-  title: string;
-  code: string;
-  pdfUrl: string;
-  creationDate?: string;
-}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -87,7 +80,7 @@ export const apiService = {
         password: '[REDACTED]',
       });
 
-      const response = await api.post<{token: string; user: User}>(
+      const response = await api.post<LoginResponse>(
         '/api/auth/register',
         userData,
       );
@@ -218,14 +211,6 @@ export const apiService = {
   // Item methods
   getItems: async (): Promise<Item[]> => {
     try {
-      const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-      const userId = await AsyncStorage.getItem(USER_ID_KEY);
-
-      console.log('Fetching items with:', {
-        hasToken: !!token,
-        userId,
-      });
-
       const response = await api.get<Item[]>('/api/items');
       if (!response.data) {
         console.warn('No items returned from API');
@@ -286,8 +271,6 @@ export const apiService = {
   ): Promise<Item> => {
     try {
       const formData = new FormData();
-
-      // Make sure we're sending the correct status
       formData.append('approvalStatus', 'odobreno');
 
       if (photoUri) {
@@ -295,26 +278,12 @@ export const apiService = {
           uri: photoUri,
           type: 'image/jpeg',
           name: 'approval_photo.jpg',
-        } as any); // Type assertion needed for React Native FormData
+        } as any);
       }
 
       if (locationData) {
         formData.append('locationData', JSON.stringify(locationData));
       }
-
-      console.log('Sending approval request:', {
-        id,
-        approvalStatus,
-        hasPhoto: !!photoUri,
-        hasLocation: !!locationData,
-        location: locationData
-          ? {
-              lat: locationData.coordinates.latitude,
-              lng: locationData.coordinates.longitude,
-              accuracy: locationData.accuracy,
-            }
-          : null,
-      });
 
       const response = await api.patch<Item>(
         `/api/items/${id}/approval`,
