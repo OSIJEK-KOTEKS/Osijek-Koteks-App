@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useMemo} from 'react';
-import {View, StyleSheet, ActivityIndicator, Text, Button} from 'react-native';
+import {View, StyleSheet, ActivityIndicator} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
@@ -17,52 +17,7 @@ import {apiService} from './utils/api';
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class AppErrorBoundary extends React.Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {hasError: false, error: null};
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return {hasError: true, error};
-  }
-
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, info);
-  }
-
-  resetError = () => {
-    this.setState({hasError: false, error: null});
-  };
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
-          <Text style={styles.errorMessage}>
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </Text>
-          <Button title="Try Again" onPress={this.resetError} />
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
-
+// Define AdminTabs as a separate constant component
 const AdminTabs = () => (
   <Tab.Navigator
     screenOptions={{
@@ -91,25 +46,93 @@ const AdminTabs = () => (
   </Tab.Navigator>
 );
 
-const LoadingDisplay: React.FC = () => (
+// Define UserStack as a separate constant component
+const UserStack = () => (
+  <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Screen name="Main" component={MainScreen} />
+    <Stack.Screen
+      name="PDFViewer"
+      component={PDFViewer}
+      options={{headerShown: true}}
+    />
+    <Stack.Screen
+      name="PhotoViewer"
+      component={PhotoViewer}
+      options={{
+        headerShown: false,
+        presentation: 'modal',
+      }}
+    />
+  </Stack.Navigator>
+);
+
+// Define AdminStack as a separate constant component
+const AdminStack = () => (
+  <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Screen name="Main" component={AdminTabs} />
+    <Stack.Screen
+      name="PDFViewer"
+      component={PDFViewer}
+      options={{headerShown: true}}
+    />
+    <Stack.Screen
+      name="PhotoViewer"
+      component={PhotoViewer}
+      options={{
+        headerShown: false,
+        presentation: 'modal',
+      }}
+    />
+  </Stack.Navigator>
+);
+
+const LoadingDisplay = () => (
   <View style={styles.centered}>
     <ActivityIndicator size="large" color="#2196F3" />
   </View>
 );
 
-const App: React.FC = () => {
+const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const authContext = useMemo(
+    () => ({
+      signIn: async (token: string) => {
+        try {
+          await AsyncStorage.setItem('userToken', token);
+          setUserToken(token);
+          const userProfile = await apiService.getUserProfile();
+          setIsAdmin(userProfile.role === 'admin');
+        } catch (error) {
+          console.error('Sign in error:', error);
+          throw error;
+        }
+      },
+      signOut: async () => {
+        try {
+          await AsyncStorage.removeItem('userToken');
+          await apiService.logout();
+          setUserToken(null);
+          setIsAdmin(false);
+        } catch (error) {
+          console.error('Sign out error:', error);
+          throw error;
+        }
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (token) {
+          setUserToken(token);
           const userProfile = await apiService.getUserProfile();
           setIsAdmin(userProfile.role === 'admin');
-          setUserToken(token);
         }
       } catch (e) {
         console.error('Bootstrap error:', e);
@@ -124,70 +147,26 @@ const App: React.FC = () => {
     bootstrapAsync();
   }, []);
 
-  const authContext = useMemo(
-    () => ({
-      signIn: async (token: string) => {
-        try {
-          setUserToken(token);
-          await AsyncStorage.setItem('userToken', token);
-          const userProfile = await apiService.getUserProfile();
-          setIsAdmin(userProfile.role === 'admin');
-        } catch (error) {
-          console.error('Sign in error:', error);
-          throw error;
-        }
-      },
-      signOut: async () => {
-        try {
-          setUserToken(null);
-          setIsAdmin(false);
-          await AsyncStorage.removeItem('userToken');
-          await apiService.logout();
-        } catch (error) {
-          console.error('Sign out error:', error);
-          throw error;
-        }
-      },
-    }),
-    [],
-  );
-
   if (isLoading) {
     return <LoadingDisplay />;
   }
 
+  const renderNavigator = () => {
+    if (!userToken) {
+      return (
+        <Stack.Navigator screenOptions={{headerShown: false}}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Navigator>
+      );
+    }
+
+    return isAdmin ? <AdminStack /> : <UserStack />;
+  };
+
   return (
-    <AppErrorBoundary>
-      <AuthContext.Provider value={authContext}>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{headerShown: false}}>
-            {userToken ? (
-              <>
-                <Stack.Screen
-                  name="Main"
-                  component={isAdmin ? AdminTabs : MainScreen}
-                />
-                <Stack.Screen
-                  name="PDFViewer"
-                  component={PDFViewer}
-                  options={{headerShown: true}}
-                />
-                <Stack.Screen
-                  name="PhotoViewer"
-                  component={PhotoViewer}
-                  options={{
-                    headerShown: false,
-                    presentation: 'modal',
-                  }}
-                />
-              </>
-            ) : (
-              <Stack.Screen name="Login" component={LoginScreen} />
-            )}
-          </Stack.Navigator>
-        </NavigationContainer>
-      </AuthContext.Provider>
-    </AppErrorBoundary>
+    <AuthContext.Provider value={authContext}>
+      <NavigationContainer>{renderNavigator()}</NavigationContainer>
+    </AuthContext.Provider>
   );
 };
 
@@ -197,25 +176,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#ffffff',
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#ff3b30',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
   },
 });
 

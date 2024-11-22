@@ -5,10 +5,10 @@ import {CompositeNavigationProp} from '@react-navigation/native';
 // Navigation Types
 export type RootStackParamList = {
   Login: undefined;
+  AuthenticatedStack: undefined;
   Main: undefined;
   PDFViewer: {pdfUrl: string};
   PhotoViewer: {photoUrl: string};
-  CreateItem: undefined;
 };
 
 export type AdminTabParamList = {

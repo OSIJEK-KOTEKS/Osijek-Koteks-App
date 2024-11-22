@@ -132,7 +132,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     // Implement forgot password functionality
     Alert.alert(
       'Zaboravljena lozinka',
-      'Molimo kontaktirajte administratora za resetiranje lozinke.',
+      'Kontaktirajte nas na: it@osijek-koteks.hr',
     );
   };
 

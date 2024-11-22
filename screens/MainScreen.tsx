@@ -29,7 +29,10 @@ import CustomAvatar from '../components/CustomAvatar';
 import PhotoCaptureModal from '../components/PhotoCaptureModal';
 import {CreateItemModal} from '../components/CreateItemModal';
 import LocationDetailView from '../components/LocationDetailView';
+import DateRangeFilters from '../components/DateRangeFilters';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+const [dateRange, setDateRange] = useState('7days');
+const [sortOrder, setSortOrder] = useState('date-desc');
 
 type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -80,7 +83,63 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
   const {signOut} = useContext(AuthContext);
+  const [dateRange, setDateRange] = useState<string>('7days');
+  const [sortOrder, setSortOrder] = useState<string>('date-desc');
 
+  const getDateFromString = (dateStr: string) => {
+    const [day, month, year] = dateStr.split('.');
+    return new Date(`${year}-${month}-${day}`);
+  };
+
+  const getFilteredItems = useCallback(
+    (
+      items: Item[],
+      selectedCode: string,
+      dateRange: string,
+      sortOrder: string,
+    ) => {
+      let filtered = [...items];
+
+      // Date range filter
+      if (dateRange !== 'all') {
+        const today = new Date();
+        const daysToSubtract = dateRange === '7days' ? 7 : 30;
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - daysToSubtract);
+
+        filtered = filtered.filter(item => {
+          const [day, month, year] = item.creationDate.split('.');
+          const itemDate = new Date(
+            Number(year),
+            Number(month) - 1,
+            Number(day),
+          );
+          return itemDate >= startDate;
+        });
+      }
+
+      // Code filter
+      if (selectedCode !== 'all') {
+        filtered = filtered.filter(item => item.code === selectedCode);
+      }
+
+      // Sorting by date only
+      filtered.sort((a, b) => {
+        const [dayA, monthA, yearA] = a.creationDate.split('.');
+        const [dayB, monthB, yearB] = b.creationDate.split('.');
+
+        const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA));
+        const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB));
+
+        return sortOrder === 'date-desc'
+          ? dateB.getTime() - dateA.getTime()
+          : dateA.getTime() - dateB.getTime();
+      });
+
+      return filtered;
+    },
+    [],
+  );
   useEffect(() => {
     const getToken = async () => {
       try {
@@ -133,13 +192,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   }, [fetchData]);
 
   useEffect(() => {
-    if (selectedCode === 'all') {
-      setFilteredItems(items);
-    } else {
-      const filtered = items.filter(item => item.code === selectedCode);
-      setFilteredItems(filtered);
-    }
-  }, [selectedCode, items]);
+    if (!items.length) return;
+
+    const filtered = getFilteredItems(
+      items,
+      selectedCode,
+      dateRange,
+      sortOrder,
+    );
+    setFilteredItems(filtered);
+  }, [items, selectedCode, dateRange, sortOrder, getFilteredItems]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -334,20 +396,15 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
           <Divider style={styles.divider} />
 
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerLabel}>Radni nalog</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={selectedCode}
-                onValueChange={itemValue => setSelectedCode(itemValue)}
-                style={styles.picker}>
-                <Picker.Item label="Svi Radni Nalozi" value="all" />
-                {availableCodes.map(code => (
-                  <Picker.Item key={code} label={code} value={code} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          <DateRangeFilters
+            selectedRange={dateRange}
+            onRangeChange={setDateRange}
+            selectedCode={selectedCode}
+            onCodeChange={setSelectedCode}
+            availableCodes={availableCodes}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+          />
 
           <Divider style={styles.divider} />
 
@@ -367,12 +424,24 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
         <View style={styles.documentsContainer}>
           <Text style={styles.sectionTitle}>
-            RN {selectedCode !== 'all' ? `(${selectedCode})` : '(Svi)'}
+            {dateRange === '7days'
+              ? 'Zadnjih 7 dana'
+              : dateRange === '30days'
+              ? 'Zadnjih 30 dana'
+              : 'Svi dokumenti'}{' '}
+            {selectedCode !== 'all' ? `(${selectedCode})` : ''}
           </Text>
         </View>
       </>
     );
-  }, [userProfile, selectedCode, availableCodes, filteredItems.length]);
+  }, [
+    userProfile,
+    selectedCode,
+    availableCodes,
+    dateRange,
+    sortOrder,
+    filteredItems.length,
+  ]);
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -787,6 +856,27 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 12,
     marginTop: 8,
+  },
+  filterContainer: {
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 15,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginLeft: 8,
+  },
+  filterDivider: {
+    marginVertical: 12,
+    backgroundColor: '#E0E0E0',
   },
 });
 
