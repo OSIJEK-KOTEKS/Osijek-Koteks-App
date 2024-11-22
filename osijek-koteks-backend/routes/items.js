@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
@@ -14,19 +15,10 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'approval-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
+const storage = multer.memoryStorage();
 
 // File filter for images
 const fileFilter = (req, file, cb) => {
-  // Accept images only
   if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
     return cb(new Error('Only image files are allowed!'), false);
   }
@@ -37,13 +29,38 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
   },
 });
 
 // Validate 5-digit code format
 const validateCode = code => /^\d{5}$/.test(code);
 
+// Image compression and processing function
+const processAndSaveImage = async (buffer, originalname) => {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+  const filename = 'approval-' + uniqueSuffix + path.extname(originalname);
+  const filepath = path.join(uploadDir, filename);
+
+  try {
+    await sharp(buffer, {failOnError: false})
+      .rotate() // This will auto-rotate based on EXIF data
+      .resize(1200, 1200, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality: 80,
+        progressive: true,
+      })
+      .toFile(filepath);
+
+    return '/' + filepath;
+  } catch (error) {
+    console.error('Image processing error:', error);
+    throw error;
+  }
+};
 // Get items by user's codes
 router.get('/', auth, async (req, res) => {
   try {
@@ -61,10 +78,8 @@ router.get('/', auth, async (req, res) => {
       codes: user.codes,
     });
 
-    // If user is admin, they can see all items
     const query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
-    // Add date range filter if provided
     if (req.query.startDate && req.query.endDate) {
       query.creationDate = {
         $gte: new Date(req.query.startDate),
@@ -89,7 +104,6 @@ router.get('/', auth, async (req, res) => {
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
-    // Allow both admin and bot users to create items
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
       return res
         .status(403)
@@ -121,7 +135,7 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Update approval status (allow both admin and regular users)
+// Update approval status
 router.patch(
   '/:id/approval',
   auth,
@@ -142,7 +156,6 @@ router.patch(
         return res.status(404).json({message: 'Item not found'});
       }
 
-      // Handle photo upload for approval
       if (approvalStatus === 'odobreno') {
         if (!req.file) {
           return res
@@ -150,7 +163,6 @@ router.patch(
             .json({message: 'Photo is required for approval'});
         }
 
-        // Parse location data from the form
         let parsedLocationData;
         try {
           parsedLocationData = JSON.parse(locationData);
@@ -161,25 +173,35 @@ router.patch(
           });
         }
 
-        // Update approval photo info
-        item.approvalPhoto = {
-          url: `/${req.file.path.replace(/\\/g, '/')}`,
-          uploadDate: new Date(),
-          mimeType: req.file.mimetype,
-        };
+        try {
+          const photoUrl = await processAndSaveImage(
+            req.file.buffer,
+            req.file.originalname,
+          );
 
-        // Update location data
-        item.approvalLocation = {
-          coordinates: {
-            latitude: parsedLocationData.coordinates.latitude,
-            longitude: parsedLocationData.coordinates.longitude,
-          },
-          accuracy: parsedLocationData.accuracy,
-          timestamp: new Date(parsedLocationData.timestamp),
-        };
+          item.approvalPhoto = {
+            url: photoUrl,
+            uploadDate: new Date(),
+            mimeType: 'image/jpeg',
+          };
+
+          item.approvalLocation = {
+            coordinates: {
+              latitude: parsedLocationData.coordinates.latitude,
+              longitude: parsedLocationData.coordinates.longitude,
+            },
+            accuracy: parsedLocationData.accuracy,
+            timestamp: new Date(parsedLocationData.timestamp),
+          };
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return res.status(500).json({
+            message: 'Error processing image',
+            error: error.message,
+          });
+        }
       }
 
-      // Update approval status and related fields
       item.approvalStatus = approvalStatus;
       if (approvalStatus === 'odobreno') {
         item.approvalDate = new Date();
@@ -218,6 +240,7 @@ router.patch(
     }
   },
 );
+
 // Get a specific item
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -264,7 +287,6 @@ router.patch('/:id', auth, async (req, res) => {
       return res.status(400).json({message: 'Code must be exactly 5 digits'});
     }
 
-    // Update fields if provided
     if (title) item.title = title;
     if (code) item.code = code;
     if (pdfUrl) item.pdfUrl = pdfUrl;
