@@ -443,14 +443,30 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         </View>
 
         <View style={styles.documentsContainer}>
-          <Text style={styles.sectionTitle}>
-            {dateRange === '7days'
-              ? 'Zadnjih 7 dana'
-              : dateRange === '30days'
-              ? 'Zadnjih 30 dana'
-              : 'Svi dokumenti'}{' '}
-            {selectedCode !== 'all' ? `(${selectedCode})` : ''}
-          </Text>
+          <View style={styles.documentHeader}>
+            <Text style={styles.sectionTitle}>
+              {dateRange === '7days'
+                ? 'Zadnjih 7 dana'
+                : dateRange === '30days'
+                ? 'Zadnjih 30 dana'
+                : 'Svi dokumenti'}{' '}
+              {selectedCode !== 'all' ? `(${selectedCode})` : ''}
+            </Text>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}>
+              <MaterialIcons
+                name="refresh"
+                size={24}
+                color="#2196F3"
+                style={[
+                  styles.refreshIcon,
+                  refreshing && styles.refreshIconSpinning,
+                ]}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </>
     );
@@ -463,6 +479,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     filteredItems.length,
     isProfileMenuVisible,
     handleLogout,
+    refreshing,
+    onRefresh,
   ]);
 
   return (
@@ -906,6 +924,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 2,
+  },
+  documentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  refreshIcon: {
+    transform: [{rotate: '0deg'}],
+  },
+  refreshIconSpinning: {
+    transform: [{rotate: '360deg'}],
+    opacity: 0.5,
   },
 });
 
