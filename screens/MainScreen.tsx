@@ -31,8 +31,7 @@ import {CreateItemModal} from '../components/CreateItemModal';
 import LocationDetailView from '../components/LocationDetailView';
 import DateRangeFilters from '../components/DateRangeFilters';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const [dateRange, setDateRange] = useState('7days');
-const [sortOrder, setSortOrder] = useState('date-desc');
+import ProfileMenu from '../components/ProfileMenu';
 
 type MainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -85,6 +84,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const {signOut} = useContext(AuthContext);
   const [dateRange, setDateRange] = useState<string>('7days');
   const [sortOrder, setSortOrder] = useState<string>('date-desc');
+  const [isProfileMenuVisible, setProfileMenuVisible] = useState(false);
 
   const getDateFromString = (dateStr: string) => {
     const [day, month, year] = dateStr.split('.');
@@ -376,7 +376,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     return (
       <>
         <View style={styles.cardContainer}>
-          <View style={styles.profileContainer}>
+          <TouchableOpacity
+            style={styles.profileContainer}
+            onPress={() => setProfileMenuVisible(true)}>
             <CustomAvatar
               firstName={userProfile?.firstName}
               lastName={userProfile?.lastName}
@@ -392,7 +394,25 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 {userProfile?.company || 'Loading...'}
               </Text>
             </View>
-          </View>
+            <MaterialIcons
+              name="keyboard-arrow-down"
+              size={24}
+              color="#666"
+              style={styles.arrowIcon}
+            />
+          </TouchableOpacity>
+
+          <ProfileMenu
+            isVisible={isProfileMenuVisible}
+            onClose={() => setProfileMenuVisible(false)}
+            onLogout={handleLogout}
+            userName={
+              userProfile
+                ? `${userProfile.firstName} ${userProfile.lastName}`
+                : ''
+            }
+            userEmail={userProfile?.email}
+          />
 
           <Divider style={styles.divider} />
 
@@ -441,6 +461,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     dateRange,
     sortOrder,
     filteredItems.length,
+    isProfileMenuVisible,
+    handleLogout,
   ]);
 
   return (
@@ -547,24 +569,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  profileContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  company: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
+
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -877,6 +882,30 @@ const styles = StyleSheet.create({
   filterDivider: {
     marginVertical: 12,
     backgroundColor: '#E0E0E0',
+  },
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    position: 'relative',
+  },
+  profileInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  arrowIcon: {
+    position: 'absolute',
+    right: 15,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  company: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
   },
 });
 
