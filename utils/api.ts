@@ -9,7 +9,7 @@ import {
   LocationData,
 } from '../types';
 
-const API_URL = 'http://192.168.1.130:5000';
+const API_URL = 'http://192.168.0.130:5000';
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
 

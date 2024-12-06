@@ -4,6 +4,9 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// Import models
+const Item = require('./models/Item');
+
 const app = express();
 
 // Basic CORS configuration
@@ -30,6 +33,30 @@ app.use((req, res, next) => {
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Test route for MongoDB connection
+app.get('/api/test-db', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
+    await mongoose.connection.db.admin().ping();
+    res.json({
+      status: 'success',
+      message: 'Successfully connected to MongoDB Atlas',
+      database: mongoose.connection.db.databaseName,
+      connectionState: mongoose.connection.readyState,
+    });
+  } catch (error) {
+    console.error('Database ping error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to connect to database',
+      error: error.message,
+      connectionState: mongoose.connection.readyState,
+    });
+  }
+});
 
 // Data retention middleware
 const dataRetentionMiddleware = async (req, res, next) => {
@@ -107,6 +134,10 @@ app.use((err, req, res, next) => {
 mongoose
   .connect(process.env.MONGODB_URI, {
     maxPoolSize: 10,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
   })
   .then(() => {
     console.log('MongoDB connected successfully');
@@ -118,5 +149,17 @@ mongoose
     console.error('MongoDB connection error:', err);
     process.exit(1);
   });
+
+// Handle server shutdown gracefully
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed through app termination');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    process.exit(1);
+  }
+});
 
 module.exports = app;

@@ -72,7 +72,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
         {!error ? (
           <Image
             source={{
-              uri: `http://192.168.1.130:5000${photoUrl}`,
+              uri: `http://192.168.0.130:5000${photoUrl}`,
               headers: {
                 Authorization: `Bearer ${token}`,
               },

@@ -331,7 +331,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                           <View style={styles.previewImageWrapper}>
                             <Image
                               source={{
-                                uri: `http://192.168.1.130:5000${item.approvalPhoto.url}`,
+                                uri: `http://192.168.0.130:5000${item.approvalPhoto.url}`,
                                 headers: {
                                   Authorization: `Bearer ${userToken}`,
                                 },
