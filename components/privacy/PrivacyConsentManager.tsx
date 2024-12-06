@@ -1,10 +1,9 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Platform,
 } from 'react-native';
 import {Text, CheckBox} from 'react-native-elements';
@@ -20,6 +19,51 @@ interface PrivacyConsentManagerProps {
   onAccept: () => void;
 }
 
+interface PrivacyAlertProps {
+  isVisible: boolean;
+  onAccept: () => void;
+  onCancel: () => void;
+}
+
+const PrivacyAlert: React.FC<PrivacyAlertProps> = ({
+  isVisible,
+  onAccept,
+  onCancel,
+}) => {
+  return (
+    <Modal
+      isVisible={isVisible}
+      onBackdropPress={onCancel}
+      style={styles.alertModal}
+      animationIn="fadeIn"
+      animationOut="fadeOut">
+      <View style={styles.alertContainer}>
+        <Text style={styles.alertTitle}>Obavezna pravila privatnosti</Text>
+        <Text style={styles.alertMessage}>
+          Za korištenje aplikacije morate prihvatiti pravila privatnosti i
+          uvjete korištenja.
+        </Text>
+        <View style={styles.alertButtonContainer}>
+          <TouchableOpacity
+            style={[styles.alertButton, styles.alertCancelButton]}
+            onPress={onCancel}
+            accessible={true}
+            accessibilityRole="button">
+            <Text style={styles.alertButtonText}>Odustani</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.alertButton, styles.alertAcceptButton]}
+            onPress={onAccept}
+            accessible={true}
+            accessibilityRole="button">
+            <Text style={styles.alertButtonText}>Prihvati</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
   isVisible,
   onClose,
@@ -28,14 +72,11 @@ export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
   const [locationConsent, setLocationConsent] = useState(false);
   const [cameraConsent, setCameraConsent] = useState(false);
   const [dataProcessingConsent, setDataProcessingConsent] = useState(false);
-  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [isAlertVisible, setAlertVisible] = useState(false);
 
   const handleAccept = async () => {
     if (!locationConsent || !cameraConsent || !dataProcessingConsent) {
-      Alert.alert(
-        'Potrebna suglasnost',
-        'Morate prihvatiti obavezne stavke za korištenje aplikacije.',
-      );
+      setAlertVisible(true);
       return;
     }
 
@@ -47,7 +88,6 @@ export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
           location: locationConsent,
           camera: cameraConsent,
           dataProcessing: dataProcessingConsent,
-          marketing: marketingConsent,
         },
       };
 
@@ -58,12 +98,37 @@ export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
       onAccept();
     } catch (error) {
       console.error('Error saving privacy consent:', error);
-      Alert.alert('Greška', 'Došlo je do greške pri spremanju postavki.');
     }
   };
 
-  const privacyPolicyContent = `
-PRAVILA PRIVATNOSTI
+  const handleDecline = () => {
+    setAlertVisible(true);
+  };
+
+  const handleAlertAccept = () => {
+    setAlertVisible(false);
+  };
+
+  const handleAlertCancel = () => {
+    setAlertVisible(false);
+  };
+
+  return (
+    <>
+      <Modal
+        isVisible={isVisible}
+        onBackdropPress={onClose}
+        onBackButtonPress={onClose}
+        style={styles.modal}
+        accessibilityLabel="Pravila privatnosti i suglasnosti">
+        <View style={styles.container}>
+          <Text h4 style={styles.title} accessibilityRole="header">
+            Pravila privatnosti i suglasnosti
+          </Text>
+
+          <ScrollView style={styles.scrollView}>
+            <Text style={styles.content} accessibilityRole="text">
+              {`PRAVILA PRIVATNOSTI
 
 1. Opće informacije
 Ova aplikacija prikuplja i obrađuje vaše osobne podatke u skladu s Općom uredbom o zaštiti podataka (GDPR).
@@ -102,63 +167,69 @@ Vaše podatke čuvamo samo onoliko dugo koliko je potrebno za svrhe zbog kojih s
 Implementirali smo tehničke i organizacijske mjere za zaštitu vaših podataka.
 
 8. Kontakt
-Za sva pitanja o zaštiti podataka kontaktirajte nas na: it@osijek-koteks.hr
-`;
+Za sva pitanja o zaštiti podataka kontaktirajte nas na: it@osijek-koteks.hr`}
+            </Text>
 
-  return (
-    <Modal
-      isVisible={isVisible}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      style={styles.modal}>
-      <View style={styles.container}>
-        <Text h4 style={styles.title}>
-          Pravila privatnosti i suglasnosti
-        </Text>
+            <View style={styles.consentSection}>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Obavezne suglasnosti
+              </Text>
 
-        <ScrollView style={styles.scrollView}>
-          <Text style={styles.content}>{privacyPolicyContent}</Text>
+              <CheckBox
+                title="Pristajem na prikupljanje i obradu lokacijskih podataka (obavezno)"
+                checked={locationConsent}
+                onPress={() => setLocationConsent(!locationConsent)}
+                containerStyle={styles.checkboxContainer}
+                accessibilityRole="checkbox"
+                accessibilityLabel="Pristanak za lokacijske podatke"
+              />
 
-          <View style={styles.consentSection}>
-            <Text style={styles.sectionTitle}>Obavezne suglasnosti</Text>
+              <CheckBox
+                title="Pristajem na korištenje kamere za fotografiranje dokumenata (obavezno)"
+                checked={cameraConsent}
+                onPress={() => setCameraConsent(!cameraConsent)}
+                containerStyle={styles.checkboxContainer}
+                accessibilityRole="checkbox"
+                accessibilityLabel="Pristanak za korištenje kamere"
+              />
 
-            <CheckBox
-              title="Pristajem na prikupljanje i obradu lokacijskih podataka (obavezno)"
-              checked={locationConsent}
-              onPress={() => setLocationConsent(!locationConsent)}
-              containerStyle={styles.checkboxContainer}
-            />
+              <CheckBox
+                title="Pristajem na obradu osobnih podataka prema pravilima privatnosti (obavezno)"
+                checked={dataProcessingConsent}
+                onPress={() => setDataProcessingConsent(!dataProcessingConsent)}
+                containerStyle={styles.checkboxContainer}
+                accessibilityRole="checkbox"
+                accessibilityLabel="Pristanak za obradu osobnih podataka"
+              />
+            </View>
+          </ScrollView>
 
-            <CheckBox
-              title="Pristajem na korištenje kamere za fotografiranje dokumenata (obavezno)"
-              checked={cameraConsent}
-              onPress={() => setCameraConsent(!cameraConsent)}
-              containerStyle={styles.checkboxContainer}
-            />
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.declineButton]}
+              onPress={handleDecline}
+              accessible={true}
+              accessibilityRole="button">
+              <Text style={styles.buttonText}>Odbij</Text>
+            </TouchableOpacity>
 
-            <CheckBox
-              title="Pristajem na obradu osobnih podataka prema pravilima privatnosti (obavezno)"
-              checked={dataProcessingConsent}
-              onPress={() => setDataProcessingConsent(!dataProcessingConsent)}
-              containerStyle={styles.checkboxContainer}
-            />
+            <TouchableOpacity
+              style={[styles.button, styles.acceptButton]}
+              onPress={handleAccept}
+              accessible={true}
+              accessibilityRole="button">
+              <Text style={styles.buttonText}>Prihvati</Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.declineButton]}
-            onPress={onClose}>
-            <Text style={styles.buttonText}>Odbij</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.acceptButton]}
-            onPress={handleAccept}>
-            <Text style={styles.buttonText}>Prihvati</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      <PrivacyAlert
+        isVisible={isAlertVisible}
+        onAccept={handleAlertAccept}
+        onCancel={handleAlertCancel}
+      />
+    </>
   );
 };
 
@@ -212,18 +283,75 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     marginHorizontal: 5,
+    elevation: Platform.select({android: 2, ios: 0}),
   },
   acceptButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#1976D2',
   },
   declineButton: {
-    backgroundColor: '#666',
+    backgroundColor: '#D32F2F',
   },
   buttonText: {
-    color: 'white',
+    color: '#FFFFFF',
     textAlign: 'center',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '700',
+  },
+  // Alert Modal Styles
+  alertModal: {
+    justifyContent: 'center',
+    margin: 20,
+  },
+  alertContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  alertButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  alertButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    elevation: Platform.select({android: 2, ios: 0}),
+  },
+  alertCancelButton: {
+    backgroundColor: '#D32F2F',
+  },
+  alertAcceptButton: {
+    backgroundColor: '#1976D2',
+  },
+  alertButtonText: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 
