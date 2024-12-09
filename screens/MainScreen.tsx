@@ -16,7 +16,7 @@ import {Picker} from '@react-native-picker/picker';
 import {GestureHandlerRootView, Swipeable} from 'react-native-gesture-handler';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {apiService} from '../utils/api';
+import {apiService, getImageUrl} from '../utils/api';
 import {
   User,
   Item,
@@ -331,7 +331,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                           <View style={styles.previewImageWrapper}>
                             <Image
                               source={{
-                                uri: `http://192.168.0.130:5000${item.approvalPhoto.url}`,
+                                uri: getImageUrl(item.approvalPhoto.url),
                                 headers: {
                                   Authorization: `Bearer ${userToken}`,
                                 },

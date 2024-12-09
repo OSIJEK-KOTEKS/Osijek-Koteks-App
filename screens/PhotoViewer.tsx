@@ -15,7 +15,7 @@ import {StackNavigationProp} from '@react-navigation/stack';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {RootStackParamList} from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import {getImageUrl} from '../utils/api';
 type PhotoViewerRouteProp = RouteProp<RootStackParamList, 'PhotoViewer'>;
 type PhotoViewerNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -72,7 +72,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
         {!error ? (
           <Image
             source={{
-              uri: `http://192.168.0.130:5000${photoUrl}`,
+              uri: getImageUrl(photoUrl),
               headers: {
                 Authorization: `Bearer ${token}`,
               },

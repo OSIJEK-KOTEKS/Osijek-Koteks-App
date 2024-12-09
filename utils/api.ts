@@ -12,6 +12,7 @@ import {
 const API_URL = __DEV__
   ? 'http://192.168.1.130:5000' // Development
   : 'https://osijek-koteks-app.onrender.com'; // Production
+export const getImageUrl = (path: string) => `${API_URL}${path}`;
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
 
