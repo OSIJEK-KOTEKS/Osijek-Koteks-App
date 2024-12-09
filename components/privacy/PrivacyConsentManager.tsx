@@ -34,7 +34,7 @@ export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
     locationConsent && cameraConsent && dataProcessingConsent;
 
   const handleAccept = async () => {
-    if (!allRequiredConsentsAccepted) {
+    if (!locationConsent || !cameraConsent || !dataProcessingConsent) {
       Alert.alert(
         'Potrebna suglasnost',
         'Morate prihvatiti obavezne stavke za korištenje aplikacije.',
@@ -113,8 +113,10 @@ Za sva pitanja o zaštiti podataka kontaktirajte nas na: it@osijek-koteks.hr
       isVisible={isVisible}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
-      style={styles.modal}>
-      <View style={styles.container}>
+      style={styles.modal}
+      backdropOpacity={0.5}
+      backdropColor="black">
+      <View style={[styles.container, {backgroundColor: 'white'}]}>
         <Text h4 style={styles.title}>
           Pravila privatnosti i suglasnosti
         </Text>

@@ -104,7 +104,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       console.log('Login successful', loginResponse.user);
 
       if (!loginResponse.token || !loginResponse.user._id) {
-        throw new Error('Invalid login response');
+        throw new Error('Nevažeći odgovor za prijavu');
       }
 
       // Call the signIn function from AuthContext

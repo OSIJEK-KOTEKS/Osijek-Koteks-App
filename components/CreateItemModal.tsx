@@ -51,13 +51,13 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     setLoading(true);
     try {
       await apiService.createItem(formData);
-      Alert.alert('Success', 'Item created successfully');
+      Alert.alert('Success', 'Dokument je dodan');
       onSuccess();
       onClose();
       setFormData({title: '', code: '', pdfUrl: ''});
     } catch (error) {
       console.error('Error creating item:', error);
-      Alert.alert('Error', 'Failed to create item. Please try again.');
+      Alert.alert('Error', 'Greška');
     } finally {
       setLoading(false);
     }

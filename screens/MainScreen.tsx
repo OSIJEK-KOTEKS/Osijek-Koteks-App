@@ -180,7 +180,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       console.error('Error fetching dashboard data:', error);
       Alert.alert(
         'Error',
-        'Failed to load data. Please check your connection and try again.',
+        'Učitavanje podataka nije uspjelo. Provjerite vezu i pokušajte ponovo.',
       );
     } finally {
       setLoading(false);
@@ -215,7 +215,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       await signOut();
     } catch (error) {
       console.error('Logout error:', error);
-      Alert.alert('Error', 'Failed to logout. Please try again.');
+      Alert.alert('Error', 'Greška kod odjave. Pokušajte ponovno');
     }
   }, [signOut]);
 
@@ -231,10 +231,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           locationData,
         );
         await fetchData();
-        Alert.alert('Success', 'Item approved successfully');
+        Alert.alert('Success', 'Dokument uspješno odobren');
       } catch (error) {
         console.error('Error approving item:', error);
-        Alert.alert('Error', 'Failed to approve item. Please try again.');
+        Alert.alert('Error', 'Greška kod ovjere dokumenta. Pokušajte ponovno');
       } finally {
         setPhotoModalVisible(false);
         setSelectedItemId(null);
