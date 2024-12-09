@@ -5,6 +5,7 @@
 osijek-koteks.keystore
 # Xcode
 #
+
 build/
 *.pbxuser
 !default.pbxuser
