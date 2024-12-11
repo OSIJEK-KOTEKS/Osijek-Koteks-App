@@ -12,6 +12,7 @@ import {
 // In api.ts
 const API_URL = 'https://osijek-koteks-app.onrender.com'; // Using production URL for both dev and prod
 export const getImageUrl = (path: string) => `${API_URL}${path}`;
+
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
 
@@ -320,9 +321,11 @@ export const apiService = {
   },
   deleteItem: async (id: string): Promise<void> => {
     try {
+      console.log('Attempting to delete item with ID:', id);
       await api.delete(`/api/items/${id}`);
+      console.log('Successfully deleted item:', id);
     } catch (error) {
-      console.error('Error deleting item:', error);
+      console.error('Error details:', error);
       throw error;
     }
   },

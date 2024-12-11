@@ -308,19 +308,25 @@ router.patch('/:id', auth, async (req, res) => {
 // Delete an item (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {
+    console.log('Delete request received for item:', req.params.id);
+    console.log('Request user:', req.user);
+
     if (req.user.role !== 'admin') {
+      console.log('Access denied - non-admin user attempted deletion');
       return res.status(403).json({message: 'Access denied. Admin only.'});
     }
 
     const item = await Item.findById(req.params.id);
     if (!item) {
+      console.log('Item not found:', req.params.id);
       return res.status(404).json({message: 'Item not found'});
     }
 
     await item.deleteOne();
+    console.log('Item successfully deleted:', req.params.id);
     res.json({message: 'Item deleted successfully'});
   } catch (err) {
-    console.error('Error deleting item:', err);
+    console.error('Error during item deletion:', err);
     res.status(500).json({message: 'Server error'});
   }
 });

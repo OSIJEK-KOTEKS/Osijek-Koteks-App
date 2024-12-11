@@ -284,9 +284,11 @@ export const apiService = {
 
   deleteItem: async (id: string): Promise<void> => {
     try {
+      console.log('Attempting to delete item with ID:', id);
       await api.delete(`/api/items/${id}`);
+      console.log('Successfully deleted item:', id);
     } catch (error) {
-      console.error('Error deleting item:', error);
+      console.error('Error details:', error);
       throw error;
     }
   },
