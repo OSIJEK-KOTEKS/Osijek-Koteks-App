@@ -1,4 +1,3 @@
-// src/utils/api.ts
 import axios from 'axios';
 import {
   User,
@@ -6,10 +5,13 @@ import {
   Item,
   CreateItemInput,
   LocationData,
+  RegistrationData,
 } from '../types';
 
 const API_URL =
   process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
+
+export const getImageUrl = (path: string) => `${API_URL}${path}`;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -21,6 +23,7 @@ api.interceptors.request.use(
     const token = localStorage.getItem('userToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding token to request:', token.substring(0, 20) + '...');
     }
     return config;
   },
@@ -44,16 +47,26 @@ api.interceptors.response.use(
   },
 );
 
-export const getImageUrl = (path: string) => `${API_URL}${path}`;
-
 export const apiService = {
   // Auth methods
   login: async (email: string, password: string): Promise<LoginResponse> => {
     try {
+      console.log('Attempting login for:', email);
       const response = await api.post<LoginResponse>('/api/auth/login', {
         email,
         password,
       });
+
+      console.log('Login response received:', {
+        tokenExists: !!response.data.token,
+        userExists: !!response.data.user,
+        userId: response.data.user._id,
+      });
+
+      // Store both token and user ID
+      localStorage.setItem('userToken', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
@@ -61,9 +74,36 @@ export const apiService = {
     }
   },
 
+  register: async (userData: RegistrationData): Promise<User> => {
+    try {
+      console.log('Registering user:', {
+        ...userData,
+        password: '[REDACTED]',
+      });
+
+      const response = await api.post<LoginResponse>(
+        '/api/auth/register',
+        userData,
+      );
+      console.log('Registration successful:', {
+        userId: response.data.user._id,
+        email: response.data.user.email,
+      });
+
+      localStorage.setItem('userToken', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+
+      return response.data.user;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  },
+
   logout: async () => {
     try {
       localStorage.removeItem('userToken');
+      localStorage.removeItem('userId');
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -83,7 +123,13 @@ export const apiService = {
 
   getUserProfile: async (): Promise<User> => {
     try {
-      const response = await api.get<User>('/api/users/profile');
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        throw new Error('No user ID found');
+      }
+      console.log('Fetching user profile for ID:', userId);
+
+      const response = await api.get<User>(`/api/users/${userId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -91,11 +137,55 @@ export const apiService = {
     }
   },
 
-  deleteUser: async (userId: string): Promise<void> => {
+  createUser: async (userData: RegistrationData): Promise<User> => {
     try {
-      await api.delete(`/api/users/${userId}`);
+      console.log('Creating new user:', {
+        ...userData,
+        password: '[REDACTED]',
+      });
+
+      const response = await api.post<User>('/api/users', userData);
+      console.log('User creation successful:', {
+        userId: response.data._id,
+        email: response.data.email,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('User creation error:', error);
+      throw error;
+    }
+  },
+
+  updateUser: async (
+    id: string,
+    userData: Partial<Omit<User, '_id'>>,
+  ): Promise<User> => {
+    try {
+      console.log('Updating user:', id, userData);
+      const response = await api.patch<User>(`/api/users/${id}`, userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/api/users/${id}`);
     } catch (error) {
       console.error('Error deleting user:', error);
+      throw error;
+    }
+  },
+
+  updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
+    try {
+      const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user codes:', error);
       throw error;
     }
   },
@@ -104,6 +194,10 @@ export const apiService = {
   getItems: async (): Promise<Item[]> => {
     try {
       const response = await api.get<Item[]>('/api/items');
+      if (!response.data) {
+        console.warn('No items returned from API');
+        return [];
+      }
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -113,10 +207,26 @@ export const apiService = {
 
   createItem: async (itemData: CreateItemInput): Promise<Item> => {
     try {
+      console.log('Creating new item:', itemData);
       const response = await api.post<Item>('/api/items', itemData);
       return response.data;
     } catch (error) {
       console.error('Error creating item:', error);
+      throw error;
+    }
+  },
+
+  updateItem: async (
+    id: string,
+    itemData: Partial<
+      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
+    >,
+  ): Promise<Item> => {
+    try {
+      const response = await api.patch<Item>(`/api/items/${id}`, itemData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item:', error);
       throw error;
     }
   },
@@ -152,6 +262,22 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error updating item approval:', error);
+      throw error;
+    }
+  },
+
+  updateUserPassword: async (
+    userId: string,
+    newPassword: string,
+  ): Promise<User> => {
+    try {
+      console.log('Updating password for user:', userId);
+      const response = await api.patch<User>(`/api/users/${userId}/password`, {
+        password: newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating password:', error);
       throw error;
     }
   },

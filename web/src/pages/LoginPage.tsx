@@ -1,4 +1,3 @@
-// src/pages/LoginPage.tsx
 import React, {useState} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
@@ -27,12 +26,12 @@ const LoginPage: React.FC = () => {
       setError('');
       setLoading(true);
       const response = await apiService.login(email, password);
-      await signIn(response.token);
+      await signIn(response.token, response.user);
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, {replace: true});
     } catch (err) {
-      setError('Neispravni podaci za prijavu');
       console.error('Login error:', err);
+      setError('Neispravni podaci za prijavu');
     } finally {
       setLoading(false);
     }

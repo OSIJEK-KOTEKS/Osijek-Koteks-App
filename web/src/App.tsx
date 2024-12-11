@@ -18,36 +18,33 @@ const App: React.FC = () => {
   return (
     <React.StrictMode>
       <ThemeProvider theme={theme}>
-        <>
-          <GlobalStyles />
+        <GlobalStyles />
+        <Router>
           <AuthProvider>
-            <Router>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <PrivateRoute>
-                      <DashboardPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/users"
-                  element={
-                    <PrivateRoute adminOnly>
-                      <UserManagementPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/"
-                  element={<Navigate to="/dashboard" replace />}
-                />
-              </Routes>
-            </Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute>
+                    <DashboardPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <PrivateRoute adminOnly>
+                    <UserManagementPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Catch all route for 404 */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
           </AuthProvider>
-        </>
+        </Router>
       </ThemeProvider>
     </React.StrictMode>
   );

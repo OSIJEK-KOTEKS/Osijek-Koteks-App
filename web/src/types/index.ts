@@ -11,6 +11,16 @@ export interface User {
   phoneNumber?: string;
 }
 
+export interface RegistrationData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  role: 'admin' | 'user' | 'bot';
+  codes: string[];
+}
+
 export interface Item {
   _id: string;
   title: string;
