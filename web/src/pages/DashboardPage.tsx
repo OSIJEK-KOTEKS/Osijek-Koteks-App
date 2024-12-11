@@ -1,10 +1,13 @@
-import React, {useState, useEffect} from 'react';
+// osijek-koteks-web/src/pages/DashboardPage.tsx
+
+import React, {useState, useEffect, useCallback} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
-import {apiService} from '../utils/api';
+import {apiService, getImageUrl} from '../utils/api';
 import {Item} from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
+import ImageViewerModal from '../components/ImageViewerModal';
 
 const Header = styled.div`
   display: flex;
@@ -62,12 +65,43 @@ const ItemDetails = styled.p`
   font-size: 0.9rem;
 `;
 
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: ${({theme}) => theme.spacing.medium};
+  margin-top: ${({theme}) => theme.spacing.medium};
+`;
+
+const ImageButton = styled(S.Button)`
+  background-color: ${({theme}) => theme.colors.primary};
+  color: white;
+
+  &:hover {
+    background-color: ${({theme}) => theme.colors.primaryDark};
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: ${({theme}) => theme.colors.primary};
+`;
+
+const EmptyMessage = styled.div`
+  text-align: center;
+  padding: ${({theme}) => theme.spacing.large};
+  color: ${({theme}) => theme.colors.text};
+`;
+
 const DashboardPage = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
+  const token = localStorage.getItem('userToken');
 
   useEffect(() => {
     fetchItems();
@@ -104,7 +138,7 @@ const DashboardPage = () => {
   if (loading) {
     return (
       <S.PageContainer>
-        <div>Učitavanje...</div>
+        <LoadingContainer>Učitavanje...</LoadingContainer>
       </S.PageContainer>
     );
   }
@@ -159,19 +193,33 @@ const DashboardPage = () => {
                 <strong>Datum odobrenja:</strong> {item.approvalDate}
               </ItemDetails>
             )}
-            <S.Button
-              onClick={() => handleOpenPdf(item.pdfUrl)}
-              style={{marginTop: '1rem'}}>
-              Otvori PDF
-            </S.Button>
+            <ButtonGroup>
+              <S.Button onClick={() => handleOpenPdf(item.pdfUrl)}>
+                Otvori PDF
+              </S.Button>
+              {item.approvalPhoto?.url && (
+                <ImageButton
+                  onClick={() =>
+                    setSelectedImage(getImageUrl(item.approvalPhoto!.url!))
+                  }>
+                  Pogledaj Sliku
+                </ImageButton>
+              )}
+            </ButtonGroup>
           </ItemCard>
         ))}
       </ItemsGrid>
 
       {items.length === 0 && !loading && (
-        <div style={{textAlign: 'center', marginTop: '2rem'}}>
-          Nema dostupnih dokumenata
-        </div>
+        <EmptyMessage>Nema dostupnih dokumenata</EmptyMessage>
+      )}
+
+      {selectedImage && token && (
+        <ImageViewerModal
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+          token={token}
+        />
       )}
     </S.PageContainer>
   );
