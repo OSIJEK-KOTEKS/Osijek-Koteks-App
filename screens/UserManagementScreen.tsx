@@ -152,29 +152,29 @@ export const UserManagementScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    Alert.alert(
-      'Potvrda brisanja',
-      'Jeste li sigurni da želite izbrisati ovog korisnika?',
-      [
-        {text: 'Odustani', style: 'cancel'},
-        {
-          text: 'Izbriši',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.deleteUser(userId);
-              await fetchUsers();
-              Alert.alert('Uspjeh', 'Korisnik uspješno izbrisan');
-            } catch (error) {
-              console.error('Error deleting user:', error);
-              Alert.alert('Greška', 'Greška pri brisanju korisnika');
-            }
-          },
-        },
-      ],
-    );
-  };
+  // const handleDeleteUser = async (userId: string) => {
+  //   Alert.alert(
+  //     'Potvrda brisanja',
+  //     'Jeste li sigurni da želite izbrisati ovog korisnika?',
+  //     [
+  //       {text: 'Odustani', style: 'cancel'},
+  //       {
+  //         text: 'Izbriši',
+  //         style: 'destructive',
+  //         onPress: async () => {
+  //           try {
+  //             await apiService.deleteUser(userId);
+  //             await fetchUsers();
+  //             Alert.alert('Uspjeh', 'Korisnik uspješno izbrisan');
+  //           } catch (error) {
+  //             console.error('Error deleting user:', error);
+  //             Alert.alert('Greška', 'Greška pri brisanju korisnika');
+  //           }
+  //         },
+  //       },
+  //     ],
+  //   );
+  // };
 
   // Code Management Handlers
   const handleAddNewCode = () => {
@@ -328,29 +328,29 @@ export const UserManagementScreen: React.FC = () => {
     }
   };
 
-  const handleDataDeletion = async (userId: string) => {
-    Alert.alert(
-      'Brisanje podataka',
-      'Ova akcija će trajno izbrisati sve korisničke podatke. Želite li nastaviti?',
-      [
-        {text: 'Odustani', style: 'cancel'},
-        {
-          text: 'Izbriši',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.deleteUser(userId);
-              await fetchUsers();
-              Alert.alert('Uspjeh', 'Korisnički podaci uspješno izbrisani');
-            } catch (error) {
-              console.error('Error deleting user:', error);
-              Alert.alert('Greška', 'Greška pri brisanju podataka');
-            }
-          },
-        },
-      ],
-    );
-  };
+  // const handleDataDeletion = async (userId: string) => {
+  //   Alert.alert(
+  //     'Brisanje podataka',
+  //     'Ova akcija će trajno izbrisati sve korisničke podatke. Želite li nastaviti?',
+  //     [
+  //       {text: 'Odustani', style: 'cancel'},
+  //       {
+  //         text: 'Izbriši',
+  //         style: 'destructive',
+  //         onPress: async () => {
+  //           try {
+  //             await apiService.deleteUser(userId);
+  //             await fetchUsers();
+  //             Alert.alert('Uspjeh', 'Korisnički podaci uspješno izbrisani');
+  //           } catch (error) {
+  //             console.error('Error deleting user:', error);
+  //             Alert.alert('Greška', 'Greška pri brisanju podataka');
+  //           }
+  //         },
+  //       },
+  //     ],
+  //   );
+  // };
 
   const showPrivacySettings = (user: User) => {
     setSelectedUser(user);
@@ -383,9 +383,9 @@ export const UserManagementScreen: React.FC = () => {
         <TouchableOpacity onPress={() => handleEditUser(item)}>
           <MaterialIcons name="edit" size={24} color="#2196F3" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleDeleteUser(item._id)}>
+        {/* <TouchableOpacity onPress={() => handleDeleteUser(item._id)}>
           <MaterialIcons name="delete" size={24} color="#f44336" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </ListItem>
   );
@@ -674,7 +674,7 @@ export const UserManagementScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   style={[styles.privacyButton, styles.deleteButton]}
                   onPress={() =>
                     selectedUser && handleDataDeletion(selectedUser._id)
@@ -687,7 +687,7 @@ export const UserManagementScreen: React.FC = () => {
                   <Text style={[styles.privacyButtonText, styles.deleteText]}>
                     Izbriši sve podatke
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <View style={styles.privacyInfo}>
                   <Text style={styles.privacyInfoHeader}>
@@ -832,11 +832,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#666',
   },
-  deleteButton: {
-    backgroundColor: '#ffebee',
-    borderColor: '#ffcdd2',
-    borderWidth: 1,
-  },
+
   buttonText: {
     color: 'white',
     fontSize: 16,

@@ -171,15 +171,6 @@ export const apiService = {
     }
   },
 
-  deleteUser: async (id: string): Promise<void> => {
-    try {
-      await api.delete(`/api/users/${id}`);
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      throw error;
-    }
-  },
-
   updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
     try {
       const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});

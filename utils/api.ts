@@ -9,7 +9,6 @@ import {
   LocationData,
 } from '../types';
 
-// In api.ts
 const API_URL = 'https://osijek-koteks-app.onrender.com'; // Using production URL for both dev and prod
 export const getImageUrl = (path: string) => `${API_URL}${path}`;
 
@@ -192,15 +191,6 @@ export const apiService = {
     }
   },
 
-  deleteUser: async (id: string): Promise<void> => {
-    try {
-      await api.delete(`/api/users/${id}`);
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      throw error;
-    }
-  },
-
   updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
     try {
       const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
@@ -304,6 +294,7 @@ export const apiService = {
       throw error;
     }
   },
+
   updateUserPassword: async (
     userId: string,
     newPassword: string,
@@ -319,6 +310,7 @@ export const apiService = {
       throw error;
     }
   },
+
   deleteItem: async (id: string): Promise<void> => {
     try {
       console.log('Attempting to delete item with ID:', id);

@@ -99,22 +99,6 @@ const UserManagementPage = () => {
     console.log('Edit user:', user);
   };
 
-  const handleDelete = async (userId: string) => {
-    if (
-      !window.confirm('Jeste li sigurni da želite izbrisati ovog korisnika?')
-    ) {
-      return;
-    }
-
-    try {
-      await apiService.deleteUser(userId);
-      await fetchUsers();
-    } catch (err) {
-      setError('Greška pri brisanju korisnika');
-      console.error('Error deleting user:', err);
-    }
-  };
-
   const handleExportData = (user: User) => {
     const data = {
       personalData: {
@@ -184,11 +168,6 @@ const UserManagementPage = () => {
                 Izvoz podataka
               </S.Button>
               <S.Button onClick={() => handleEdit(user)}>Uredi</S.Button>
-              <S.Button
-                onClick={() => handleDelete(user._id)}
-                variant="secondary">
-                Izbriši
-              </S.Button>
             </ButtonGroup>
           </UserHeader>
 
