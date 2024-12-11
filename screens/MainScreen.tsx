@@ -219,6 +219,33 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   }, [signOut]);
 
+  const handleDeleteItem = async (itemId: string) => {
+    Alert.alert(
+      'Potvrda brisanja',
+      'Jeste li sigurni da želite obrisati ovaj dokument?',
+      [
+        {
+          text: 'Odustani',
+          style: 'cancel',
+        },
+        {
+          text: 'Obriši',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deleteItem(itemId);
+              await fetchData(); // Refresh the list after deletion
+              Alert.alert('Uspjeh', 'Dokument je uspješno izbrisan');
+            } catch (error) {
+              console.error('Error deleting item:', error);
+              Alert.alert('Greška', 'Greška prilikom brisanja dokumenta');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleApproveItem = useCallback(
     async (photoUri: string, locationData: LocationData) => {
       if (!selectedItemId) return;
@@ -362,6 +389,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                       <Text style={styles.approveButtonText}>Odobri</Text>
                     </TouchableOpacity>
                   )}
+
+                  {userProfile?.role === 'admin' && (
+                    <TouchableOpacity
+                      style={[styles.approveButton, styles.deleteButton]}
+                      onPress={() => handleDeleteItem(item._id)}>
+                      <Text style={styles.approveButtonText}>Obriši</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -369,7 +404,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         </Swipeable>
       );
     },
-    [navigation, userToken],
+    [navigation, userToken, userProfile],
   );
 
   const ListHeaderComponent = useCallback(() => {
@@ -932,6 +967,10 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     padding: 8,
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
+    marginLeft: 8, // Add some space if there are other buttons
   },
   refreshIcon: {
     transform: [{rotate: '0deg'}],
