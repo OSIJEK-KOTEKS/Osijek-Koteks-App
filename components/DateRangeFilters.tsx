@@ -32,6 +32,8 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
   const sortOptions = [
     {label: 'Najnoviji prvo', value: 'date-desc'},
     {label: 'Najstariji prvo', value: 'date-asc'},
+    {label: 'Odobreni', value: 'approved-first'},
+    {label: 'Na čekanju', value: 'pending-first'},
   ];
 
   const renderPickerItems = (items: Array<{label: string; value: string}>) => {

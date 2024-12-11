@@ -123,14 +123,46 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         filtered = filtered.filter(item => item.code === selectedCode);
       }
 
-      // Sorting by date only
+      // Sorting
       filtered.sort((a, b) => {
+        // First handle approval status sorting
+        if (sortOrder === 'approved-first') {
+          if (
+            a.approvalStatus === 'odobreno' &&
+            b.approvalStatus !== 'odobreno'
+          )
+            return -1;
+          if (
+            a.approvalStatus !== 'odobreno' &&
+            b.approvalStatus === 'odobreno'
+          )
+            return 1;
+        } else if (sortOrder === 'pending-first') {
+          if (
+            a.approvalStatus === 'na čekanju' &&
+            b.approvalStatus !== 'na čekanju'
+          )
+            return -1;
+          if (
+            a.approvalStatus !== 'na čekanju' &&
+            b.approvalStatus === 'na čekanju'
+          )
+            return 1;
+        }
+
+        // If approval status is the same or not sorting by approval, sort by date
         const [dayA, monthA, yearA] = a.creationDate.split('.');
         const [dayB, monthB, yearB] = b.creationDate.split('.');
 
         const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA));
         const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB));
 
+        // For approval status sorting, use date as secondary sort
+        if (sortOrder === 'approved-first' || sortOrder === 'pending-first') {
+          return dateB.getTime() - dateA.getTime(); // Newer first as secondary sort
+        }
+
+        // For date-based sorting
         return sortOrder === 'date-desc'
           ? dateB.getTime() - dateA.getTime()
           : dateA.getTime() - dateB.getTime();
