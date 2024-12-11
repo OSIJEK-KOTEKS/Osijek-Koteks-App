@@ -1,6 +1,4 @@
-// osijek-koteks-web/src/pages/DashboardPage.tsx
-
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {apiService, getImageUrl} from '../utils/api';
@@ -8,6 +6,7 @@ import {Item} from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
+import LocationViewerModal from '../components/LocationViewerModal';
 
 const Header = styled.div`
   display: flex;
@@ -67,16 +66,22 @@ const ItemDetails = styled.p`
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: ${({theme}) => theme.spacing.medium};
+  gap: ${({theme}) => theme.spacing.small};
   margin-top: ${({theme}) => theme.spacing.medium};
+  flex-wrap: wrap;
 `;
 
-const ImageButton = styled(S.Button)`
-  background-color: ${({theme}) => theme.colors.primary};
-  color: white;
+const ActionButton = styled(S.Button)`
+  flex: 1;
+  min-width: auto;
+`;
+
+const DeleteButton = styled(ActionButton)`
+  background-color: ${({theme}) => theme.colors.error};
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({theme}) => theme.colors.error};
+    opacity: 0.9;
   }
 `;
 
@@ -99,6 +104,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
@@ -133,6 +139,26 @@ const DashboardPage = () => {
 
   const handleOpenPdf = (pdfUrl: string) => {
     window.open(pdfUrl, '_blank');
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (window.confirm('Jeste li sigurni da želite izbrisati ovaj dokument?')) {
+      try {
+        setLoading(true);
+        await apiService.deleteItem(itemId);
+        setItems(prevItems => prevItems.filter(item => item._id !== itemId));
+        setError('');
+      } catch (err) {
+        console.error('Error deleting item:', err);
+        setError('Greška pri brisanju dokumenta');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const showLocationModal = (item: Item) => {
+    setSelectedLocation(item);
   };
 
   if (loading) {
@@ -194,16 +220,29 @@ const DashboardPage = () => {
               </ItemDetails>
             )}
             <ButtonGroup>
-              <S.Button onClick={() => handleOpenPdf(item.pdfUrl)}>
+              <ActionButton onClick={() => handleOpenPdf(item.pdfUrl)}>
                 Otvori PDF
-              </S.Button>
+              </ActionButton>
+
               {item.approvalPhoto?.url && (
-                <ImageButton
+                <ActionButton
                   onClick={() =>
                     setSelectedImage(getImageUrl(item.approvalPhoto!.url!))
                   }>
                   Pogledaj Sliku
-                </ImageButton>
+                </ActionButton>
+              )}
+
+              {item.approvalLocation && (
+                <ActionButton onClick={() => showLocationModal(item)}>
+                  Lokacija
+                </ActionButton>
+              )}
+
+              {user?.role === 'admin' && (
+                <DeleteButton onClick={() => handleDelete(item._id)}>
+                  Izbriši
+                </DeleteButton>
               )}
             </ButtonGroup>
           </ItemCard>
@@ -219,6 +258,14 @@ const DashboardPage = () => {
           imageUrl={selectedImage}
           onClose={() => setSelectedImage(null)}
           token={token}
+        />
+      )}
+
+      {selectedLocation?.approvalLocation && (
+        <LocationViewerModal
+          location={selectedLocation.approvalLocation}
+          onClose={() => setSelectedLocation(null)}
+          approvalDate={selectedLocation.approvalDate}
         />
       )}
     </S.PageContainer>
