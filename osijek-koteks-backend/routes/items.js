@@ -8,7 +8,7 @@ const Item = require('../models/Item');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
-
+const cloudinary = require('../config/cloudinary');
 // Configure multer for file upload
 const storage = multer.memoryStorage();
 
@@ -267,7 +267,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Update an item (admin only)
-router.patch('/:id', auth, async (req, res) => {
+router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({message: 'Access denied. Admin only.'});
@@ -284,10 +284,38 @@ router.patch('/:id', auth, async (req, res) => {
       return res.status(400).json({message: 'Code must be exactly 5 digits'});
     }
 
+    // Update basic fields
     if (title) item.title = title;
     if (code) item.code = code;
     if (pdfUrl) item.pdfUrl = pdfUrl;
     if (creationDate) item.creationDate = new Date(creationDate);
+
+    // Handle photo upload if present
+    if (req.file) {
+      try {
+        console.log('Uploading new photo to Cloudinary...');
+        const cloudinaryResponse = await uploadToCloudinary(req.file);
+        console.log('Cloudinary response:', cloudinaryResponse);
+
+        // Delete old photo from Cloudinary if exists
+        if (item.approvalPhoto && item.approvalPhoto.publicId) {
+          await cloudinary.uploader.destroy(item.approvalPhoto.publicId);
+        }
+
+        item.approvalPhoto = {
+          url: cloudinaryResponse.url,
+          uploadDate: new Date(),
+          mimeType: req.file.mimetype,
+          publicId: cloudinaryResponse.publicId,
+        };
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        return res.status(500).json({
+          message: 'Error uploading image',
+          error: error.message,
+        });
+      }
+    }
 
     const updatedItem = await item.save();
     await updatedItem.populate('approvedBy', 'firstName lastName');
