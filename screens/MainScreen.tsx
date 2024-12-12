@@ -290,7 +290,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           locationData,
         );
         await fetchData();
-        Alert.alert('Success', 'Dokument uspješno odobren');
+        Alert.alert('Uspjeh', 'Dokument uspješno odobren');
       } catch (error) {
         console.error('Error approving item:', error);
         Alert.alert('Error', 'Greška kod ovjere dokumenta. Pokušajte ponovno');
@@ -339,7 +339,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Kreiran:</Text>
-                    <Text style={styles.detailValue}>{item.creationDate}</Text>
+                    <Text style={styles.detailValue}>
+                      {item.creationTime
+                        ? `${item.creationDate} ${item.creationTime}`
+                        : item.creationDate}
+                    </Text>
                   </View>
 
                   <View style={styles.detailRow}>

@@ -50,8 +50,20 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
 
     setLoading(true);
     try {
-      await apiService.createItem(formData);
-      Alert.alert('Success', 'Dokument je dodan');
+      // Add current time to the form data
+      const now = new Date();
+      const creationTime = now.toLocaleTimeString('hr-HR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const itemData = {
+        ...formData,
+        creationTime,
+      };
+
+      await apiService.createItem(itemData);
+      Alert.alert('Uspjeh', 'Dokument je dodan');
       onSuccess();
       onClose();
       setFormData({title: '', code: '', pdfUrl: ''});
@@ -62,7 +74,6 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       setLoading(false);
     }
   };
-
   return (
     <Modal
       isVisible={isVisible}

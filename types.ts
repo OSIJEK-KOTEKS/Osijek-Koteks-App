@@ -67,6 +67,7 @@ export interface Item {
   code: string;
   pdfUrl: string;
   creationDate: string;
+  creationTime?: string;
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
   approvedBy?: {
