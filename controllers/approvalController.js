@@ -1,5 +1,5 @@
 // controllers/approvalController.js
-const uploadToCloudinary = require('../utils/uploadToCloudinary');
+const uploadToCloudinary = require('../osijek-koteks-backend/utils/uploadToCloudinary');
 
 // Your approval endpoint
 const createApproval = async (req, res) => {
