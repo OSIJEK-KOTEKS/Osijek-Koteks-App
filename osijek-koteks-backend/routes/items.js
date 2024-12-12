@@ -7,12 +7,7 @@ const sharp = require('sharp');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-
-// Create uploads directory if it doesn't exist
-const uploadDir = 'uploads/approval-photos';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, {recursive: true});
-}
+const uploadToCloudinary = require('../utils/uploadToCloudinary');
 
 // Configure multer for file upload
 const storage = multer.memoryStorage();
@@ -36,31 +31,6 @@ const upload = multer({
 // Validate 5-digit code format
 const validateCode = code => /^\d{5}$/.test(code);
 
-// Image compression and processing function
-const processAndSaveImage = async (buffer, originalname) => {
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-  const filename = 'approval-' + uniqueSuffix + path.extname(originalname);
-  const filepath = path.join(uploadDir, filename);
-
-  try {
-    await sharp(buffer, {failOnError: false})
-      .rotate() // This will auto-rotate based on EXIF data
-      .resize(1200, 1200, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .jpeg({
-        quality: 80,
-        progressive: true,
-      })
-      .toFile(filepath);
-
-    return '/' + filepath;
-  } catch (error) {
-    console.error('Image processing error:', error);
-    throw error;
-  }
-};
 // Get items by user's codes
 router.get('/', auth, async (req, res) => {
   try {
@@ -143,6 +113,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update approval status
+// Update approval status
 router.patch(
   '/:id/approval',
   auth,
@@ -150,30 +121,40 @@ router.patch(
   async (req, res) => {
     try {
       const {approvalStatus, locationData} = req.body;
+      console.log('Starting approval update with status:', approvalStatus);
 
       if (
         !approvalStatus ||
         !['na čekanju', 'odobreno', 'odbijen'].includes(approvalStatus)
       ) {
+        console.log('Invalid approval status:', approvalStatus);
         return res.status(400).json({message: 'Invalid approval status'});
       }
 
       const item = await Item.findById(req.params.id);
       if (!item) {
+        console.log('Item not found:', req.params.id);
         return res.status(404).json({message: 'Item not found'});
       }
 
       if (approvalStatus === 'odobreno') {
         if (!req.file) {
+          console.log('No file in request');
           return res
             .status(400)
             .json({message: 'Photo is required for approval'});
         }
+        console.log('File received:', {
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+        });
 
         let parsedLocationData;
         try {
           parsedLocationData = JSON.parse(locationData);
+          console.log('Location data parsed:', parsedLocationData);
         } catch (error) {
+          console.error('Location data parsing error:', error);
           return res.status(400).json({
             message: 'Invalid location data format',
             error: error.message,
@@ -181,15 +162,15 @@ router.patch(
         }
 
         try {
-          const photoUrl = await processAndSaveImage(
-            req.file.buffer,
-            req.file.originalname,
-          );
+          console.log('About to upload to Cloudinary...');
+          const cloudinaryResponse = await uploadToCloudinary(req.file);
+          console.log('Cloudinary response:', cloudinaryResponse);
 
           item.approvalPhoto = {
-            url: photoUrl,
+            url: cloudinaryResponse.url,
             uploadDate: new Date(),
-            mimeType: 'image/jpeg',
+            mimeType: req.file.mimetype,
+            publicId: cloudinaryResponse.publicId,
           };
 
           item.approvalLocation = {
@@ -200,11 +181,17 @@ router.patch(
             accuracy: parsedLocationData.accuracy,
             timestamp: new Date(parsedLocationData.timestamp),
           };
+
+          console.log(
+            'Updated item with Cloudinary photo:',
+            item.approvalPhoto,
+          );
         } catch (error) {
-          console.error('Error processing image:', error);
+          console.error('Detailed upload error:', error);
           return res.status(500).json({
-            message: 'Error processing image',
+            message: 'Error uploading image',
             error: error.message,
+            stack: error.stack,
           });
         }
       }
@@ -220,6 +207,7 @@ router.patch(
           url: null,
           uploadDate: null,
           mimeType: null,
+          publicId: null,
         };
         item.approvalLocation = {
           coordinates: {
@@ -231,8 +219,10 @@ router.patch(
         };
       }
 
+      console.log('Saving updated item...');
       const updatedItem = await item.save();
       await updatedItem.populate('approvedBy', 'firstName lastName');
+      console.log('Item successfully updated');
 
       res.json(updatedItem);
     } catch (err) {
