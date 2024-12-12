@@ -7,12 +7,21 @@ import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
 import LocationViewerModal from '../components/LocationViewerModal';
+import Logo from '../components/Logo';
 
+// Styled Components
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: ${({theme}) => theme.spacing.large};
+  width: 100%;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({theme}) => theme.spacing.medium};
 `;
 
 const ItemsGrid = styled.div`
@@ -26,6 +35,11 @@ const ItemCard = styled.div`
   padding: ${({theme}) => theme.spacing.medium};
   border-radius: ${({theme}) => theme.borderRadius};
   box-shadow: ${({theme}) => theme.shadows.main};
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
 `;
 
 const StatusBadge = styled.span<{status: Item['approvalStatus']}>`
@@ -50,18 +64,25 @@ const StatusBadge = styled.span<{status: Item['approvalStatus']}>`
 
 const UserInfo = styled.div`
   margin-bottom: ${({theme}) => theme.spacing.medium};
+  color: ${({theme}) => theme.colors.text};
+  font-size: 0.9rem;
 `;
 
 const ItemTitle = styled.h3`
   margin: 0 0 8px 0;
   font-size: 1.1rem;
   color: ${({theme}) => theme.colors.text};
+  font-weight: 600;
 `;
 
 const ItemDetails = styled.p`
   margin: 4px 0;
   color: ${({theme}) => theme.colors.text};
   font-size: 0.9rem;
+
+  strong {
+    font-weight: 600;
+  }
 `;
 
 const ButtonGroup = styled.div`
@@ -74,6 +95,8 @@ const ButtonGroup = styled.div`
 const ActionButton = styled(S.Button)`
   flex: 1;
   min-width: auto;
+  padding: 8px 16px;
+  font-size: 0.9rem;
 `;
 
 const DeleteButton = styled(ActionButton)`
@@ -97,9 +120,17 @@ const EmptyMessage = styled.div`
   text-align: center;
   padding: ${({theme}) => theme.spacing.large};
   color: ${({theme}) => theme.colors.text};
+  background: ${({theme}) => theme.colors.white};
+  border-radius: ${({theme}) => theme.borderRadius};
+  box-shadow: ${({theme}) => theme.shadows.main};
 `;
 
-const DashboardPage = () => {
+const HeaderActions = styled.div`
+  display: flex;
+  gap: ${({theme}) => theme.spacing.medium};
+`;
+
+const Dashboard: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -172,25 +203,24 @@ const DashboardPage = () => {
   return (
     <S.PageContainer>
       <Header>
-        <div>
-          <h1>Dokumenti</h1>
-          <UserInfo>
-            Dobrodošli, {user?.firstName} {user?.lastName}
-            {user?.company && ` (${user.company})`}
-          </UserInfo>
-        </div>
-        <div>
+        <HeaderLeft>
+          <Logo />
+          <div>
+            <h1>Dokumenti</h1>
+            <UserInfo>
+              Dobrodošli, {user?.firstName} {user?.lastName}
+              {user?.company && ` (${user.company})`}
+            </UserInfo>
+          </div>
+        </HeaderLeft>
+        <HeaderActions>
           {user?.role === 'admin' && (
-            <S.Button
-              onClick={() => navigate('/users')}
-              style={{marginRight: '1rem'}}>
-              Korisnici
-            </S.Button>
+            <S.Button onClick={() => navigate('/users')}>Korisnici</S.Button>
           )}
           <S.Button variant="secondary" onClick={handleLogout}>
             Odjava
           </S.Button>
-        </div>
+        </HeaderActions>
       </Header>
 
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
@@ -272,4 +302,4 @@ const DashboardPage = () => {
   );
 };
 
-export default DashboardPage;
+export default Dashboard;

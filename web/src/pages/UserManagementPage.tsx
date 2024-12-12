@@ -5,12 +5,20 @@ import {apiService} from '../utils/api';
 import {User} from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
+import Logo from '../components/Logo';
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: ${({theme}) => theme.spacing.large};
+  width: 100%;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({theme}) => theme.spacing.medium};
 `;
 
 const UserCard = styled.div`
@@ -136,7 +144,10 @@ const UserManagementPage = () => {
   return (
     <S.PageContainer>
       <Header>
-        <h1>Upravljanje korisnicima</h1>
+        <HeaderLeft>
+          <Logo />
+          <h1>Upravljanje korisnicima</h1>
+        </HeaderLeft>
         <ButtonGroup>
           <S.Button onClick={() => navigate('/dashboard')}>
             Natrag na dokumente
