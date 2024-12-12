@@ -8,6 +8,7 @@ import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
 import LocationViewerModal from '../components/LocationViewerModal';
 import Logo from '../components/Logo';
+import DashboardFilters from '../components/DashboardFilters';
 
 // Styled Components
 const Header = styled.div`
@@ -132,10 +133,16 @@ const HeaderActions = styled.div`
 
 const Dashboard: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
+  const [selectedRange, setSelectedRange] = useState('7days');
+  const [selectedCode, setSelectedCode] = useState('all');
+  const [sortOrder, setSortOrder] = useState('date-desc');
+  const [availableCodes, setAvailableCodes] = useState<string[]>([]);
+
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
@@ -143,6 +150,93 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      // Extract unique codes from items
+      const codes = Array.from(new Set(items.map(item => item.code))).sort();
+      setAvailableCodes(codes);
+    }
+  }, [items]);
+
+  const getFilteredItems = (
+    items: Item[],
+    selectedCode: string,
+    dateRange: string,
+    sortOrder: string,
+  ) => {
+    let filtered = [...items];
+
+    // Date range filter
+    if (dateRange !== 'all') {
+      const today = new Date();
+      const daysToSubtract = dateRange === '7days' ? 7 : 30;
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - daysToSubtract);
+
+      filtered = filtered.filter(item => {
+        const [day, month, year] = item.creationDate.split('.');
+        const itemDate = new Date(Number(year), Number(month) - 1, Number(day));
+        return itemDate >= startDate;
+      });
+    }
+
+    // Code filter
+    if (selectedCode !== 'all') {
+      filtered = filtered.filter(item => item.code === selectedCode);
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      // First handle approval status sorting
+      if (sortOrder === 'approved-first') {
+        if (a.approvalStatus === 'odobreno' && b.approvalStatus !== 'odobreno')
+          return -1;
+        if (a.approvalStatus !== 'odobreno' && b.approvalStatus === 'odobreno')
+          return 1;
+      } else if (sortOrder === 'pending-first') {
+        if (
+          a.approvalStatus === 'na čekanju' &&
+          b.approvalStatus !== 'na čekanju'
+        )
+          return -1;
+        if (
+          a.approvalStatus !== 'na čekanju' &&
+          b.approvalStatus === 'na čekanju'
+        )
+          return 1;
+      }
+
+      // If approval status is the same or not sorting by approval, sort by date
+      const [dayA, monthA, yearA] = a.creationDate.split('.');
+      const [dayB, monthB, yearB] = b.creationDate.split('.');
+
+      const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA));
+      const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB));
+
+      // For approval status sorting, use date as secondary sort
+      if (sortOrder === 'approved-first' || sortOrder === 'pending-first') {
+        return dateB.getTime() - dateA.getTime(); // Newer first as secondary sort
+      }
+
+      // For date-based sorting
+      return sortOrder === 'date-desc'
+        ? dateB.getTime() - dateA.getTime()
+        : dateA.getTime() - dateB.getTime();
+    });
+
+    return filtered;
+  };
+
+  useEffect(() => {
+    const filtered = getFilteredItems(
+      items,
+      selectedCode,
+      selectedRange,
+      sortOrder,
+    );
+    setFilteredItems(filtered);
+  }, [items, selectedCode, selectedRange, sortOrder]);
 
   const fetchItems = async () => {
     try {
@@ -225,8 +319,18 @@ const Dashboard: React.FC = () => {
 
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
+      <DashboardFilters
+        selectedRange={selectedRange}
+        onRangeChange={setSelectedRange}
+        selectedCode={selectedCode}
+        onCodeChange={setSelectedCode}
+        availableCodes={availableCodes}
+        sortOrder={sortOrder}
+        onSortOrderChange={setSortOrder}
+      />
+
       <ItemsGrid>
-        {items.map(item => (
+        {filteredItems.map(item => (
           <ItemCard key={item._id}>
             <ItemTitle>{item.title}</ItemTitle>
             <ItemDetails>
@@ -279,7 +383,7 @@ const Dashboard: React.FC = () => {
         ))}
       </ItemsGrid>
 
-      {items.length === 0 && !loading && (
+      {filteredItems.length === 0 && !loading && (
         <EmptyMessage>Nema dostupnih dokumenata</EmptyMessage>
       )}
 
