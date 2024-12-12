@@ -68,6 +68,8 @@ interface ImageViewerModalProps {
   token: string;
 }
 
+// osijek-koteks-web/src/components/ImageViewerModal.tsx
+
 const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   imageUrl,
   onClose,
@@ -83,6 +85,14 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         setIsLoading(true);
         setError(null);
 
+        // If it's a Cloudinary URL, use it directly
+        if (imageUrl.startsWith('https://res.cloudinary.com')) {
+          setImageObjectUrl(imageUrl);
+          setIsLoading(false);
+          return;
+        }
+
+        // For non-Cloudinary URLs, fetch with authentication
         const response = await fetch(imageUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -106,9 +116,12 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
     fetchImage();
 
-    // Cleanup function to revoke object URL
+    // Cleanup function to revoke object URL only for non-Cloudinary URLs
     return () => {
-      if (imageObjectUrl) {
+      if (
+        imageObjectUrl &&
+        !imageUrl.startsWith('https://res.cloudinary.com')
+      ) {
         URL.revokeObjectURL(imageObjectUrl);
       }
     };

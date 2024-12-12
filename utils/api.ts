@@ -10,7 +10,14 @@ import {
 } from '../types';
 
 const API_URL = 'https://osijek-koteks-app.onrender.com'; // Using production URL for both dev and prod
-export const getImageUrl = (path: string) => `${API_URL}${path}`;
+export const getImageUrl = (path: string) => {
+  // If it's an absolute URL (like Cloudinary URLs), return it as-is
+  if (path?.startsWith('http')) {
+    return path;
+  }
+  // Otherwise, prepend the API URL for relative paths
+  return `${API_URL}${path}`;
+};
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
