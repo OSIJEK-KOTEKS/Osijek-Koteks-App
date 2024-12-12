@@ -27,8 +27,10 @@ export interface Item {
   code: string;
   pdfUrl: string;
   creationDate: string;
+  creationTime?: string; // Added this field
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
+  approvalTime?: string; // Added this field for consistency
   approvedBy?: {
     _id: string;
     firstName: string;
@@ -37,6 +39,7 @@ export interface Item {
   approvalPhoto?: {
     url: string | null;
     uploadDate: string | null;
+    uploadTime?: string | null; // Added this field for consistency
     mimeType: string | null;
   } | null;
   approvalLocation?: {
@@ -68,4 +71,5 @@ export interface CreateItemInput {
   code: string;
   pdfUrl: string;
   creationDate?: string;
+  creationTime?: string; // Added this field
 }

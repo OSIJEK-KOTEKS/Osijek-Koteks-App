@@ -116,11 +116,18 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({message: 'Code must be exactly 5 digits'});
     }
 
+    const now = new Date();
+    const creationTime = now.toLocaleTimeString('hr-HR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     const item = new Item({
       title,
       code,
       pdfUrl,
-      creationDate: creationDate ? new Date(creationDate) : new Date(),
+      creationDate: creationDate ? new Date(creationDate) : now,
+      creationTime,
       approvalStatus: 'na čekanju',
     });
 

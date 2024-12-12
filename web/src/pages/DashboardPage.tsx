@@ -159,8 +159,12 @@ const Dashboard: React.FC = () => {
     }
   }, [items]);
 
+  interface ExtendedItem extends Item {
+    creationTime?: string;
+  }
+
   const getFilteredItems = (
-    items: Item[],
+    items: ExtendedItem[],
     selectedCode: string,
     dateRange: string,
     sortOrder: string,
@@ -337,7 +341,10 @@ const Dashboard: React.FC = () => {
               <strong>RN:</strong> {item.code}
             </ItemDetails>
             <ItemDetails>
-              <strong>Datum:</strong> {item.creationDate}
+              <strong>Datum i vrijeme:</strong>{' '}
+              {item.creationTime
+                ? `${item.creationDate} ${item.creationTime}`
+                : item.creationDate}
             </ItemDetails>
             <StatusBadge status={item.approvalStatus}>
               {item.approvalStatus}

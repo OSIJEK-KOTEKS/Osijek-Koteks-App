@@ -25,6 +25,10 @@ const ItemSchema = new mongoose.Schema(
       default: Date.now,
       required: true,
     },
+    creationTime: {
+      type: String,
+      required: false,
+    },
     approvalStatus: {
       type: String,
       enum: ['na čekanju', 'odobreno', 'odbijen'],
@@ -96,6 +100,14 @@ ItemSchema.methods.toJSON = function () {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+    });
+  }
+
+  // Add creationTime if it doesn't exist
+  if (!obj.creationTime && obj.createdAt) {
+    obj.creationTime = obj.createdAt.toLocaleTimeString('hr-HR', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 
