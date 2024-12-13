@@ -1,0 +1,405 @@
+import React, {useState, useEffect} from 'react';
+import styled from 'styled-components';
+import {User} from '../types';
+import {apiService} from '../utils/api';
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 95%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const PasswordSection = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid ${({theme}) => theme.colors.gray};
+`;
+
+const PasswordButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({theme}) => theme.colors.primary};
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const PasswordInputGroup = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: start;
+`;
+
+const Label = styled.label`
+  font-weight: 500;
+  color: ${({theme}) => theme.colors.text};
+`;
+
+const Input = styled.input`
+  padding: 0.5rem;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  border-radius: 4px;
+  font-size: 1rem;
+`;
+
+const Select = styled.select`
+  padding: 0.5rem;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  border-radius: 4px;
+  font-size: 1rem;
+`;
+
+const CodesInput = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: start;
+`;
+
+const CodesList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+`;
+
+const CodeBadge = styled.div`
+  background: ${({theme}) => theme.colors.gray};
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const RemoveCodeButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({theme}) => theme.colors.error};
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+`;
+
+const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  background: ${({theme, variant}) =>
+    variant === 'primary' ? theme.colors.primary : theme.colors.gray};
+  color: ${({variant}) => (variant === 'primary' ? 'white' : 'black')};
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+interface EditUserModalProps {
+  user: User | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const EditUserModal: React.FC<EditUserModalProps> = ({
+  user,
+  isOpen,
+  onClose,
+  onSuccess,
+}) => {
+  const [formData, setFormData] = useState<Partial<User>>({});
+  const [newCode, setNewCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        company: user.company,
+        role: user.role,
+        codes: [...user.codes],
+        isVerified: user.isVerified,
+      });
+      // Reset other state values
+      setNewCode('');
+      setNewPassword('');
+      setShowPasswordField(false);
+      setError('');
+    }
+  }, [user]);
+
+  // Cleanup effect when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setNewCode('');
+      setNewPassword('');
+      setShowPasswordField(false);
+      setError('');
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?._id) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await apiService.updateUser(user._id, formData);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError('Greška pri ažuriranju korisnika');
+      console.error('Error updating user:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddCode = () => {
+    if (!/^\d{5}$/.test(newCode)) {
+      setError('Kod mora sadržavati točno 5 brojeva');
+      return;
+    }
+
+    if (formData.codes?.includes(newCode)) {
+      setError('Ovaj kod već postoji');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      codes: [...(prev.codes || []), newCode].sort(),
+    }));
+    setNewCode('');
+    setError('');
+  };
+
+  const handleRemoveCode = (code: string) => {
+    setFormData(prev => ({
+      ...prev,
+      codes: prev.codes?.filter(c => c !== code) || [],
+    }));
+  };
+
+  if (!isOpen || !user) return null;
+
+  return (
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={e => e.stopPropagation()}>
+        <h2>Uredi korisnika</h2>
+        <Form onSubmit={handleSubmit}>
+          <FormGroup>
+            <Label>Email</Label>
+            <Input
+              type="email"
+              value={formData.email || ''}
+              onChange={e => setFormData({...formData, email: e.target.value})}
+              disabled
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Ime</Label>
+            <Input
+              type="text"
+              value={formData.firstName || ''}
+              onChange={e =>
+                setFormData({...formData, firstName: e.target.value})
+              }
+              required
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Prezime</Label>
+            <Input
+              type="text"
+              value={formData.lastName || ''}
+              onChange={e =>
+                setFormData({...formData, lastName: e.target.value})
+              }
+              required
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Firma</Label>
+            <Input
+              type="text"
+              value={formData.company || ''}
+              onChange={e =>
+                setFormData({...formData, company: e.target.value})
+              }
+              required
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Uloga</Label>
+            <Select
+              value={formData.role || 'user'}
+              onChange={e =>
+                setFormData({
+                  ...formData,
+                  role: e.target.value as User['role'],
+                })
+              }>
+              <option value="user">Korisnik</option>
+              <option value="admin">Administrator</option>
+              <option value="bot">Bot</option>
+            </Select>
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Radni nalozi</Label>
+            <CodesInput>
+              <Input
+                type="text"
+                value={newCode}
+                onChange={e => setNewCode(e.target.value)}
+                placeholder="Unesi 5 brojeva"
+                maxLength={5}
+                pattern="\d{5}"
+                autoComplete="off"
+              />
+              <Button type="button" onClick={handleAddCode}>
+                Dodaj
+              </Button>
+            </CodesInput>
+            <CodesList>
+              {formData.codes?.map(code => (
+                <CodeBadge key={code}>
+                  {code}
+                  <RemoveCodeButton
+                    type="button"
+                    onClick={() => handleRemoveCode(code)}>
+                    ×
+                  </RemoveCodeButton>
+                </CodeBadge>
+              ))}
+            </CodesList>
+          </FormGroup>
+
+          <PasswordSection>
+            <PasswordButton
+              type="button"
+              onClick={() => setShowPasswordField(!showPasswordField)}>
+              {showPasswordField
+                ? '- Sakrij promjenu lozinke'
+                : '+ Promijeni lozinku'}
+            </PasswordButton>
+
+            {showPasswordField && (
+              <FormGroup>
+                <Label>Nova lozinka</Label>
+                <PasswordInputGroup>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Minimalno 6 znakova"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      if (!user?._id) return;
+                      if (newPassword.length < 6) {
+                        setError('Lozinka mora imati najmanje 6 znakova');
+                        return;
+                      }
+                      setIsLoading(true);
+                      try {
+                        await apiService.updateUserPassword(
+                          user._id,
+                          newPassword,
+                        );
+                        setNewPassword('');
+                        setShowPasswordField(false);
+                        setError('');
+                        alert('Lozinka je uspješno promijenjena');
+                      } catch (err) {
+                        setError('Greška pri promjeni lozinke');
+                        console.error('Error updating password:', err);
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}>
+                    Promijeni lozinku
+                  </Button>
+                </PasswordInputGroup>
+              </FormGroup>
+            )}
+          </PasswordSection>
+
+          {error && <div style={{color: 'red'}}>{error}</div>}
+
+          <ButtonGroup>
+            <Button type="button" onClick={onClose}>
+              Odustani
+            </Button>
+            <Button type="submit" variant="primary" disabled={isLoading}>
+              {isLoading ? 'Spremanje...' : 'Spremi'}
+            </Button>
+          </ButtonGroup>
+        </Form>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+export default EditUserModal;

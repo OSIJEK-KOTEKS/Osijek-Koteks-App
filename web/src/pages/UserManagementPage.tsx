@@ -1,10 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {apiService} from '../utils/api';
-import {User} from '../types';
 import styled from 'styled-components';
+import {User} from '../types';
+import {apiService} from '../utils/api';
 import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
+import EditUserModal from '../components/EditUserModal';
+import CreateUserModal from '../components/CreateUserModal';
 
 const Header = styled.div`
   display: flex;
@@ -20,12 +22,23 @@ const HeaderLeft = styled.div`
   gap: ${({theme}) => theme.spacing.medium};
 `;
 
+const HeaderTitle = styled.h1`
+  margin: 0;
+  color: ${({theme}) => theme.colors.text};
+  font-size: 1.5rem;
+`;
+
 const UserCard = styled.div`
   background: ${({theme}) => theme.colors.white};
   padding: ${({theme}) => theme.spacing.medium};
   border-radius: ${({theme}) => theme.borderRadius};
   box-shadow: ${({theme}) => theme.shadows.main};
   margin-bottom: ${({theme}) => theme.spacing.medium};
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
 `;
 
 const UserHeader = styled.div`
@@ -38,12 +51,14 @@ const UserHeader = styled.div`
 const UserDetails = styled.div`
   margin: 4px 0;
   color: ${({theme}) => theme.colors.text};
+  font-size: 0.9rem;
 `;
 
 const UserName = styled.h3`
   margin: 0;
   color: ${({theme}) => theme.colors.text};
   font-size: 1.1rem;
+  font-weight: 600;
 `;
 
 const Badge = styled.span<{role: User['role']}>`
@@ -77,10 +92,27 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-export const UserManagementPage = () => {
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${({theme}) => theme.spacing.large};
+  color: ${({theme}) => theme.colors.text};
+  background: ${({theme}) => theme.colors.white};
+  border-radius: ${({theme}) => theme.borderRadius};
+  box-shadow: ${({theme}) => theme.shadows.main};
+`;
+
+const LoadingState = styled.div`
+  text-align: center;
+  padding: ${({theme}) => theme.spacing.large};
+  color: ${({theme}) => theme.colors.primary};
+`;
+
+const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,7 +133,11 @@ export const UserManagementPage = () => {
     }
   };
 
-  const getRolePermissions = (role: 'admin' | 'user' | 'bot') => {
+  const handleEdit = (user: User) => {
+    setSelectedUser(user);
+  };
+
+  const getRolePermissions = (role: User['role']) => {
     switch (role) {
       case 'admin':
         return [
@@ -127,7 +163,6 @@ export const UserManagementPage = () => {
   const handleDataExport = async (user: User) => {
     try {
       const currentDate = new Date().toISOString();
-
       const exportData = {
         metadata: {
           exportDate: currentDate,
@@ -193,12 +228,10 @@ export const UserManagementPage = () => {
         },
       };
 
-      // Create filename with user details and timestamp
       const filename = `gdpr-data-export_${user.firstName}-${user.lastName}_${
         new Date().toISOString().split('T')[0]
       }.json`;
 
-      // Convert to blob and trigger download
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: 'application/json',
       });
@@ -216,15 +249,10 @@ export const UserManagementPage = () => {
     }
   };
 
-  const handleEdit = (user: User) => {
-    // For future implementation
-    console.log('Edit user:', user);
-  };
-
   if (loading) {
     return (
       <S.PageContainer>
-        <div>Učitavanje...</div>
+        <LoadingState>Učitavanje korisnika...</LoadingState>
       </S.PageContainer>
     );
   }
@@ -234,13 +262,17 @@ export const UserManagementPage = () => {
       <Header>
         <HeaderLeft>
           <Logo />
-          <h1>Upravljanje korisnicima</h1>
+          <HeaderTitle>Upravljanje korisnicima</HeaderTitle>
         </HeaderLeft>
         <ButtonGroup>
           <S.Button onClick={() => navigate('/dashboard')}>
             Natrag na dokumente
           </S.Button>
-          <S.Button variant="primary">Dodaj korisnika</S.Button>
+          <S.Button
+            variant="primary"
+            onClick={() => setIsCreateModalOpen(true)}>
+            Dodaj korisnika
+          </S.Button>
         </ButtonGroup>
       </Header>
 
@@ -252,7 +284,13 @@ export const UserManagementPage = () => {
             <div>
               <UserName>
                 {user.firstName} {user.lastName}
-                <Badge role={user.role}>{user.role}</Badge>
+                <Badge role={user.role}>
+                  {user.role === 'admin'
+                    ? 'Administrator'
+                    : user.role === 'bot'
+                    ? 'Bot'
+                    : 'Korisnik'}
+                </Badge>
               </UserName>
               <UserDetails>{user.email}</UserDetails>
               <UserDetails>Firma: {user.company}</UserDetails>
@@ -281,10 +319,26 @@ export const UserManagementPage = () => {
       ))}
 
       {users.length === 0 && !loading && (
-        <div style={{textAlign: 'center', marginTop: '2rem'}}>
-          Nema pronađenih korisnika
-        </div>
+        <EmptyState>Nema pronađenih korisnika</EmptyState>
       )}
+
+      <EditUserModal
+        user={selectedUser}
+        isOpen={!!selectedUser}
+        onClose={() => setSelectedUser(null)}
+        onSuccess={() => {
+          setSelectedUser(null);
+          fetchUsers();
+        }}
+      />
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          fetchUsers();
+        }}
+      />
     </S.PageContainer>
   );
 };
