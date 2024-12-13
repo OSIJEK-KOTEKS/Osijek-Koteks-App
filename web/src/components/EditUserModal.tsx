@@ -85,10 +85,24 @@ const Select = styled.select`
   font-size: 1rem;
 `;
 
-const CodesInput = styled.div`
+const CodesInputSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const CodesInputRow = styled.div`
   display: flex;
   gap: 0.5rem;
   align-items: start;
+`;
+
+const CodesSelect = styled.select`
+  padding: 0.5rem;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  border-radius: 4px;
+  font-size: 1rem;
+  flex: 1;
 `;
 
 const CodesList = styled.div`
@@ -141,11 +155,18 @@ const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
   }
 `;
 
+const ErrorMessage = styled.div`
+  color: ${({theme}) => theme.colors.error};
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+`;
+
 interface EditUserModalProps {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  availableCodes: string[];
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -153,6 +174,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  availableCodes,
 }) => {
   const [formData, setFormData] = useState<Partial<User>>({});
   const [newCode, setNewCode] = useState('');
@@ -209,7 +231,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   };
 
-  const handleAddCode = () => {
+  const handleManualCodeAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+
     if (!/^\d{5}$/.test(newCode)) {
       setError('Kod mora sadržavati točno 5 brojeva');
       return;
@@ -226,6 +250,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }));
     setNewCode('');
     setError('');
+  };
+
+  const handleExistingCodeAdd = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCode = e.target.value;
+    if (!selectedCode) return;
+
+    if (!formData.codes?.includes(selectedCode)) {
+      setFormData(prev => ({
+        ...prev,
+        codes: [...(prev.codes || []), selectedCode].sort(),
+      }));
+    }
+    e.target.value = ''; // Reset select after adding
   };
 
   const handleRemoveCode = (code: string) => {
@@ -306,20 +343,36 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
           <FormGroup>
             <Label>Radni nalozi</Label>
-            <CodesInput>
-              <Input
-                type="text"
-                value={newCode}
-                onChange={e => setNewCode(e.target.value)}
-                placeholder="Unesi 5 brojeva"
-                maxLength={5}
-                pattern="\d{5}"
-                autoComplete="off"
-              />
-              <Button type="button" onClick={handleAddCode}>
-                Dodaj
-              </Button>
-            </CodesInput>
+            <CodesInputSection>
+              <CodesInputRow>
+                <Input
+                  type="text"
+                  value={newCode}
+                  onChange={e => setNewCode(e.target.value)}
+                  placeholder="Unesi 5 brojeva"
+                  maxLength={5}
+                  pattern="\d{5}"
+                  autoComplete="off"
+                />
+                <Button type="button" onClick={handleManualCodeAdd}>
+                  Dodaj
+                </Button>
+              </CodesInputRow>
+
+              <CodesInputRow>
+                <CodesSelect value="" onChange={handleExistingCodeAdd}>
+                  <option value="">Odaberi postojeći kod...</option>
+                  {availableCodes
+                    .filter(code => !formData.codes?.includes(code))
+                    .map(code => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                </CodesSelect>
+              </CodesInputRow>
+            </CodesInputSection>
+
             <CodesList>
               {formData.codes?.map(code => (
                 <CodeBadge key={code}>
@@ -386,7 +439,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             )}
           </PasswordSection>
 
-          {error && <div style={{color: 'red'}}>{error}</div>}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
 
           <ButtonGroup>
             <Button type="button" onClick={onClose}>

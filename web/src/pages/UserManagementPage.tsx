@@ -346,6 +346,7 @@ const UserManagementPage: React.FC = () => {
           setSelectedUser(null);
           fetchUsers();
         }}
+        availableCodes={availableCodes}
       />
       <CreateUserModal
         isOpen={isCreateModalOpen}
