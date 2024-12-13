@@ -113,17 +113,33 @@ const UserManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  const updateAvailableCodes = (fetchedUsers: User[]) => {
+    // Extract all codes from all users
+    const allCodes = fetchedUsers.reduce((codes: string[], user) => {
+      return [...codes, ...user.codes];
+    }, []);
+
+    // Remove duplicates and sort
+    const uniqueCodes = Array.from(new Set(allCodes)).sort((a, b) =>
+      a.localeCompare(b, undefined, {numeric: true}),
+    );
+
+    setAvailableCodes(uniqueCodes);
+  };
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const fetchedUsers = await apiService.getUsers();
       setUsers(fetchedUsers);
+      updateAvailableCodes(fetchedUsers);
       setError('');
     } catch (err) {
       setError('Greška pri dohvaćanju korisnika');
@@ -338,6 +354,7 @@ const UserManagementPage: React.FC = () => {
           setIsCreateModalOpen(false);
           fetchUsers();
         }}
+        availableCodes={availableCodes}
       />
     </S.PageContainer>
   );

@@ -57,10 +57,24 @@ const Select = styled.select`
   font-size: 1rem;
 `;
 
-const CodesInput = styled.div`
+const CodesInputSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const CodesInputRow = styled.div`
   display: flex;
   gap: 0.5rem;
   align-items: start;
+`;
+
+const CodesSelect = styled.select`
+  padding: 0.5rem;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  border-radius: 4px;
+  font-size: 1rem;
+  flex: 1;
 `;
 
 const CodesList = styled.div`
@@ -123,12 +137,14 @@ interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  availableCodes: string[];
 }
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  availableCodes,
 }) => {
   const [formData, setFormData] = useState<RegistrationData>({
     email: '',
@@ -163,7 +179,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -192,7 +208,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     }
   };
 
-  const handleAddCode = () => {
+  const handleManualCodeAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+
     if (!/^\d{5}$/.test(newCode)) {
       setError('Kod mora sadržavati točno 5 brojeva');
       return;
@@ -211,10 +229,23 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setError('');
   };
 
-  const handleRemoveCode = (code: string) => {
+  const handleExistingCodeAdd = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCode = e.target.value;
+    if (!selectedCode) return;
+
+    if (!formData.codes.includes(selectedCode)) {
+      setFormData(prev => ({
+        ...prev,
+        codes: [...prev.codes, selectedCode].sort(),
+      }));
+    }
+    e.target.value = ''; // Reset select after adding
+  };
+
+  const handleRemoveCode = (codeToRemove: string) => {
     setFormData(prev => ({
       ...prev,
-      codes: prev.codes.filter(c => c !== code),
+      codes: prev.codes.filter(code => code !== codeToRemove),
     }));
   };
 
@@ -316,19 +347,36 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
           <FormGroup>
             <Label>Radni nalozi</Label>
-            <CodesInput>
-              <Input
-                type="text"
-                value={newCode}
-                onChange={e => setNewCode(e.target.value)}
-                placeholder="Unesi 5 brojeva"
-                maxLength={5}
-                pattern="\d{5}"
-              />
-              <Button type="button" onClick={handleAddCode}>
-                Dodaj
-              </Button>
-            </CodesInput>
+            <CodesInputSection>
+              <CodesInputRow>
+                <Input
+                  type="text"
+                  value={newCode}
+                  onChange={e => setNewCode(e.target.value)}
+                  placeholder="Unesi 5 brojeva"
+                  maxLength={5}
+                  pattern="\d{5}"
+                  autoComplete="off"
+                />
+                <Button type="button" onClick={handleManualCodeAdd}>
+                  Dodaj
+                </Button>
+              </CodesInputRow>
+
+              <CodesInputRow>
+                <CodesSelect value="" onChange={handleExistingCodeAdd}>
+                  <option value="">Odaberi postojeći kod...</option>
+                  {availableCodes
+                    .filter(code => !formData.codes.includes(code))
+                    .map(code => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                </CodesSelect>
+              </CodesInputRow>
+            </CodesInputSection>
+
             <CodesList>
               {formData.codes.map(code => (
                 <CodeBadge key={code}>
