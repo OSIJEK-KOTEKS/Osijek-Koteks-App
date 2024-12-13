@@ -90,6 +90,7 @@ router.post('/', auth, async (req, res) => {
     const creationTime = now.toLocaleTimeString('hr-HR', {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
     });
 
     const item = new Item({

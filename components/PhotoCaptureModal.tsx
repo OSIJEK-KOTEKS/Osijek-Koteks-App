@@ -268,10 +268,12 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
     try {
       const options: CameraOptions = {
         mediaType: 'photo',
-        quality: 0.8 as PhotoQuality,
+        quality: 0.7 as PhotoQuality, // Reduced quality
         saveToPhotos: false,
         includeBase64: false,
         presentationStyle: 'fullScreen',
+        maxWidth: 1200, // Add max dimensions
+        maxHeight: 1200,
       };
 
       // Launch camera without checking permissions - the library handles this internally

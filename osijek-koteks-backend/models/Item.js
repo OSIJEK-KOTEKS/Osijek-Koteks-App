@@ -100,6 +100,7 @@ ItemSchema.methods.toJSON = function () {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      timeZone: 'Europe/Zagreb',
     });
   }
 
@@ -108,9 +109,9 @@ ItemSchema.methods.toJSON = function () {
     obj.creationTime = obj.createdAt.toLocaleTimeString('hr-HR', {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
     });
   }
-
   // Format approvalDate
   if (obj.approvalDate) {
     obj.approvalDate = obj.approvalDate.toLocaleDateString('hr-HR', {
