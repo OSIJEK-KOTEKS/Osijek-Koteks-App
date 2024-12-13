@@ -1,4 +1,3 @@
-// src/pages/UserManagementPage.tsx
 import React, {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {apiService} from '../utils/api';
@@ -78,7 +77,7 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-const UserManagementPage = () => {
+export const UserManagementPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,35 +101,124 @@ const UserManagementPage = () => {
     }
   };
 
+  const getRolePermissions = (role: 'admin' | 'user' | 'bot') => {
+    switch (role) {
+      case 'admin':
+        return [
+          'Full system access',
+          'User management',
+          'Document approval',
+          'Data export',
+          'System configuration',
+        ];
+      case 'user':
+        return [
+          'Document viewing',
+          'Document approval',
+          'Personal data access',
+        ];
+      case 'bot':
+        return ['Automated document creation', 'System integration'];
+      default:
+        return [];
+    }
+  };
+
+  const handleDataExport = async (user: User) => {
+    try {
+      const currentDate = new Date().toISOString();
+
+      const exportData = {
+        metadata: {
+          exportDate: currentDate,
+          exportVersion: '1.0',
+          dataController: 'Osijek-Koteks',
+          dataProtectionOfficerContact: 'it@osijek-koteks.hr',
+        },
+        personalData: {
+          userId: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          company: user.company,
+          role: user.role,
+          phoneNumber: user.phoneNumber || 'Not provided',
+          verificationStatus: user.isVerified ? 'Verified' : 'Not verified',
+        },
+        accessRights: {
+          assignedCodes: user.codes,
+          role: user.role,
+          permissions: getRolePermissions(user.role),
+        },
+        dataProcessingConsent: {
+          status: 'Active',
+          lastUpdated: currentDate,
+          consentVersion: '1.0',
+          dataRetentionPeriod: '365 days',
+          purposes: [
+            'User authentication',
+            'Document approval processing',
+            'Location tracking for document verification',
+            'Photo capture for document verification',
+          ],
+        },
+        privacyRights: {
+          rightToAccess: true,
+          rightToRectification: true,
+          rightToErasure: true,
+          rightToDataPortability: true,
+          rightToRestrictProcessing: true,
+          howToExerciseRights:
+            'Contact it@osijek-koteks.hr to exercise your data protection rights',
+        },
+        dataSharing: {
+          thirdParties: [
+            {
+              name: 'Cloudinary',
+              purpose: 'Photo storage for document verification',
+              dataShared: ['Document verification photos'],
+              location: 'Cloud service',
+            },
+          ],
+        },
+        technicalMeasures: {
+          encryption: 'Data is encrypted in transit and at rest',
+          accessControls: 'Role-based access control implemented',
+          securityMeasures: [
+            'Secure password hashing',
+            'JWT-based authentication',
+            'HTTPS encryption',
+            'Regular security updates',
+          ],
+        },
+      };
+
+      // Create filename with user details and timestamp
+      const filename = `gdpr-data-export_${user.firstName}-${user.lastName}_${
+        new Date().toISOString().split('T')[0]
+      }.json`;
+
+      // Convert to blob and trigger download
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exporting user data:', error);
+      alert('Greška pri izvozu podataka');
+    }
+  };
+
   const handleEdit = (user: User) => {
     // For future implementation
     console.log('Edit user:', user);
-  };
-
-  const handleExportData = (user: User) => {
-    const data = {
-      personalData: {
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        company: user.company,
-        role: user.role,
-      },
-      codes: user.codes,
-      isVerified: user.isVerified,
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${user.firstName}-${user.lastName}-data.json`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
   };
 
   if (loading) {
@@ -174,7 +262,7 @@ const UserManagementPage = () => {
             </div>
             <ButtonGroup>
               <S.Button
-                onClick={() => handleExportData(user)}
+                onClick={() => handleDataExport(user)}
                 variant="secondary">
                 Izvoz podataka
               </S.Button>
