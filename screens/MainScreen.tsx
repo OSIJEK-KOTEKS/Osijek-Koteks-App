@@ -85,6 +85,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [dateRange, setDateRange] = useState<string>('7days');
   const [sortOrder, setSortOrder] = useState<string>('date-desc');
   const [isProfileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const getDateFromString = (dateStr: string) => {
     const [day, month, year] = dateStr.split('.');
@@ -190,34 +193,70 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     };
   }, []);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const profile = await apiService.getUserProfile();
-      setUserProfile(profile);
+  const fetchData = useCallback(
+    async (resetItems: boolean = true) => {
+      try {
+        if (resetItems) {
+          setLoading(true);
+          setPage(1);
+        }
 
-      const fetchedItems = await apiService.getItems();
-      setItems(fetchedItems);
-      setFilteredItems(fetchedItems);
+        const profile = await apiService.getUserProfile();
+        setUserProfile(profile);
 
-      if (profile.role === 'admin') {
-        const uniqueCodes = Array.from(
-          new Set(fetchedItems.map(item => item.code)),
-        ).sort();
-        setAvailableCodes(uniqueCodes);
-      } else {
-        setAvailableCodes(profile.codes.sort());
+        const response = await apiService.getItems(resetItems ? 1 : page);
+
+        if (resetItems) {
+          setItems(response.items);
+        } else {
+          setItems(prev => [...prev, ...response.items]);
+        }
+
+        setHasMore(response.pagination.hasMore);
+
+        if (profile.role === 'admin') {
+          const uniqueCodes = Array.from(
+            new Set(response.items.map(item => item.code)),
+          ).sort();
+          setAvailableCodes(uniqueCodes);
+        } else {
+          setAvailableCodes(profile.codes.sort());
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        Alert.alert(
+          'Error',
+          'Učitavanje podataka nije uspjelo. Provjerite vezu i pokušajte ponovo.',
+        );
+      } finally {
+        setLoading(false);
+        setIsLoadingMore(false);
       }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      Alert.alert(
-        'Error',
-        'Učitavanje podataka nije uspjelo. Provjerite vezu i pokušajte ponovo.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [page],
+  );
+
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || isLoadingMore || loading) return;
+
+    setIsLoadingMore(true);
+    setPage(prev => prev + 1);
+  }, [hasMore, isLoadingMore, loading]);
+
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#2196F3" />
+        <Text style={styles.footerText}>Učitavam još dokumenata...</Text>
+      </View>
+    );
+  };
+  // Update useEffect
+  useEffect(() => {
+    fetchData(page === 1);
+  }, [fetchData, page]);
 
   useEffect(() => {
     fetchData();
@@ -574,18 +613,18 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             )
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchData(true).finally(() => setRefreshing(false));
+              }}
+            />
           }
-          ListFooterComponent={
-            <View style={styles.buttonContainer}>
-              <Button
-                title="Odjava"
-                onPress={handleLogout}
-                buttonStyle={styles.logoutButton}
-                titleStyle={styles.buttonTitle}
-              />
-            </View>
-          }
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponentStyle={styles.footerContainer}
           contentContainerStyle={styles.listContentContainer}
         />
 
@@ -645,6 +684,26 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  footerLoader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  footerText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  footerContainer: {
+    marginBottom: 80, // Account for FAB
   },
   documentsContainer: {
     backgroundColor: 'white',

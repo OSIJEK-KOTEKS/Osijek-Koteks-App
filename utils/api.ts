@@ -9,13 +9,12 @@ import {
   LocationData,
 } from '../types';
 
-const API_URL = 'https://osijek-koteks-app.onrender.com'; // Using production URL for both dev and prod
+const API_URL = 'https://osijek-koteks-app.onrender.com';
+
 export const getImageUrl = (path: string) => {
-  // If it's an absolute URL (like Cloudinary URLs), return it as-is
   if (path?.startsWith('http')) {
     return path;
   }
-  // Otherwise, prepend the API URL for relative paths
   return `${API_URL}${path}`;
 };
 
@@ -55,6 +54,17 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+// New interface for paginated response
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: {
+    total: number;
+    page: number;
+    pages: number;
+    hasMore: boolean;
+  };
+}
 
 export const apiService = {
   // Auth methods
@@ -117,7 +127,6 @@ export const apiService = {
       });
 
       const response = await api.post<User>('/api/users', userData);
-
       console.log('User creation successful:', {
         userId: response.data._id,
         email: response.data.email,
@@ -209,13 +218,38 @@ export const apiService = {
   },
 
   // Item methods
-  getItems: async (): Promise<Item[]> => {
+  getItems: async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      startDate?: string;
+      endDate?: string;
+    },
+  ): Promise<PaginatedResponse<Item>> => {
     try {
-      const response = await api.get<Item[]>('/api/items');
+      const params = {
+        page,
+        limit,
+        ...filters,
+      };
+
+      const response = await api.get<PaginatedResponse<Item>>('/api/items', {
+        params,
+      });
+
       if (!response.data) {
         console.warn('No items returned from API');
-        return [];
+        return {
+          items: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pages: 0,
+            hasMore: false,
+          },
+        };
       }
+
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);

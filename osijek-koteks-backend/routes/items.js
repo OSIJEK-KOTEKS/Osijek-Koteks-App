@@ -36,6 +36,10 @@ router.get('/', auth, async (req, res) => {
   try {
     console.log('Fetching items for user:', req.user._id);
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const user = await User.findById(req.user._id);
     if (!user) {
       console.log('User not found with ID:', req.user._id);
@@ -57,14 +61,27 @@ router.get('/', auth, async (req, res) => {
       };
     }
 
-    console.log('Query:', JSON.stringify(query));
+    // Get total count for pagination
+    const total = await Item.countDocuments(query);
 
+    // Get paginated items
     const items = await Item.find(query)
       .sort({creationDate: -1})
+      .skip(skip)
+      .limit(limit)
       .populate('approvedBy', 'firstName lastName');
 
-    console.log(`Found ${items.length} items`);
-    res.json(items);
+    console.log(`Found ${items.length} items for page ${page}`);
+
+    res.json({
+      items,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        hasMore: skip + items.length < total,
+      },
+    });
   } catch (err) {
     console.error('Error fetching items:', err);
     res.status(500).json({message: 'Server error', error: err.message});
