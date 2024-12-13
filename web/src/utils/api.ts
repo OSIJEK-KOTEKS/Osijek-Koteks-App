@@ -11,7 +11,14 @@ import {
 const API_URL =
   process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
 
-export const getImageUrl = (path: string) => `${API_URL}${path}`;
+export const getImageUrl = (path: string) => {
+  // If it's an absolute URL (like Cloudinary URLs), return it as-is
+  if (path?.startsWith('http')) {
+    return path;
+  }
+  // Otherwise, prepend the API URL for relative paths
+  return `${API_URL}${path}`;
+};
 
 const api = axios.create({
   baseURL: API_URL,
