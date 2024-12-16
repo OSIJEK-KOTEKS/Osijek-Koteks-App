@@ -26,12 +26,19 @@ const api = axios.create({
 });
 
 // Request interceptor for adding auth token
+// In your api interceptor
 api.interceptors.request.use(
   async config => {
-    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    const token = await AsyncStorage.getItem('userToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Adding token to request:', token.substring(0, 20) + '...');
+      // Add detailed logging
+      console.log('Request config:', {
+        url: config.url,
+        method: config.method,
+        headers: config.headers,
+        params: config.params,
+      });
     }
     return config;
   },
@@ -41,15 +48,14 @@ api.interceptors.request.use(
   },
 );
 
-// Response interceptor for error handling
 api.interceptors.response.use(
   response => response,
   error => {
-    console.error('API Error:', {
-      endpoint: error.config?.url,
-      method: error.config?.method,
+    console.error('API Error Details:', {
       status: error.response?.status,
       data: error.response?.data,
+      headers: error.response?.headers,
+      config: error.config, // log the request config
     });
     return Promise.reject(error);
   },

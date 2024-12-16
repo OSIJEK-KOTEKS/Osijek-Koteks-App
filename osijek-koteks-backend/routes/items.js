@@ -32,29 +32,46 @@ const upload = multer({
 const validateCode = code => /^\d{5}$/.test(code);
 
 // Get items by user's codes
+// Modified items.js route
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Fetching items for user:', req.user._id);
-    console.log('Query params:', {
+    // Log more details about the request
+    console.log('Items request:', {
+      userId: req.user?._id,
       page: req.query.page,
       limit: req.query.limit,
-      startDate: req.query.startDate,
-      endDate: req.query.endDate,
+      userInfo: req.user, // See what user info we have
     });
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // ... your existing user check code ...
+    // Check if we have user info from auth middleware
+    if (!req.user || !req.user._id) {
+      console.error('No user info in request:', req.user);
+      return res.status(401).json({message: 'User not authenticated'});
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      console.error('User not found in DB:', req.user._id);
+      return res.status(404).json({message: 'User not found'});
+    }
+
+    console.log('Found user:', {
+      id: user._id,
+      role: user.role,
+      codes: user.codes,
+    });
 
     const query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
-    // Log the constructed query
-    console.log('MongoDB query:', query);
+    // Log the query we're about to execute
+    console.log('Query to execute:', query);
 
     const total = await Item.countDocuments(query);
-    console.log('Total documents:', total);
+    console.log('Total items found:', total);
 
     const items = await Item.find(query)
       .sort({creationDate: -1})
@@ -62,31 +79,24 @@ router.get('/', auth, async (req, res) => {
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');
 
-    const paginationData = {
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-      hasMore: skip + items.length < total,
-    };
-
-    // Log detailed pagination info
-    console.log('Pagination details:', {
-      currentPage: page,
-      itemsPerPage: limit,
-      skip,
-      itemsReturned: items.length,
-      totalItems: total,
-      totalPages: Math.ceil(total / limit),
-      hasMore: skip + items.length < total,
-    });
+    console.log(`Successfully found ${items.length} items for page ${page}`);
 
     res.json({
       items,
-      pagination: paginationData,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        hasMore: skip + items.length < total,
+      },
     });
   } catch (err) {
-    console.error('Error fetching items:', err);
-    res.status(500).json({message: 'Server error', error: err.message});
+    console.error('Detailed error in items route:', err);
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    });
   }
 });
 // Create a new item
