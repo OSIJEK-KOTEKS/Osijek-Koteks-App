@@ -137,17 +137,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   // Data Fetching
   const fetchData = useCallback(
     async (resetItems: boolean = true) => {
-      if (loadingRef.current) return;
+      if (loadingRef.current && !resetItems) return;
       loadingRef.current = true;
 
       try {
         const currentPage = resetItems ? 1 : page;
-        console.log(
-          'Fetching data for page:',
-          currentPage,
-          'reset:',
-          resetItems,
-        );
 
         if (resetItems) {
           setLoading(true);
@@ -157,14 +151,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         const profile = await apiService.getUserProfile();
         setUserProfile(profile);
 
-        // Create local date start and end
         const startOfDay = new Date(selectedDate);
         startOfDay.setHours(0, 0, 0, 0);
 
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // Format dates as strings in local timezone
         const filters = {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString(),
@@ -172,35 +164,29 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           sortOrder: sortOrder,
         };
 
-        console.log('Date range:', {
-          start: startOfDay.toLocaleString(),
-          end: endOfDay.toLocaleString(),
-        });
+        console.log('Fetching page:', currentPage, 'with filters:', filters);
 
         const response = await apiService.getItems(currentPage, 10, filters);
 
         console.log('API Response:', {
+          page: currentPage,
           itemsCount: response.items.length,
-          hasMore: response.pagination.hasMore,
-          totalItems: response.pagination.total,
-          currentPage: response.pagination.page,
           total: response.pagination.total,
         });
 
-        // Update total documents count
         setTotalDocuments(response.pagination.total);
 
         if (resetItems) {
           setItems(response.items);
         } else {
-          setItems(prev => {
-            const newItems = [...prev, ...response.items];
-            return newItems;
-          });
+          setItems(prev => [...prev, ...response.items]);
         }
 
-        const hasMoreItems = response.pagination.total > currentPage * 10;
-        setHasMore(hasMoreItems);
+        // Update hasMore based on total items and current items
+        const totalItems = response.pagination.total;
+        const currentItems =
+          (resetItems ? 0 : items.length) + response.items.length;
+        setHasMore(currentItems < totalItems);
 
         if (profile.role === 'admin') {
           const codes = Array.from(
@@ -222,8 +208,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         loadingRef.current = false;
       }
     },
-    [page, selectedDate, selectedCode, sortOrder],
+    [page, selectedDate, selectedCode, sortOrder, items.length],
   );
+
+  // Update the effect that watches for page changes
+  useEffect(() => {
+    if (page > 1) {
+      console.log('Page changed, fetching more items for page:', page);
+      fetchData(false);
+    }
+  }, [page, fetchData]);
 
   useEffect(() => {
     // Only fetch if we have a valid date
@@ -235,7 +229,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     setSelectedDate(newDate);
     // Note: We don't need to call fetchData here because the useEffect will handle it
   };
-  //Load more handler
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || loadingRef.current) {
       console.log('Load more blocked:', {
@@ -247,15 +241,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       return;
     }
 
-    console.log(
-      'Loading more items, current page:',
-      page,
-      'current items:',
-      items.length,
-    );
-    setIsLoadingMore(true);
-    setPage(prev => prev + 1);
-  }, [hasMore, isLoadingMore, loading, page, items.length]);
+    const nextPage = page + 1;
+    console.log('Loading more items, moving to page:', nextPage);
+    setPage(nextPage);
+    fetchData(false);
+  }, [hasMore, isLoadingMore, loading, page, fetchData]);
 
   useEffect(() => {
     if (page > 1) {

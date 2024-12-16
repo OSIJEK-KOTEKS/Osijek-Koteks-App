@@ -37,17 +37,27 @@ const validateCode = code => /^\d{5}$/.test(code);
 // In your items.js route file
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Query params received:', req.query);
-    console.log('User from auth:', req.user); // Add this log
-
     const {startDate, endDate, code, sortOrder} = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    // Build the base query - Fix here to use req.user
+    console.log('Processing request:', {
+      page,
+      skip,
+      limit,
+      startDate,
+      endDate,
+      code,
+      sortOrder,
+      userRole: req.user.role,
+    });
+
+    // Build the base query
     let query = req.user.role === 'admin' ? {} : {code: {$in: req.user.codes}};
 
     // Add date filter if dates are provided
     if (startDate && endDate) {
-      // Parse the ISO strings to Date objects
       const start = new Date(startDate);
       const end = new Date(endDate);
 
@@ -59,7 +69,6 @@ router.get('/', auth, async (req, res) => {
       console.log('Date filter:', {
         start: start.toISOString(),
         end: end.toISOString(),
-        query: query.creationDate,
       });
     }
 
@@ -68,11 +77,7 @@ router.get('/', auth, async (req, res) => {
       query.code = code;
     }
 
-    console.log('Full query:', query);
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    console.log('Query:', query);
 
     // Add sorting
     let sortOptions = {creationDate: -1}; // Default sort
@@ -90,6 +95,7 @@ router.get('/', auth, async (req, res) => {
       };
     }
 
+    // Execute the query with pagination
     const items = await Item.find(query)
       .sort(sortOptions)
       .skip(skip)
@@ -97,14 +103,24 @@ router.get('/', auth, async (req, res) => {
       .populate('approvedBy', 'firstName lastName');
 
     const total = await Item.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+
+    console.log('Query results:', {
+      page,
+      totalItems: total,
+      itemsReturned: items.length,
+      totalPages,
+      hasMore,
+    });
 
     res.json({
       items,
       pagination: {
         total,
         page,
-        pages: Math.ceil(total / limit),
-        hasMore: total > page * limit,
+        pages: totalPages,
+        hasMore,
       },
     });
   } catch (err) {

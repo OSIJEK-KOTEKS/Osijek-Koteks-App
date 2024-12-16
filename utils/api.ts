@@ -237,6 +237,8 @@ export const apiService = {
     filters?: ItemFilters,
   ): Promise<PaginatedResponse<Item>> => {
     try {
+      console.log('Making API request for page:', page);
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -246,35 +248,13 @@ export const apiService = {
         ...(filters?.sortOrder && {sortOrder: filters.sortOrder}),
       });
 
-      console.log('API Request with params:', Object.fromEntries(params));
-
       const response = await api.get<PaginatedResponse<Item>>(
         `/api/items?${params}`,
       );
 
-      if (!response.data) {
-        console.warn('No items returned from API');
-        return {
-          items: [],
-          pagination: {
-            total: 0,
-            page: 1,
-            pages: 0,
-            hasMore: false,
-          },
-        };
-      }
-
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('API Error Details:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-        });
-      }
       throw error;
     }
   },
