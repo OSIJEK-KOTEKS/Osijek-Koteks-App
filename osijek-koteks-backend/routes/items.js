@@ -35,63 +35,46 @@ const validateCode = code => /^\d{5}$/.test(code);
 // Modified items.js route
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Items request:', {
-      userId: req.user?._id,
-      page: req.query.page,
-      limit: req.query.limit,
-      startDate: req.query.startDate,
-      code: req.query.code,
-      userInfo: req.user,
-    });
+    console.log('Query params received:', req.query);
 
+    const {startDate, endDate, code, sortOrder} = req.query;
+
+    // Build the base query
+    let query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
+
+    // Add exact date filter if dates are provided
+    if (startDate && endDate) {
+      query.creationDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+      console.log('Date filter:', query.creationDate);
+    }
+
+    // Add code filter if specific code is requested
+    if (code && code !== 'all') {
+      query.code = code;
+    }
+
+    console.log('Final query:', query);
+
+    // Execute the query with pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    if (!req.user || !req.user._id) {
-      console.error('No user info in request:', req.user);
-      return res.status(401).json({message: 'User not authenticated'});
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      console.error('User not found in DB:', req.user._id);
-      return res.status(404).json({message: 'User not found'});
-    }
-
-    // Build the query
-    let query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
-
-    // Add date filter if startDate is provided
-    if (req.query.startDate) {
-      const startDate = new Date(req.query.startDate);
-      query.creationDate = {$gte: startDate};
-    }
-
-    // Add code filter if specific code is requested
-    if (req.query.code && req.query.code !== 'all') {
-      query.code = req.query.code;
-    }
-
-    console.log('MongoDB Query:', query);
-
-    const total = await Item.countDocuments(query);
-    console.log('Total items found:', total);
-
-    // Add sorting based on sortOrder parameter
+    // Add sorting
     let sortOptions = {creationDate: -1}; // Default sort
-    const sortOrder = req.query.sortOrder;
-
     if (sortOrder === 'date-asc') {
       sortOptions = {creationDate: 1};
     } else if (sortOrder === 'approved-first') {
       sortOptions = {
-        approvalStatus: -1, // 'odobreno' items first
+        approvalStatus: -1,
         creationDate: -1,
       };
     } else if (sortOrder === 'pending-first') {
       sortOptions = {
-        approvalStatus: 1, // 'na čekanju' items first
+        approvalStatus: 1,
         creationDate: -1,
       };
     }
@@ -102,7 +85,7 @@ router.get('/', auth, async (req, res) => {
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');
 
-    console.log(`Successfully found ${items.length} items for page ${page}`);
+    const total = await Item.countDocuments(query);
 
     res.json({
       items,
@@ -114,12 +97,8 @@ router.get('/', auth, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Detailed error in items route:', err);
-    res.status(500).json({
-      message: 'Server error',
-      error: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    });
+    console.error('Error in items route:', err);
+    res.status(500).json({message: 'Server error'});
   }
 });
 // Create a new item
