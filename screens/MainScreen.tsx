@@ -95,6 +95,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   // Refs
   const loadingRef = useRef(false);
   const flatListRef = useRef<FlatList>(null);
+  const onEndReachedCalledDuringMomentum = useRef(false);
+  const isLoadingRef = useRef(false);
 
   // Context
   const {signOut} = useContext(AuthContext);
@@ -139,8 +141,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       loadingRef.current = true;
 
       try {
-        const currentPage = resetItems ? 1 : page; // Get current page
-        console.log('Fetching data for page:', currentPage); // Debug log
+        const currentPage = resetItems ? 1 : page;
+        console.log(
+          'Fetching data for page:',
+          currentPage,
+          'reset:',
+          resetItems,
+        );
 
         if (resetItems) {
           setLoading(true);
@@ -155,26 +162,37 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           ...(selectedCode !== 'all' && {code: selectedCode}),
         };
 
-        const response = await apiService.getItems(
-          currentPage, // Use currentPage instead of resetItems ? 1 : page
-          10,
-          filters,
-        );
+        const response = await apiService.getItems(currentPage, 10, filters);
 
-        console.log('Response data:', {
-          currentPage,
-          itemsReceived: response.items.length,
+        console.log('API Response:', {
+          itemsCount: response.items.length,
           hasMore: response.pagination.hasMore,
           totalItems: response.pagination.total,
+          currentPage: response.pagination.page,
+          total: response.pagination.total,
         });
 
         if (resetItems) {
           setItems(response.items);
         } else {
-          setItems(prev => [...prev, ...response.items]);
+          setItems(prev => {
+            const newItems = [...prev, ...response.items];
+            console.log('Total items after update:', newItems.length);
+            return newItems;
+          });
         }
 
-        setHasMore(response.pagination.hasMore);
+        // Update hasMore based on pagination info
+        const hasMoreItems = response.pagination.total > currentPage * 10;
+        console.log(
+          'Setting hasMore to:',
+          hasMoreItems,
+          'total:',
+          response.pagination.total,
+          'current items:',
+          currentPage * 10,
+        );
+        setHasMore(hasMoreItems);
 
         if (profile.role === 'admin') {
           const uniqueCodes = Array.from(
@@ -198,26 +216,31 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     },
     [page, dateRange, selectedCode, getDateRangeFilter],
   );
-
   //Load more handler
   const handleLoadMore = useCallback(() => {
-    if (!hasMore || isLoadingMore || loading || loadingRef.current) return;
+    if (!hasMore || isLoadingMore || loading || loadingRef.current) {
+      console.log('Load more blocked:', {
+        hasMore,
+        isLoadingMore,
+        loading,
+        loadingRef: loadingRef.current,
+      });
+      return;
+    }
+
     console.log(
       'Loading more items, current page:',
       page,
-      'setting to:',
-      page + 1,
+      'current items:',
+      items.length,
     );
     setIsLoadingMore(true);
-    setPage(prev => {
-      console.log('Updating page from', prev, 'to', prev + 1);
-      return prev + 1;
-    });
-  }, [hasMore, isLoadingMore, loading, page]);
+    setPage(prev => prev + 1);
+  }, [hasMore, isLoadingMore, loading, page, items.length]);
 
   useEffect(() => {
     if (page > 1) {
-      console.log('Page changed to:', page, 'fetching more data');
+      console.log('Page changed, fetching more items for page:', page);
       fetchData(false);
     }
   }, [page, fetchData]);
@@ -472,7 +495,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           }
           ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.3} // Changed from 0.5
+          scrollEventThrottle={150}
           windowSize={3}
           maxToRenderPerBatch={5}
           updateCellsBatchingPeriod={100}
@@ -483,16 +507,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             autoscrollToTopThreshold: 10,
           }}
           contentContainerStyle={styles.listContentContainer}
-          onScroll={() => {
-            console.log('Scrolling, current page:', page); // Debug log
-          }}
-          scrollEventThrottle={16}
-          onMomentumScrollBegin={() => {
-            console.log('Scroll began');
-          }}
-          onMomentumScrollEnd={() => {
-            console.log('Scroll ended');
-          }}
         />
 
         {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
@@ -576,13 +590,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   footerLoader: {
+    height: 60, // Add fixed height
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
     backgroundColor: 'white',
     marginHorizontal: 16,
     marginTop: 8,
+    marginBottom: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',

@@ -87,7 +87,7 @@ router.get('/', auth, async (req, res) => {
         total,
         page,
         pages: Math.ceil(total / limit),
-        hasMore: skip + items.length < total,
+        hasMore: total > page * limit,
       },
     });
   } catch (err) {
