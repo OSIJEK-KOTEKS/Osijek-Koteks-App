@@ -141,7 +141,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       loadingRef.current = true;
 
       try {
+        // Get the correct page number
         const currentPage = resetItems ? 1 : page;
+        console.log(
+          'Fetching data for page:',
+          currentPage,
+          'reset:',
+          resetItems,
+        );
 
         if (resetItems) {
           setLoading(true);
@@ -164,29 +171,32 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           sortOrder: sortOrder,
         };
 
-        console.log('Fetching page:', currentPage, 'with filters:', filters);
+        console.log('Fetching items for page:', currentPage, filters);
 
         const response = await apiService.getItems(currentPage, 10, filters);
 
         console.log('API Response:', {
-          page: currentPage,
-          itemsCount: response.items.length,
-          total: response.pagination.total,
+          pageReceived: response.pagination.page,
+          itemsReceived: response.items.length,
+          totalItems: response.pagination.total,
+          hasMore: response.pagination.hasMore,
         });
 
-        setTotalDocuments(response.pagination.total);
-
+        // Handle items based on whether we're resetting or adding more
         if (resetItems) {
           setItems(response.items);
         } else {
-          setItems(prev => [...prev, ...response.items]);
+          setItems(prev => {
+            const existingIds = new Set(prev.map(item => item._id));
+            const newItems = response.items.filter(
+              item => !existingIds.has(item._id),
+            );
+            return [...prev, ...newItems];
+          });
         }
 
-        // Update hasMore based on total items and current items
-        const totalItems = response.pagination.total;
-        const currentItems =
-          (resetItems ? 0 : items.length) + response.items.length;
-        setHasMore(currentItems < totalItems);
+        setTotalDocuments(response.pagination.total);
+        setHasMore(response.pagination.hasMore);
 
         if (profile.role === 'admin') {
           const codes = Array.from(
@@ -208,9 +218,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         loadingRef.current = false;
       }
     },
-    [page, selectedDate, selectedCode, sortOrder, items.length],
+    [page, selectedDate, selectedCode, sortOrder],
   );
-
   // Update the effect that watches for page changes
   useEffect(() => {
     if (page > 1) {
@@ -230,6 +239,20 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     // Note: We don't need to call fetchData here because the useEffect will handle it
   };
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+    setItems([]);
+    fetchData(true);
+  }, [selectedDate, selectedCode, sortOrder]);
+
+  // Load more data when page changes
+  useEffect(() => {
+    if (page > 1) {
+      fetchData(false);
+    }
+  }, [page]);
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || loadingRef.current) {
       console.log('Load more blocked:', {
@@ -241,11 +264,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       return;
     }
 
+    console.log('Triggering load more, current page:', page);
+    setIsLoadingMore(true);
     const nextPage = page + 1;
-    console.log('Loading more items, moving to page:', nextPage);
     setPage(nextPage);
-    fetchData(false);
-  }, [hasMore, isLoadingMore, loading, page, fetchData]);
+  }, [hasMore, isLoadingMore, loading, page]);
 
   useEffect(() => {
     if (page > 1) {
@@ -500,20 +523,21 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
-          ListFooterComponent={renderFooter}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color="#2196F3" />
+                <Text style={styles.footerText}>Učitavam još...</Text>
+              </View>
+            ) : null
+          }
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3} // Changed from 0.5
+          onEndReachedThreshold={0.3}
           scrollEventThrottle={150}
-          windowSize={3}
-          maxToRenderPerBatch={5}
-          updateCellsBatchingPeriod={100}
-          removeClippedSubviews={true}
           initialNumToRender={10}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 10,
-          }}
-          contentContainerStyle={styles.listContentContainer}
+          maxToRenderPerBatch={10}
+          windowSize={21}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
 
         {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
