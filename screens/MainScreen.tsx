@@ -86,6 +86,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [dateRange, setDateRange] = useState<string>('7days');
   const [sortOrder, setSortOrder] = useState<string>('date-desc');
   const [isProfileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [totalDocuments, setTotalDocuments] = useState<number>(0);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -160,6 +161,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         const filters = {
           startDate: getDateRangeFilter(dateRange),
           ...(selectedCode !== 'all' && {code: selectedCode}),
+          sortOrder: sortOrder,
         };
 
         const response = await apiService.getItems(currentPage, 10, filters);
@@ -171,6 +173,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           currentPage: response.pagination.page,
           total: response.pagination.total,
         });
+
+        // Update total documents count
+        setTotalDocuments(response.pagination.total);
 
         if (resetItems) {
           setItems(response.items);
@@ -184,21 +189,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
         // Update hasMore based on pagination info
         const hasMoreItems = response.pagination.total > currentPage * 10;
-        console.log(
-          'Setting hasMore to:',
-          hasMoreItems,
-          'total:',
-          response.pagination.total,
-          'current items:',
-          currentPage * 10,
-        );
         setHasMore(hasMoreItems);
 
         if (profile.role === 'admin') {
-          const uniqueCodes = Array.from(
+          const codes = Array.from(
             new Set(response.items.map(item => item.code)),
           ).sort();
-          setAvailableCodes(uniqueCodes);
+          setAvailableCodes(codes);
         } else {
           setAvailableCodes(profile.codes.sort());
         }
@@ -214,7 +211,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         loadingRef.current = false;
       }
     },
-    [page, dateRange, selectedCode, getDateRangeFilter],
+    [page, dateRange, selectedCode, sortOrder, getDateRangeFilter],
   );
   //Load more handler
   const handleLoadMore = useCallback(() => {
@@ -401,7 +398,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Dokumenti</Text>
-              <Text style={styles.statValue}>{items.length}</Text>
+              <Text style={styles.statValue}>{totalDocuments}</Text>
             </View>
             {userProfile?.role === 'admin' && (
               <View style={styles.statBox}>
