@@ -83,7 +83,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<string>('7days');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [sortOrder, setSortOrder] = useState<string>('date-desc');
   const [isProfileMenuVisible, setProfileMenuVisible] = useState(false);
   const [totalDocuments, setTotalDocuments] = useState<number>(0);
@@ -103,20 +103,19 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const {signOut} = useContext(AuthContext);
 
   // Date Range Filter Helper
-  const getDateRangeFilter = useCallback((range: string) => {
-    const today = new Date();
-    if (range === '7days') {
-      const sevenDaysAgo = new Date(today);
-      sevenDaysAgo.setDate(today.getDate() - 7);
-      return sevenDaysAgo.toISOString();
-    } else if (range === '30days') {
-      const thirtyDaysAgo = new Date(today);
-      thirtyDaysAgo.setDate(today.getDate() - 30);
-      return thirtyDaysAgo.toISOString();
-    }
-    return undefined;
-  }, []);
+  const getDateFilter = useCallback((date: Date) => {
+    // Create exact start and end of the selected day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
 
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return {
+      startDate: startOfDay.toISOString(),
+      endDate: endOfDay.toISOString(),
+    };
+  }, []);
   // Token Effect
   useEffect(() => {
     const getToken = async () => {
@@ -158,11 +157,25 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         const profile = await apiService.getUserProfile();
         setUserProfile(profile);
 
+        // Create local date start and end
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Format dates as strings in local timezone
         const filters = {
-          startDate: getDateRangeFilter(dateRange),
+          startDate: startOfDay.toISOString(),
+          endDate: endOfDay.toISOString(),
           ...(selectedCode !== 'all' && {code: selectedCode}),
           sortOrder: sortOrder,
         };
+
+        console.log('Date range:', {
+          start: startOfDay.toLocaleString(),
+          end: endOfDay.toLocaleString(),
+        });
 
         const response = await apiService.getItems(currentPage, 10, filters);
 
@@ -182,12 +195,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         } else {
           setItems(prev => {
             const newItems = [...prev, ...response.items];
-            console.log('Total items after update:', newItems.length);
             return newItems;
           });
         }
 
-        // Update hasMore based on pagination info
         const hasMoreItems = response.pagination.total > currentPage * 10;
         setHasMore(hasMoreItems);
 
@@ -211,8 +222,19 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         loadingRef.current = false;
       }
     },
-    [page, dateRange, selectedCode, sortOrder, getDateRangeFilter],
+    [page, selectedDate, selectedCode, sortOrder],
   );
+
+  useEffect(() => {
+    // Only fetch if we have a valid date
+    if (selectedDate) {
+      fetchData(true); // true to reset the items list
+    }
+  }, [selectedDate, fetchData]);
+  const handleDateChange = (newDate: Date) => {
+    setSelectedDate(newDate);
+    // Note: We don't need to call fetchData here because the useEffect will handle it
+  };
   //Load more handler
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || loadingRef.current) {
@@ -317,8 +339,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
   // Filter Handler
   const handleFilterChange = useCallback(
-    (newDateRange: string, newCode: string, newSortOrder: string) => {
-      setDateRange(newDateRange);
+    (newDate: Date, newCode: string, newSortOrder: string) => {
+      setSelectedDate(newDate);
       setSelectedCode(newCode);
       setSortOrder(newSortOrder);
       fetchData(true);
@@ -384,8 +406,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           <Divider style={styles.divider} />
 
           <DateRangeFilters
-            selectedRange={dateRange}
-            onRangeChange={setDateRange}
+            selectedDate={selectedDate}
+            onDateChange={handleDateChange}
             selectedCode={selectedCode}
             onCodeChange={setSelectedCode}
             availableCodes={availableCodes}
@@ -412,12 +434,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         <View style={styles.documentsContainer}>
           <View style={styles.documentHeader}>
             <Text style={styles.sectionTitle}>
-              {dateRange === '7days'
-                ? 'Zadnjih 7 dana'
-                : dateRange === '30days'
-                ? 'Zadnjih 30 dana'
-                : 'Svi dokumenti'}{' '}
-              {selectedCode !== 'all' ? `(${selectedCode})` : ''}
+              {selectedDate.toLocaleDateString('hr-HR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+              })}
+              {selectedCode !== 'all' ? ` (${selectedCode})` : ''}
             </Text>
             <TouchableOpacity
               style={styles.refreshButton}
@@ -441,14 +463,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     userProfile,
     selectedCode,
     availableCodes,
-    dateRange,
+    selectedDate,
     sortOrder,
-    items.length,
-    isProfileMenuVisible,
+    totalDocuments,
     handleRefresh,
     refreshing,
   ]);
-
   const renderFooter = useCallback(() => {
     if (!isLoadingMore) return null;
 

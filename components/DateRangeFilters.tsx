@@ -1,12 +1,13 @@
-import React from 'react';
-import {View, StyleSheet, Platform} from 'react-native';
+import React, {useState} from 'react';
+import {View, StyleSheet, Platform, TouchableOpacity} from 'react-native';
 import {Text} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface DateRangeFiltersProps {
-  selectedRange: string;
-  onRangeChange: (range: string) => void;
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
   selectedCode: string;
   onCodeChange: (code: string) => void;
   availableCodes: string[];
@@ -15,19 +16,15 @@ interface DateRangeFiltersProps {
 }
 
 const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
-  selectedRange,
-  onRangeChange,
+  selectedDate,
+  onDateChange,
   selectedCode,
   onCodeChange,
   availableCodes,
   sortOrder,
   onSortOrderChange,
 }) => {
-  const dateRanges = [
-    {label: 'Zadnjih 7 dana', value: '7days'},
-    {label: 'Zadnjih 30 dana', value: '30days'},
-    {label: 'Svi dokumenti', value: 'all'},
-  ];
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const sortOptions = [
     {label: 'Najnoviji prvo', value: 'date-desc'},
@@ -36,6 +33,21 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
     {label: 'Na čekanju', value: 'pending-first'},
   ];
 
+  const handleDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(false);
+    if (date) {
+      onDateChange(date);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
   const renderPickerItems = (items: Array<{label: string; value: string}>) => {
     return items.map(item => (
       <Picker.Item
@@ -43,34 +55,34 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
         label={item.label}
         value={item.value}
         color="#000000"
-        style={{
-          backgroundColor: '#FFFFFF',
-          color: '#000000',
-          fontSize: 16,
-        }}
       />
     ));
   };
 
   return (
     <View style={styles.container}>
-      {/* Date Range Section */}
+      {/* Date Selection Section */}
       <View style={styles.section}>
         <View style={styles.labelContainer}>
           <MaterialIcons name="date-range" size={20} color="#2196F3" />
-          <Text style={styles.label}>Vremenski period</Text>
+          <Text style={styles.label}>Datum</Text>
         </View>
-        <View style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={selectedRange}
-            onValueChange={onRangeChange}
-            style={styles.picker}
-            dropdownIconColor="#2196F3"
-            mode="dropdown"
-            prompt="Odaberi period">
-            {renderPickerItems(dateRanges)}
-          </Picker>
-        </View>
+        <TouchableOpacity
+          style={styles.dateButton}
+          onPress={() => setShowDatePicker(true)}>
+          <Text style={styles.dateButtonText}>{formatDate(selectedDate)}</Text>
+          <MaterialIcons name="calendar-today" size={20} color="#2196F3" />
+        </TouchableOpacity>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
       </View>
 
       {/* Code Filter Section */}
@@ -85,29 +97,14 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
             onValueChange={onCodeChange}
             style={styles.picker}
             dropdownIconColor="#2196F3"
-            mode="dropdown"
-            prompt="Odaberi radni nalog">
-            <Picker.Item
-              label="Svi Radni Nalozi"
-              value="all"
-              color="#000000"
-              style={{
-                backgroundColor: '#FFFFFF',
-                color: '#000000',
-                fontSize: 16,
-              }}
-            />
+            mode="dropdown">
+            <Picker.Item label="Svi Radni Nalozi" value="all" color="#000000" />
             {availableCodes.map(code => (
               <Picker.Item
                 key={code}
                 label={code}
                 value={code}
                 color="#000000"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  color: '#000000',
-                  fontSize: 16,
-                }}
               />
             ))}
           </Picker>
@@ -126,8 +123,7 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
             onValueChange={onSortOrderChange}
             style={styles.picker}
             dropdownIconColor="#2196F3"
-            mode="dropdown"
-            prompt="Odaberi sortiranje">
+            mode="dropdown">
             {renderPickerItems(sortOptions)}
           </Picker>
         </View>
@@ -140,14 +136,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
     borderRadius: 10,
-    marginHorizontal: 16,
-    marginVertical: 8,
     padding: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   section: {
     marginBottom: 15,
@@ -182,14 +171,37 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         height: 150,
-        backgroundColor: '#FFFFFF',
       },
       android: {
         height: 48,
-        color: '#000000',
-        backgroundColor: '#FFFFFF',
       },
     }),
+    color: '#000000',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: '#000000',
   },
 });
 

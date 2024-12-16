@@ -33,22 +33,30 @@ const validateCode = code => /^\d{5}$/.test(code);
 
 // Get items by user's codes
 // Modified items.js route
+// In your items.js route file
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Query params received:', req.query);
-
     const {startDate, endDate, code, sortOrder} = req.query;
 
     // Build the base query
     let query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
-    // Add exact date filter if dates are provided
+    // Add date filter if dates are provided
     if (startDate && endDate) {
+      // Parse the ISO strings to Date objects
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
       query.creationDate = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
+        $gte: start,
+        $lte: end,
       };
-      console.log('Date filter:', query.creationDate);
+
+      console.log('Date filter:', {
+        start: start.toISOString(),
+        end: end.toISOString(),
+        query: query.creationDate,
+      });
     }
 
     // Add code filter if specific code is requested
@@ -56,9 +64,8 @@ router.get('/', auth, async (req, res) => {
       query.code = code;
     }
 
-    console.log('Final query:', query);
+    console.log('Full query:', query);
 
-    // Execute the query with pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -98,7 +105,10 @@ router.get('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('Error in items route:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
   }
 });
 // Create a new item

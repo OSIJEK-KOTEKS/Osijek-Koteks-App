@@ -75,10 +75,10 @@ export interface PaginatedResponse<T> {
 // Interface for item filters
 export interface ItemFilters {
   startDate?: string;
+  endDate?: string; // Added this
   code?: string;
   sortOrder?: string;
 }
-
 export const apiService = {
   // Auth methods
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -241,11 +241,12 @@ export const apiService = {
         page: page.toString(),
         limit: limit.toString(),
         ...(filters?.startDate && {startDate: filters.startDate}),
+        ...(filters?.endDate && {endDate: filters.endDate}),
         ...(filters?.code && filters.code !== 'all' && {code: filters.code}),
         ...(filters?.sortOrder && {sortOrder: filters.sortOrder}),
       });
 
-      console.log('Fetching items with params:', Object.fromEntries(params));
+      console.log('API Request with params:', Object.fromEntries(params));
 
       const response = await api.get<PaginatedResponse<Item>>(
         `/api/items?${params}`,
@@ -277,6 +278,7 @@ export const apiService = {
       throw error;
     }
   },
+
   createItem: async (itemData: CreateItemInput): Promise<Item> => {
     try {
       console.log('Creating new item:', itemData);
