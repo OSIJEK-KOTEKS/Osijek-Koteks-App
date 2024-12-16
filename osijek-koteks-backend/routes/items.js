@@ -35,19 +35,19 @@ const validateCode = code => /^\d{5}$/.test(code);
 // Modified items.js route
 router.get('/', auth, async (req, res) => {
   try {
-    // Log more details about the request
     console.log('Items request:', {
       userId: req.user?._id,
       page: req.query.page,
       limit: req.query.limit,
-      userInfo: req.user, // See what user info we have
+      startDate: req.query.startDate,
+      code: req.query.code,
+      userInfo: req.user,
     });
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Check if we have user info from auth middleware
     if (!req.user || !req.user._id) {
       console.error('No user info in request:', req.user);
       return res.status(401).json({message: 'User not authenticated'});
@@ -59,22 +59,45 @@ router.get('/', auth, async (req, res) => {
       return res.status(404).json({message: 'User not found'});
     }
 
-    console.log('Found user:', {
-      id: user._id,
-      role: user.role,
-      codes: user.codes,
-    });
+    // Build the query
+    let query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
-    const query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
+    // Add date filter if startDate is provided
+    if (req.query.startDate) {
+      const startDate = new Date(req.query.startDate);
+      query.creationDate = {$gte: startDate};
+    }
 
-    // Log the query we're about to execute
-    console.log('Query to execute:', query);
+    // Add code filter if specific code is requested
+    if (req.query.code && req.query.code !== 'all') {
+      query.code = req.query.code;
+    }
+
+    console.log('MongoDB Query:', query);
 
     const total = await Item.countDocuments(query);
     console.log('Total items found:', total);
 
+    // Add sorting based on sortOrder parameter
+    let sortOptions = {creationDate: -1}; // Default sort
+    const sortOrder = req.query.sortOrder;
+
+    if (sortOrder === 'date-asc') {
+      sortOptions = {creationDate: 1};
+    } else if (sortOrder === 'approved-first') {
+      sortOptions = {
+        approvalStatus: -1, // 'odobreno' items first
+        creationDate: -1,
+      };
+    } else if (sortOrder === 'pending-first') {
+      sortOptions = {
+        approvalStatus: 1, // 'na čekanju' items first
+        creationDate: -1,
+      };
+    }
+
     const items = await Item.find(query)
-      .sort({creationDate: -1})
+      .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');

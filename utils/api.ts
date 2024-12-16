@@ -75,8 +75,8 @@ export interface PaginatedResponse<T> {
 // Interface for item filters
 export interface ItemFilters {
   startDate?: string;
-  endDate?: string;
   code?: string;
+  sortOrder?: string;
 }
 
 export const apiService = {
@@ -237,15 +237,19 @@ export const apiService = {
     filters?: ItemFilters,
   ): Promise<PaginatedResponse<Item>> => {
     try {
-      const params = {
-        page,
-        limit,
-        ...filters,
-      };
-
-      const response = await api.get<PaginatedResponse<Item>>('/api/items', {
-        params,
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(filters?.startDate && {startDate: filters.startDate}),
+        ...(filters?.code && filters.code !== 'all' && {code: filters.code}),
+        ...(filters?.sortOrder && {sortOrder: filters.sortOrder}),
       });
+
+      console.log('Fetching items with params:', Object.fromEntries(params));
+
+      const response = await api.get<PaginatedResponse<Item>>(
+        `/api/items?${params}`,
+      );
 
       if (!response.data) {
         console.warn('No items returned from API');
@@ -273,7 +277,6 @@ export const apiService = {
       throw error;
     }
   },
-
   createItem: async (itemData: CreateItemInput): Promise<Item> => {
     try {
       console.log('Creating new item:', itemData);
