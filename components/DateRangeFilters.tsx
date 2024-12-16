@@ -41,11 +41,13 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
       year: 'numeric',
-    });
+      month: 'long',
+      day: 'numeric',
+    };
+    return date.toLocaleDateString('hr-HR', options);
   };
 
   const renderPickerItems = (items: Array<{label: string; value: string}>) => {
@@ -81,6 +83,7 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleDateChange}
             maximumDate={new Date()}
+            locale="hr"
           />
         )}
       </View>
