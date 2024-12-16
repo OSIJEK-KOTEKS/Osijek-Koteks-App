@@ -24,7 +24,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({message: 'User not found'});
     }
 
-    // Add user to request
+    // Add user to  request
     req.user = user;
     console.log('User authenticated:', {
       id: user._id,
