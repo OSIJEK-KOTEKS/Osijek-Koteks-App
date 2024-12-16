@@ -55,7 +55,7 @@ api.interceptors.response.use(
       status: error.response?.status,
       data: error.response?.data,
       headers: error.response?.headers,
-      config: error.config, // log the request config
+      config: error.config, // log the  request config
     });
     return Promise.reject(error);
   },
