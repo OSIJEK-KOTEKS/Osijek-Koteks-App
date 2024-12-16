@@ -34,12 +34,16 @@ const validateCode = code => /^\d{5}$/.test(code);
 // Get items by user's codes
 // Modified items.js route
 // In your items.js route file
+// In your items.js route file
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('Query params received:', req.query);
+    console.log('User from auth:', req.user); // Add this log
+
     const {startDate, endDate, code, sortOrder} = req.query;
 
-    // Build the base query
-    let query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
+    // Build the base query - Fix here to use req.user
+    let query = req.user.role === 'admin' ? {} : {code: {$in: req.user.codes}};
 
     // Add date filter if dates are provided
     if (startDate && endDate) {
