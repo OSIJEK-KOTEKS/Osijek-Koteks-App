@@ -139,6 +139,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       loadingRef.current = true;
 
       try {
+        const currentPage = resetItems ? 1 : page; // Get current page
+        console.log('Fetching data for page:', currentPage); // Debug log
+
         if (resetItems) {
           setLoading(true);
           setPage(1);
@@ -152,19 +155,18 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           ...(selectedCode !== 'all' && {code: selectedCode}),
         };
 
-        console.log('Fetching items for page:', resetItems ? 1 : page); // Add logging
-
         const response = await apiService.getItems(
-          resetItems ? 1 : page,
+          currentPage, // Use currentPage instead of resetItems ? 1 : page
           10,
           filters,
         );
 
-        console.log('Got response:', {
-          itemsCount: response.items.length,
+        console.log('Response data:', {
+          currentPage,
+          itemsReceived: response.items.length,
           hasMore: response.pagination.hasMore,
-          currentPage: response.pagination.page,
-        }); // Add logging
+          totalItems: response.pagination.total,
+        });
 
         if (resetItems) {
           setItems(response.items);
@@ -196,15 +198,30 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     },
     [page, dateRange, selectedCode, getDateRangeFilter],
   );
-  // Load More Handler
+
+  //Load more handler
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || loadingRef.current) return;
-
-    console.log('Loading more items, current page:', page); // Add logging
+    console.log(
+      'Loading more items, current page:',
+      page,
+      'setting to:',
+      page + 1,
+    );
     setIsLoadingMore(true);
-    setPage(prev => prev + 1);
+    setPage(prev => {
+      console.log('Updating page from', prev, 'to', prev + 1);
+      return prev + 1;
+    });
   }, [hasMore, isLoadingMore, loading, page]);
-  // Refresh Handler
+
+  useEffect(() => {
+    if (page > 1) {
+      console.log('Page changed to:', page, 'fetching more data');
+      fetchData(false);
+    }
+  }, [page, fetchData]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData(true);
@@ -455,10 +472,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           }
           ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          windowSize={3} // Reduced from 5
-          maxToRenderPerBatch={3} // Reduced from 5
-          updateCellsBatchingPeriod={100} // Increased from 50
+          onEndReachedThreshold={0.5}
+          windowSize={3}
+          maxToRenderPerBatch={5}
+          updateCellsBatchingPeriod={100}
           removeClippedSubviews={true}
           initialNumToRender={10}
           maintainVisibleContentPosition={{
@@ -466,6 +483,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             autoscrollToTopThreshold: 10,
           }}
           contentContainerStyle={styles.listContentContainer}
+          onScroll={() => {
+            console.log('Scrolling, current page:', page); // Debug log
+          }}
           scrollEventThrottle={16}
           onMomentumScrollBegin={() => {
             console.log('Scroll began');
