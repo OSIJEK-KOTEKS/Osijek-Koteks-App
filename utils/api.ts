@@ -55,7 +55,7 @@ api.interceptors.response.use(
   },
 );
 
-// New interface for paginated response
+// Interface for paginated responses
 export interface PaginatedResponse<T> {
   items: T[];
   pagination: {
@@ -64,6 +64,13 @@ export interface PaginatedResponse<T> {
     pages: number;
     hasMore: boolean;
   };
+}
+
+// Interface for item filters
+export interface ItemFilters {
+  startDate?: string;
+  endDate?: string;
+  code?: string;
 }
 
 export const apiService = {
@@ -119,33 +126,6 @@ export const apiService = {
     }
   },
 
-  createUser: async (userData: RegistrationData): Promise<User> => {
-    try {
-      console.log('Creating new user:', {
-        ...userData,
-        password: '[REDACTED]',
-      });
-
-      const response = await api.post<User>('/api/users', userData);
-      console.log('User creation successful:', {
-        userId: response.data._id,
-        email: response.data.email,
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('User creation error:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Creation error details:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          message: error.message,
-        });
-      }
-      throw error;
-    }
-  },
-
   logout: async () => {
     try {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
@@ -193,6 +173,33 @@ export const apiService = {
     }
   },
 
+  createUser: async (userData: RegistrationData): Promise<User> => {
+    try {
+      console.log('Creating new user:', {
+        ...userData,
+        password: '[REDACTED]',
+      });
+
+      const response = await api.post<User>('/api/users', userData);
+      console.log('User creation successful:', {
+        userId: response.data._id,
+        email: response.data.email,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('User creation error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Creation error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  },
+
   updateUser: async (
     id: string,
     userData: Partial<Omit<User, '_id'>>,
@@ -221,10 +228,7 @@ export const apiService = {
   getItems: async (
     page: number = 1,
     limit: number = 10,
-    filters?: {
-      startDate?: string;
-      endDate?: string;
-    },
+    filters?: ItemFilters,
   ): Promise<PaginatedResponse<Item>> => {
     try {
       const params = {

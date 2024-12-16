@@ -35,59 +35,60 @@ const validateCode = code => /^\d{5}$/.test(code);
 router.get('/', auth, async (req, res) => {
   try {
     console.log('Fetching items for user:', req.user._id);
+    console.log('Query params:', {
+      page: req.query.page,
+      limit: req.query.limit,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+    });
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      console.log('User not found with ID:', req.user._id);
-      return res.status(404).json({message: 'User not found'});
-    }
-
-    console.log('Found user:', {
-      id: user._id,
-      role: user.role,
-      codes: user.codes,
-    });
+    // ... your existing user check code ...
 
     const query = user.role === 'admin' ? {} : {code: {$in: user.codes}};
 
-    if (req.query.startDate && req.query.endDate) {
-      query.creationDate = {
-        $gte: new Date(req.query.startDate),
-        $lte: new Date(req.query.endDate),
-      };
-    }
+    // Log the constructed query
+    console.log('MongoDB query:', query);
 
-    // Get total count for pagination
     const total = await Item.countDocuments(query);
+    console.log('Total documents:', total);
 
-    // Get paginated items
     const items = await Item.find(query)
       .sort({creationDate: -1})
       .skip(skip)
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');
 
-    console.log(`Found ${items.length} items for page ${page}`);
+    const paginationData = {
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      hasMore: skip + items.length < total,
+    };
+
+    // Log detailed pagination info
+    console.log('Pagination details:', {
+      currentPage: page,
+      itemsPerPage: limit,
+      skip,
+      itemsReturned: items.length,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: skip + items.length < total,
+    });
 
     res.json({
       items,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit),
-        hasMore: skip + items.length < total,
-      },
+      pagination: paginationData,
     });
   } catch (err) {
     console.error('Error fetching items:', err);
     res.status(500).json({message: 'Server error', error: err.message});
   }
 });
-
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
