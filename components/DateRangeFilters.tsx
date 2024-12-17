@@ -27,10 +27,10 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const sortOptions = [
-    {label: 'Na čekanju prvo', value: 'pending-first'}, // Pending first
+    {label: 'Na čekanju prvo', value: 'pending-first'},
     {label: 'Najnoviji prvo', value: 'date-desc'},
     {label: 'Najstariji prvo', value: 'date-asc'},
-    {label: 'Odobreni zadnji', value: 'approved-last'}, // New option
+    {label: 'Odobreni zadnji', value: 'approved-last'}, // This needs to change
   ];
 
   const handleDateChange = (event: any, date?: Date) => {

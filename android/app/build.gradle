@@ -88,8 +88,8 @@ android {
         applicationId "com.osijek"  
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 19
-        versionName "1.1.19"
+        versionCode 21
+        versionName "1.1.21"
     }
     signingConfigs {
         debug {
