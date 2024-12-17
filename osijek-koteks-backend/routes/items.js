@@ -79,8 +79,6 @@ router.get('/', auth, async (req, res) => {
 
     console.log('Query:', query);
 
-    //sorting
-
     let sortOptions = {creationDate: -1}; // Default sort
     if (sortOrder === 'date-asc') {
       sortOptions = {creationDate: 1};

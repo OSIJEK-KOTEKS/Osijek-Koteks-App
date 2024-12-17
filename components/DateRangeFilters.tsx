@@ -30,7 +30,7 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
     {label: 'Na čekanju prvo', value: 'pending-first'},
     {label: 'Najnoviji prvo', value: 'date-desc'},
     {label: 'Najstariji prvo', value: 'date-asc'},
-    {label: 'Odobreni zadnji', value: 'approved-last'}, // This needs to change
+    {label: 'Odobreni prvo', value: 'approved-first'}, // Changed from 'approved-last'
   ];
 
   const handleDateChange = (event: any, date?: Date) => {
