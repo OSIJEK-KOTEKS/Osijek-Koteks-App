@@ -50,17 +50,6 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
     return date.toLocaleDateString('hr-HR', options);
   };
 
-  const renderPickerItems = (items: Array<{label: string; value: string}>) => {
-    return items.map(item => (
-      <Picker.Item
-        key={item.value}
-        label={item.label}
-        value={item.value}
-        color="#000000"
-      />
-    ));
-  };
-
   return (
     <View style={styles.container}>
       {/* Date Selection Section */}
@@ -94,24 +83,53 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
           <MaterialIcons name="assignment" size={20} color="#2196F3" />
           <Text style={styles.label}>Radni nalog</Text>
         </View>
-        <View style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={selectedCode}
-            onValueChange={onCodeChange}
-            style={styles.picker}
-            dropdownIconColor="#2196F3"
-            mode="dropdown">
-            <Picker.Item label="Svi Radni Nalozi" value="all" color="#000000" />
-            {availableCodes.map(code => (
+        {Platform.OS === 'android' ? (
+          <View style={styles.androidPickerContainer}>
+            <Picker
+              selectedValue={selectedCode}
+              onValueChange={onCodeChange}
+              style={styles.androidPicker}
+              dropdownIconColor="#2196F3"
+              mode="dropdown">
               <Picker.Item
-                key={code}
-                label={code}
-                value={code}
+                label="Svi Radni Nalozi"
+                value="all"
+                style={styles.pickerItem}
+              />
+              {availableCodes.map(code => (
+                <Picker.Item
+                  key={code}
+                  label={code}
+                  value={code}
+                  style={styles.pickerItem}
+                />
+              ))}
+            </Picker>
+          </View>
+        ) : (
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={selectedCode}
+              onValueChange={onCodeChange}
+              style={styles.picker}
+              dropdownIconColor="#2196F3"
+              mode="dropdown">
+              <Picker.Item
+                label="Svi Radni Nalozi"
+                value="all"
                 color="#000000"
               />
-            ))}
-          </Picker>
-        </View>
+              {availableCodes.map(code => (
+                <Picker.Item
+                  key={code}
+                  label={code}
+                  value={code}
+                  color="#000000"
+                />
+              ))}
+            </Picker>
+          </View>
+        )}
       </View>
 
       {/* Sort Order Section */}
@@ -120,16 +138,43 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
           <MaterialIcons name="sort" size={20} color="#2196F3" />
           <Text style={styles.label}>Sortiranje</Text>
         </View>
-        <View style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={sortOrder}
-            onValueChange={onSortOrderChange}
-            style={styles.picker}
-            dropdownIconColor="#2196F3"
-            mode="dropdown">
-            {renderPickerItems(sortOptions)}
-          </Picker>
-        </View>
+        {Platform.OS === 'android' ? (
+          <View style={styles.androidPickerContainer}>
+            <Picker
+              selectedValue={sortOrder}
+              onValueChange={onSortOrderChange}
+              style={styles.androidPicker}
+              dropdownIconColor="#2196F3"
+              mode="dropdown">
+              {sortOptions.map(option => (
+                <Picker.Item
+                  key={option.value}
+                  label={option.label}
+                  value={option.value}
+                  style={styles.pickerItem}
+                />
+              ))}
+            </Picker>
+          </View>
+        ) : (
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={sortOrder}
+              onValueChange={onSortOrderChange}
+              style={styles.picker}
+              dropdownIconColor="#2196F3"
+              mode="dropdown">
+              {sortOptions.map(option => (
+                <Picker.Item
+                  key={option.value}
+                  label={option.label}
+                  value={option.value}
+                  color="#000000"
+                />
+              ))}
+            </Picker>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -155,31 +200,43 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 8,
   },
+  androidPickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  androidPicker: {
+    backgroundColor: '#FFFFFF',
+    height: 50,
+    width: '100%',
+    color: '#000000',
+  },
+  pickerItem: {
+    backgroundColor: '#FFFFFF',
+    color: '#000000',
+    fontSize: 16,
+  },
   pickerWrapper: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        borderRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
   },
   picker: {
     ...Platform.select({
       ios: {
         height: 150,
+        backgroundColor: '#FFFFFF',
       },
       android: {
-        height: 48,
+        height: 50,
+        backgroundColor: '#FFFFFF',
       },
     }),
-    color: '#000000',
   },
   dateButton: {
     flexDirection: 'row',
