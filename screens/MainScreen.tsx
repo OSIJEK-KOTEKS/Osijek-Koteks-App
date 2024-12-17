@@ -21,7 +21,7 @@ import {Divider} from 'react-native-elements';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {apiService} from '../utils/api';
+import {apiService, ItemFilters, PaginatedResponse} from '../utils/api';
 import {User, Item, LocationData, RootStackParamList} from '../types';
 import {AuthContext} from '../AuthContext';
 import ItemCard from '../components/ItemCard';
@@ -102,6 +102,34 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   // Context
   const {signOut} = useContext(AuthContext);
 
+  const calculateItemHeight = (item?: Item) => {
+    // Base height for the card
+    let height = 180;
+
+    if (item) {
+      // Add height for approval info if present
+      if (item.approvalStatus === 'odobreno') {
+        height += 80;
+      }
+
+      // Add height for photo preview if present
+      if (item.approvalPhoto?.url) {
+        height += 100;
+      }
+    }
+
+    return height;
+  };
+
+  const calculateItemOffset = (index: number) => {
+    // Calculate offset based on previous items
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+      offset += calculateItemHeight(items[i]);
+    }
+    return offset;
+  };
+
   // Date Range Filter Helper
   const getDateFilter = useCallback((date: Date) => {
     // Create exact start and end of the selected day
@@ -135,20 +163,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   }, []);
 
   // Data Fetching
+  // Update these parts in your MainScreen.tsx
+
+  // Modify the fetchData function to handle proper pagination
   const fetchData = useCallback(
     async (resetItems: boolean = true) => {
       if (loadingRef.current && !resetItems) return;
       loadingRef.current = true;
 
       try {
-        // Get the correct page number
         const currentPage = resetItems ? 1 : page;
-        console.log(
-          'Fetching data for page:',
-          currentPage,
-          'reset:',
-          resetItems,
-        );
 
         if (resetItems) {
           setLoading(true);
@@ -164,25 +188,20 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        const filters = {
+        const filters: ItemFilters = {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString(),
           ...(selectedCode !== 'all' && {code: selectedCode}),
           sortOrder: sortOrder,
         };
 
-        console.log('Fetching items for page:', currentPage, filters);
-
+        // Fetch only the current page
         const response = await apiService.getItems(currentPage, 10, filters);
 
-        console.log('API Response:', {
-          pageReceived: response.pagination.page,
-          itemsReceived: response.items.length,
-          totalItems: response.pagination.total,
-          hasMore: response.pagination.hasMore,
-        });
+        setHasMore(response.pagination.hasMore);
+        setTotalDocuments(response.pagination.total);
 
-        // Handle items based on whether we're resetting or adding more
+        // Update items based on whether we're resetting or adding more
         if (resetItems) {
           setItems(response.items);
         } else {
@@ -195,14 +214,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           });
         }
 
-        setTotalDocuments(response.pagination.total);
-        setHasMore(response.pagination.hasMore);
-
         if (profile.role === 'admin') {
           const codes = Array.from(
             new Set(response.items.map(item => item.code)),
           ).sort();
-          setAvailableCodes(codes);
+          setAvailableCodes(prev =>
+            Array.from(new Set([...prev, ...codes])).sort(),
+          );
         } else {
           setAvailableCodes(profile.codes.sort());
         }
@@ -255,24 +273,22 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || loadingRef.current) {
-      console.log('Load more blocked:', {
-        hasMore,
-        isLoadingMore,
-        loading,
-        loadingRef: loadingRef.current,
-      });
       return;
     }
 
-    console.log('Triggering load more, current page:', page);
-    setIsLoadingMore(true);
-    const nextPage = page + 1;
-    setPage(nextPage);
-  }, [hasMore, isLoadingMore, loading, page]);
+    // Ensure we're not at the end of the list
+    if (items.length >= totalDocuments) {
+      setHasMore(false);
+      return;
+    }
 
+    setIsLoadingMore(true);
+    setPage(prevPage => prevPage + 1);
+  }, [hasMore, isLoadingMore, loading, items.length, totalDocuments]);
+
+  // Remove duplicate effects that were fetching on page change
   useEffect(() => {
     if (page > 1) {
-      console.log('Page changed, fetching more items for page:', page);
       fetchData(false);
     }
   }, [page, fetchData]);
@@ -385,7 +401,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     },
     [navigation, userProfile, userToken, handleDeleteItem],
   );
-
   const ListHeaderComponent = useCallback(() => {
     return (
       <>
@@ -523,21 +538,28 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
-          ListFooterComponent={
-            isLoadingMore ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#2196F3" />
-                <Text style={styles.footerText}>Učitavam još...</Text>
-              </View>
-            ) : null
-          }
+          ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          scrollEventThrottle={150}
+          onEndReachedThreshold={0.5}
+          onMomentumScrollBegin={() => {
+            onEndReachedCalledDuringMomentum.current = false;
+          }}
+          scrollEventThrottle={16}
           initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={21}
+          maxToRenderPerBatch={5}
+          windowSize={5}
           removeClippedSubviews={Platform.OS === 'android'}
+          updateCellsBatchingPeriod={50}
+          getItemLayout={(data, index) => ({
+            length: calculateItemHeight(data?.[index]), // Implement this function
+            offset: calculateItemOffset(index), // Implement this function
+            index,
+          })}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 10,
+          }}
+          contentContainerStyle={styles.listContentContainer}
         />
 
         {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
@@ -583,9 +605,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  listContentContainer: {
-    paddingBottom: 20,
   },
   errorContainer: {
     flex: 1,
@@ -754,6 +773,14 @@ const styles = StyleSheet.create({
   refreshIconSpinning: {
     transform: [{rotate: '360deg'}],
     opacity: 0.5,
+  },
+  listContentContainer: {
+    paddingBottom: 120, // Add more padding at bottom for FAB
+    flexGrow: 1,
+  },
+  itemContainer: {
+    marginVertical: 8, // Consistent spacing between items
+    marginHorizontal: 16,
   },
 });
 

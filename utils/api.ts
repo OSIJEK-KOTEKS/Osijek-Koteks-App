@@ -75,7 +75,7 @@ export interface PaginatedResponse<T> {
 // Interface for item filters
 export interface ItemFilters {
   startDate?: string;
-  endDate?: string; // Added this
+  endDate?: string;
   code?: string;
   sortOrder?: string;
 }
