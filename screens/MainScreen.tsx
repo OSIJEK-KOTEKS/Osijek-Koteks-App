@@ -84,7 +84,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [sortOrder, setSortOrder] = useState<string>('date-desc');
+  const [sortOrder, setSortOrder] = useState<string>('pending-first');
   const [isProfileMenuVisible, setProfileMenuVisible] = useState(false);
   const [totalDocuments, setTotalDocuments] = useState<number>(0);
 

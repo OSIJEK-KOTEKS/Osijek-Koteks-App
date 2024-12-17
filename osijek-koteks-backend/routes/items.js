@@ -80,28 +80,30 @@ router.get('/', auth, async (req, res) => {
     console.log('Query:', query);
 
     // Add sorting
+    // Inside your items.js route file, update the sorting logic:
     let sortOptions = {creationDate: -1}; // Default sort
     if (sortOrder === 'date-asc') {
       sortOptions = {creationDate: 1};
     } else if (sortOrder === 'approved-first') {
       sortOptions = {
-        approvalStatus: -1,
+        approvalStatus: -1, // This will put 'odobreno' first
         creationDate: -1,
       };
     } else if (sortOrder === 'pending-first') {
+      // Custom sorting object to prioritize 'na čekanju' status
       sortOptions = {
-        approvalStatus: 1,
-        creationDate: -1,
+        // Create a custom sort field where 'na čekanju' gets highest priority
+        approvalStatus: 1, // This will put 'na čekanju' first
+        creationDate: -1, // Secondary sort by date, newest first
       };
     }
 
-    // Execute the query with pagination
+    // Execute the query with the updated sort options
     const items = await Item.find(query)
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');
-
     const total = await Item.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
