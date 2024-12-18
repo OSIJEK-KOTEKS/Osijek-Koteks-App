@@ -159,14 +159,6 @@ const Dashboard: React.FC = () => {
   const fetchItems = useCallback(
     async (isLoadingMore: boolean = false) => {
       try {
-        console.log('Starting fetchItems with params:', {
-          isLoadingMore,
-          selectedDate,
-          selectedCode,
-          sortOrder,
-          page,
-        });
-
         const currentPage = isLoadingMore ? page : 1;
 
         if (isLoadingMore) {
@@ -181,11 +173,6 @@ const Dashboard: React.FC = () => {
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        console.log('Date range:', {
-          startOfDay: startOfDay.toISOString(),
-          endOfDay: endOfDay.toISOString(),
-        });
-
         const filters: ItemFilters = {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString(),
@@ -193,20 +180,19 @@ const Dashboard: React.FC = () => {
           sortOrder,
         };
 
-        console.log('Fetching with filters:', filters);
-
         const response = await apiService.getItems(currentPage, 10, filters);
-        console.log('API Response:', response);
 
         if (isLoadingMore) {
+          // Append items when loading more
           setItems(prevItems => [...prevItems, ...response.items]);
         } else {
+          // Replace items when filters change
           setItems(response.items);
         }
 
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
-        setPage(response.pagination.page);
+        setPage(currentPage);
 
         // Update available codes
         if (response.items.length > 0) {
@@ -220,7 +206,7 @@ const Dashboard: React.FC = () => {
 
         setError('');
       } catch (err) {
-        console.error('Error details:', err);
+        console.error('Error fetching items:', err);
         setError('Greška pri dohvaćanju dokumenata');
       } finally {
         if (isLoadingMore) {
@@ -232,7 +218,25 @@ const Dashboard: React.FC = () => {
     },
     [page, selectedDate, selectedCode, sortOrder],
   );
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || loadingMore || loading) {
+      return;
+    }
 
+    if (items.length >= totalItems) {
+      setHasMore(false);
+      return;
+    }
+
+    setPage(prevPage => prevPage + 1);
+  }, [hasMore, loadingMore, loading, items.length, totalItems]);
+
+  // Add an effect to watch for page changes
+  useEffect(() => {
+    if (page > 1) {
+      fetchItems(true);
+    }
+  }, [page, fetchItems]);
   // Initial load
   useEffect(() => {
     console.log('DashboardPage mounted');
@@ -244,13 +248,13 @@ const Dashboard: React.FC = () => {
       selectedCode,
       sortOrder,
     });
-    fetchItems(true);
+    // Use fetchItems(false) instead of fetchItems(true)
+    // This will replace items instead of appending
+    fetchItems(false);
+
+    // Reset the page when filters change
+    setPage(1);
   }, [selectedDate, selectedCode, sortOrder]);
-  const handleLoadMore = () => {
-    if (!hasMore || loadingMore) return;
-    setPage(prev => prev + 1);
-    fetchItems(true);
-  };
 
   const handleLogout = async () => {
     try {
