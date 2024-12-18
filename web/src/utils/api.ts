@@ -6,6 +6,8 @@ import {
   CreateItemInput,
   LocationData,
   RegistrationData,
+  ItemFilters,
+  PaginatedResponse,
 } from '../types';
 
 const API_URL =
@@ -189,13 +191,24 @@ export const apiService = {
   },
 
   // Item methods
-  getItems: async (): Promise<Item[]> => {
+  getItems: async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: ItemFilters,
+  ): Promise<PaginatedResponse<Item>> => {
     try {
-      const response = await api.get<Item[]>('/api/items');
-      if (!response.data) {
-        console.warn('No items returned from API');
-        return [];
-      }
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(filters?.startDate && {startDate: filters.startDate}),
+        ...(filters?.endDate && {endDate: filters.endDate}),
+        ...(filters?.code && filters.code !== 'all' && {code: filters.code}),
+        ...(filters?.sortOrder && {sortOrder: filters.sortOrder}),
+      });
+
+      const response = await api.get<PaginatedResponse<Item>>(
+        `/api/items?${params}`,
+      );
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);

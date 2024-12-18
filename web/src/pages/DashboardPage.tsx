@@ -1,8 +1,8 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {apiService, getImageUrl} from '../utils/api';
-import {Item} from '../types';
+import {Item, ItemFilters, PaginatedResponse} from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
@@ -102,7 +102,6 @@ const ActionButton = styled(S.Button)`
 
 const DeleteButton = styled(ActionButton)`
   background-color: ${({theme}) => theme.colors.error};
-
   &:hover {
     background-color: ${({theme}) => theme.colors.error};
     opacity: 0.9;
@@ -131,10 +130,16 @@ const HeaderActions = styled.div`
   gap: ${({theme}) => theme.spacing.medium};
 `;
 
+const LoadMoreButton = styled(S.Button)`
+  margin: 20px auto;
+  display: block;
+`;
+
 const Dashboard: React.FC = () => {
+  // State Management
   const [items, setItems] = useState<Item[]>([]);
-  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
@@ -142,118 +147,87 @@ const Dashboard: React.FC = () => {
   const [selectedCode, setSelectedCode] = useState('all');
   const [sortOrder, setSortOrder] = useState('date-desc');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
 
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
 
+  // Fetch items with filters
+  const fetchItems = useCallback(
+    async (isLoadingMore: boolean = false) => {
+      try {
+        const currentPage = isLoadingMore ? page : 1;
+
+        if (isLoadingMore) {
+          setLoadingMore(true);
+        } else {
+          setLoading(true);
+        }
+
+        const today = new Date();
+        const startDate = new Date();
+        if (selectedRange === '7days') {
+          startDate.setDate(today.getDate() - 7);
+        } else if (selectedRange === '30days') {
+          startDate.setDate(today.getDate() - 30);
+        }
+
+        const filters: ItemFilters = {
+          startDate:
+            selectedRange !== 'all' ? startDate.toISOString() : undefined,
+          endDate: selectedRange !== 'all' ? today.toISOString() : undefined,
+          code: selectedCode !== 'all' ? selectedCode : undefined,
+          sortOrder,
+        };
+
+        const response = await apiService.getItems(currentPage, 10, filters);
+
+        if (isLoadingMore) {
+          setItems(prevItems => [...prevItems, ...response.items]);
+        } else {
+          setItems(response.items);
+        }
+
+        setHasMore(response.pagination.hasMore);
+        setTotalItems(response.pagination.total);
+        setPage(response.pagination.page);
+
+        // Update available codes
+        if (response.items.length > 0) {
+          const newCodes = Array.from(
+            new Set(response.items.map((item: Item) => item.code)),
+          );
+          setAvailableCodes(prev =>
+            Array.from(new Set([...prev, ...newCodes])),
+          );
+        }
+
+        setError('');
+      } catch (err) {
+        setError('Greška pri dohvaćanju dokumenata');
+        console.error('Error fetching items:', err);
+      } finally {
+        if (isLoadingMore) {
+          setLoadingMore(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    [page, selectedRange, selectedCode, sortOrder],
+  );
+  // Initial load
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [selectedRange, selectedCode, sortOrder]);
 
-  useEffect(() => {
-    if (items.length > 0) {
-      // Extract unique codes from items
-      const codes = Array.from(new Set(items.map(item => item.code))).sort();
-      setAvailableCodes(codes);
-    }
-  }, [items]);
-
-  interface ExtendedItem extends Item {
-    creationTime?: string;
-  }
-
-  const getFilteredItems = (
-    items: ExtendedItem[],
-    selectedCode: string,
-    dateRange: string,
-    sortOrder: string,
-  ) => {
-    let filtered = [...items];
-
-    // Date range filter
-    if (dateRange !== 'all') {
-      const today = new Date();
-      const daysToSubtract = dateRange === '7days' ? 7 : 30;
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - daysToSubtract);
-
-      filtered = filtered.filter(item => {
-        const [day, month, year] = item.creationDate.split('.');
-        const itemDate = new Date(Number(year), Number(month) - 1, Number(day));
-        return itemDate >= startDate;
-      });
-    }
-
-    // Code filter
-    if (selectedCode !== 'all') {
-      filtered = filtered.filter(item => item.code === selectedCode);
-    }
-
-    // Sorting
-    filtered.sort((a, b) => {
-      // First handle approval status sorting
-      if (sortOrder === 'approved-first') {
-        if (a.approvalStatus === 'odobreno' && b.approvalStatus !== 'odobreno')
-          return -1;
-        if (a.approvalStatus !== 'odobreno' && b.approvalStatus === 'odobreno')
-          return 1;
-      } else if (sortOrder === 'pending-first') {
-        if (
-          a.approvalStatus === 'na čekanju' &&
-          b.approvalStatus !== 'na čekanju'
-        )
-          return -1;
-        if (
-          a.approvalStatus !== 'na čekanju' &&
-          b.approvalStatus === 'na čekanju'
-        )
-          return 1;
-      }
-
-      // If approval status is the same or not sorting by approval, sort by date
-      const [dayA, monthA, yearA] = a.creationDate.split('.');
-      const [dayB, monthB, yearB] = b.creationDate.split('.');
-
-      const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA));
-      const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB));
-
-      // For approval status sorting, use date as secondary sort
-      if (sortOrder === 'approved-first' || sortOrder === 'pending-first') {
-        return dateB.getTime() - dateA.getTime(); // Newer first as secondary sort
-      }
-
-      // For date-based sorting
-      return sortOrder === 'date-desc'
-        ? dateB.getTime() - dateA.getTime()
-        : dateA.getTime() - dateB.getTime();
-    });
-
-    return filtered;
-  };
-
-  useEffect(() => {
-    const filtered = getFilteredItems(
-      items,
-      selectedCode,
-      selectedRange,
-      sortOrder,
-    );
-    setFilteredItems(filtered);
-  }, [items, selectedCode, selectedRange, sortOrder]);
-
-  const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const fetchedItems = await apiService.getItems();
-      setItems(fetchedItems);
-      setError('');
-    } catch (err) {
-      setError('Greška pri dohvaćanju dokumenata');
-      console.error('Error fetching items:', err);
-    } finally {
-      setLoading(false);
-    }
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    setPage(prev => prev + 1);
+    fetchItems(true);
   };
 
   const handleLogout = async () => {
@@ -266,17 +240,12 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleOpenPdf = (pdfUrl: string) => {
-    window.open(pdfUrl, '_blank');
-  };
-
   const handleDelete = async (itemId: string) => {
     if (window.confirm('Jeste li sigurni da želite izbrisati ovaj dokument?')) {
       try {
         setLoading(true);
         await apiService.deleteItem(itemId);
         setItems(prevItems => prevItems.filter(item => item._id !== itemId));
-        setError('');
       } catch (err) {
         console.error('Error deleting item:', err);
         setError('Greška pri brisanju dokumenta');
@@ -286,11 +255,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const showLocationModal = (item: Item) => {
-    setSelectedLocation(item);
-  };
-
-  if (loading) {
+  if (loading && !loadingMore) {
     return (
       <S.PageContainer>
         <LoadingContainer>Učitavanje...</LoadingContainer>
@@ -304,7 +269,7 @@ const Dashboard: React.FC = () => {
         <HeaderLeft>
           <Logo />
           <div>
-            <h1>Dokumenti</h1>
+            <h1>Dokumenti ({totalItems})</h1>
             <UserInfo>
               Dobrodošli, {user?.firstName} {user?.lastName}
               {user?.company && ` (${user.company})`}
@@ -334,7 +299,7 @@ const Dashboard: React.FC = () => {
       />
 
       <ItemsGrid>
-        {filteredItems.map(item => (
+        {items.map(item => (
           <ItemCard key={item._id}>
             <ItemTitle>{item.title}</ItemTitle>
             <ItemDetails>
@@ -361,7 +326,7 @@ const Dashboard: React.FC = () => {
               </ItemDetails>
             )}
             <ButtonGroup>
-              <ActionButton onClick={() => handleOpenPdf(item.pdfUrl)}>
+              <ActionButton onClick={() => window.open(item.pdfUrl, '_blank')}>
                 Otvori PDF
               </ActionButton>
 
@@ -375,7 +340,7 @@ const Dashboard: React.FC = () => {
               )}
 
               {item.approvalLocation && (
-                <ActionButton onClick={() => showLocationModal(item)}>
+                <ActionButton onClick={() => setSelectedLocation(item)}>
                   Lokacija
                 </ActionButton>
               )}
@@ -390,8 +355,14 @@ const Dashboard: React.FC = () => {
         ))}
       </ItemsGrid>
 
-      {filteredItems.length === 0 && !loading && (
+      {items.length === 0 && !loading && (
         <EmptyMessage>Nema dostupnih dokumenata</EmptyMessage>
+      )}
+
+      {hasMore && !loading && items.length > 0 && (
+        <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
+          {loadingMore ? 'Učitavanje...' : 'Učitaj još'}
+        </LoadMoreButton>
       )}
 
       {selectedImage && token && (

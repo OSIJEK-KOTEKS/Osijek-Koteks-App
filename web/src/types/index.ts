@@ -1,4 +1,3 @@
-// src/types/index.ts
 export interface User {
   _id: string;
   email: string;
@@ -72,4 +71,22 @@ export interface CreateItemInput {
   pdfUrl: string;
   creationDate?: string;
   creationTime?: string; // Added this field
+}
+export interface ItemFilters {
+  startDate?: string;
+  endDate?: string;
+  code?: string;
+  sortOrder?: string;
+}
+
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  pages: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationInfo;
 }
