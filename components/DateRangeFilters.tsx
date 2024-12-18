@@ -1,9 +1,46 @@
 import React, {useState} from 'react';
-import {View, StyleSheet, Platform, TouchableOpacity} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Dimensions,
+} from 'react-native';
 import {Text} from 'react-native-elements';
 import {Picker} from '@react-native-picker/picker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import Modal from 'react-native-modal';
+import CalendarPicker from 'react-native-calendar-picker';
+
+// Croatian month names
+const hrMonths = [
+  'Siječanj',
+  'Veljača',
+  'Ožujak',
+  'Travanj',
+  'Svibanj',
+  'Lipanj',
+  'Srpanj',
+  'Kolovoz',
+  'Rujan',
+  'Listopad',
+  'Studeni',
+  'Prosinac',
+];
+
+// Croatian day names
+const hrDays = [
+  'Nedjelja',
+  'Ponedjeljak',
+  'Utorak',
+  'Srijeda',
+  'Četvrtak',
+  'Petak',
+  'Subota',
+];
+
+// Croatian short day names
+const hrShortDays = ['Ned', 'Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub'];
 
 interface DateRangeFiltersProps {
   selectedDate: Date;
@@ -30,10 +67,10 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
     {label: 'Na čekanju prvo', value: 'pending-first'},
     {label: 'Najnoviji prvo', value: 'date-desc'},
     {label: 'Najstariji prvo', value: 'date-asc'},
-    {label: 'Odobreni prvo', value: 'approved-first'}, // Changed from 'approved-last'
+    {label: 'Odobreni prvo', value: 'approved-first'},
   ];
 
-  const handleDateChange = (event: any, date?: Date) => {
+  const handleDateChange = (date: Date) => {
     setShowDatePicker(false);
     if (date) {
       onDateChange(date);
@@ -41,13 +78,11 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    };
-    return date.toLocaleDateString('hr-HR', options);
+    const dayName = hrDays[date.getDay()];
+    const day = date.getDate();
+    const month = hrMonths[date.getMonth()];
+    const year = date.getFullYear();
+    return `${dayName}, ${day}. ${month} ${year}.`;
   };
 
   return (
@@ -65,16 +100,38 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
           <MaterialIcons name="calendar-today" size={20} color="#2196F3" />
         </TouchableOpacity>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateChange}
-            maximumDate={new Date()}
-            locale="hr"
-          />
-        )}
+        <Modal
+          isVisible={showDatePicker}
+          onBackdropPress={() => setShowDatePicker(false)}
+          style={styles.modal}>
+          <View style={styles.calendarContainer}>
+            <Text style={styles.calendarTitle}>Odaberi datum</Text>
+            <CalendarPicker
+              weekdays={hrShortDays}
+              months={hrMonths}
+              previousTitle="Prethodni"
+              nextTitle="Sljedeći"
+              selectMonthTitle="Odaberi mjesec"
+              selectYearTitle="Odaberi godinu"
+              selectedDayColor="#2196F3"
+              selectedDayTextColor="#FFFFFF"
+              todayBackgroundColor="#ececec"
+              todayTextStyle={{color: '#000000'}}
+              maxDate={new Date()}
+              initialDate={selectedDate}
+              onDateChange={handleDateChange}
+              width={Dimensions.get('window').width * 0.8}
+              selectedStartDate={selectedDate}
+            />
+            <View style={styles.calendarButtons}>
+              <TouchableOpacity
+                style={[styles.calendarButton, styles.cancelButton]}
+                onPress={() => setShowDatePicker(false)}>
+                <Text style={styles.calendarButtonText}>Odustani</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
 
       {/* Code Filter Section */}
@@ -262,6 +319,44 @@ const styles = StyleSheet.create({
   dateButtonText: {
     fontSize: 16,
     color: '#000000',
+  },
+  modal: {
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: Dimensions.get('window').width * 0.9,
+    maxHeight: Dimensions.get('window').height * 0.8,
+  },
+  calendarTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#000000',
+  },
+  calendarButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+  },
+  calendarButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#2196F3',
+  },
+  calendarButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 
