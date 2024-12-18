@@ -32,9 +32,6 @@ const upload = multer({
 const validateCode = code => /^\d{5}$/.test(code);
 
 // Get items by user's codes
-// Modified items.js route
-// In your items.js route file
-// In your items.js route file
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder} = req.query;
