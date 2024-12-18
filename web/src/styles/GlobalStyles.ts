@@ -2,6 +2,8 @@
 import {createGlobalStyle} from 'styled-components';
 
 export const GlobalStyles = createGlobalStyle`
+  @import 'react-datepicker/dist/react-datepicker.css';
+
   * {
     box-sizing: border-box;
     margin: 0;
@@ -32,5 +34,41 @@ export const GlobalStyles = createGlobalStyle`
 
   input, button {
     font-family: inherit;
+  }
+
+  /* DatePicker custom styles */
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+
+  .react-datepicker {
+    font-family: inherit;
+    border: 1px solid ${({theme}) => theme.colors.gray};
+    border-radius: ${({theme}) => theme.borderRadius};
+  }
+
+  .react-datepicker__header {
+    background-color: ${({theme}) => theme.colors.primary};
+    border-bottom: none;
+  }
+
+  .react-datepicker__current-month,
+  .react-datepicker__day-name {
+    color: white;
+  }
+
+  .react-datepicker__day--selected {
+    background-color: ${({theme}) => theme.colors.primary};
+    &:hover {
+      background-color: ${({theme}) => theme.colors.primaryDark};
+    }
+  }
+
+  .react-datepicker__day--keyboard-selected {
+    background-color: ${({theme}) => theme.colors.primary};
+    opacity: 0.8;
+    &:hover {
+      background-color: ${({theme}) => theme.colors.primaryDark};
+    }
   }
 `;

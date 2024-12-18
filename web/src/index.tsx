@@ -1,5 +1,6 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
+import 'react-datepicker/dist/react-datepicker.css'; // Add this line
 import App from './App';
 import {ThemeProvider} from 'styled-components';
 import {GlobalStyles} from './styles/GlobalStyles';

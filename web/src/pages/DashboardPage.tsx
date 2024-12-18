@@ -142,8 +142,8 @@ const Dashboard: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
-  const [selectedRange, setSelectedRange] = useState('7days');
   const [selectedCode, setSelectedCode] = useState('all');
   const [sortOrder, setSortOrder] = useState('date-desc');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
@@ -159,6 +159,14 @@ const Dashboard: React.FC = () => {
   const fetchItems = useCallback(
     async (isLoadingMore: boolean = false) => {
       try {
+        console.log('Starting fetchItems with params:', {
+          isLoadingMore,
+          selectedDate,
+          selectedCode,
+          sortOrder,
+          page,
+        });
+
         const currentPage = isLoadingMore ? page : 1;
 
         if (isLoadingMore) {
@@ -167,23 +175,28 @@ const Dashboard: React.FC = () => {
           setLoading(true);
         }
 
-        const today = new Date();
-        const startDate = new Date();
-        if (selectedRange === '7days') {
-          startDate.setDate(today.getDate() - 7);
-        } else if (selectedRange === '30days') {
-          startDate.setDate(today.getDate() - 30);
-        }
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        console.log('Date range:', {
+          startOfDay: startOfDay.toISOString(),
+          endOfDay: endOfDay.toISOString(),
+        });
 
         const filters: ItemFilters = {
-          startDate:
-            selectedRange !== 'all' ? startDate.toISOString() : undefined,
-          endDate: selectedRange !== 'all' ? today.toISOString() : undefined,
-          code: selectedCode !== 'all' ? selectedCode : undefined,
+          startDate: startOfDay.toISOString(),
+          endDate: endOfDay.toISOString(),
+          ...(selectedCode !== 'all' && {code: selectedCode}),
           sortOrder,
         };
 
+        console.log('Fetching with filters:', filters);
+
         const response = await apiService.getItems(currentPage, 10, filters);
+        console.log('API Response:', response);
 
         if (isLoadingMore) {
           setItems(prevItems => [...prevItems, ...response.items]);
@@ -198,7 +211,7 @@ const Dashboard: React.FC = () => {
         // Update available codes
         if (response.items.length > 0) {
           const newCodes = Array.from(
-            new Set(response.items.map((item: Item) => item.code)),
+            new Set(response.items.map(item => item.code)),
           );
           setAvailableCodes(prev =>
             Array.from(new Set([...prev, ...newCodes])),
@@ -207,8 +220,8 @@ const Dashboard: React.FC = () => {
 
         setError('');
       } catch (err) {
+        console.error('Error details:', err);
         setError('Greška pri dohvaćanju dokumenata');
-        console.error('Error fetching items:', err);
       } finally {
         if (isLoadingMore) {
           setLoadingMore(false);
@@ -217,13 +230,22 @@ const Dashboard: React.FC = () => {
         }
       }
     },
-    [page, selectedRange, selectedCode, sortOrder],
+    [page, selectedDate, selectedCode, sortOrder],
   );
+
   // Initial load
   useEffect(() => {
+    console.log('DashboardPage mounted');
     fetchItems();
-  }, [selectedRange, selectedCode, sortOrder]);
-
+  }, []);
+  useEffect(() => {
+    console.log('Filters changed, refetching items with:', {
+      selectedDate,
+      selectedCode,
+      sortOrder,
+    });
+    fetchItems(true);
+  }, [selectedDate, selectedCode, sortOrder]);
   const handleLoadMore = () => {
     if (!hasMore || loadingMore) return;
     setPage(prev => prev + 1);
@@ -289,15 +311,14 @@ const Dashboard: React.FC = () => {
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
       <DashboardFilters
-        selectedRange={selectedRange}
-        onRangeChange={setSelectedRange}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
         selectedCode={selectedCode}
         onCodeChange={setSelectedCode}
         availableCodes={availableCodes}
         sortOrder={sortOrder}
         onSortOrderChange={setSortOrder}
       />
-
       <ItemsGrid>
         {items.map(item => (
           <ItemCard key={item._id}>

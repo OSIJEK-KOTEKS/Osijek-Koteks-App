@@ -1,12 +1,25 @@
 import React from 'react';
 import styled from 'styled-components';
+import DatePicker, {registerLocale} from 'react-datepicker';
+import hr from 'date-fns/locale/hr';
+import type {Locale} from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
+
+// Register Croatian locale
+registerLocale('hr', hr as unknown as Locale);
 
 const FiltersContainer = styled.div`
   background: white;
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: ${({theme}) => theme.borderRadius};
+  box-shadow: ${({theme}) => theme.shadows.main};
   margin-bottom: 2rem;
+`;
+
+const FiltersGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
 `;
 
 const FilterSection = styled.div`
@@ -21,34 +34,70 @@ const FilterLabel = styled.label`
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #333;
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const Select = styled.select`
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  border-radius: ${({theme}) => theme.borderRadius};
   background-color: white;
   font-size: 1rem;
-  color: #333;
+  color: ${({theme}) => theme.colors.text};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: #2196f3;
+    border-color: ${({theme}) => theme.colors.primary};
   }
 `;
 
-const FiltersGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+const StyledDatePickerWrapper = styled.div`
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+
+  .react-datepicker__input-container input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid ${({theme}) => theme.colors.gray};
+    border-radius: ${({theme}) => theme.borderRadius};
+    font-size: 1rem;
+    color: ${({theme}) => theme.colors.text};
+
+    &:focus {
+      outline: none;
+      border-color: ${({theme}) => theme.colors.primary};
+    }
+  }
+
+  .react-datepicker {
+    font-family: inherit;
+  }
+
+  .react-datepicker__header {
+    background-color: ${({theme}) => theme.colors.primary};
+    border-bottom: none;
+  }
+
+  .react-datepicker__current-month,
+  .react-datepicker__day-name {
+    color: white;
+  }
+
+  .react-datepicker__day--selected {
+    background-color: ${({theme}) => theme.colors.primary};
+
+    &:hover {
+      background-color: ${({theme}) => theme.colors.primaryDark};
+    }
+  }
 `;
 
-interface FiltersProps {
-  selectedRange: string;
-  onRangeChange: (range: string) => void;
+interface DashboardFiltersProps {
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
   selectedCode: string;
   onCodeChange: (code: string) => void;
   availableCodes: string[];
@@ -56,34 +105,44 @@ interface FiltersProps {
   onSortOrderChange: (order: string) => void;
 }
 
-const DashboardFilters: React.FC<FiltersProps> = ({
-  selectedRange,
-  onRangeChange,
+const DashboardFilters: React.FC<DashboardFiltersProps> = ({
+  selectedDate,
+  onDateChange,
   selectedCode,
   onCodeChange,
   availableCodes,
   sortOrder,
   onSortOrderChange,
 }) => {
+  // Handle date change including null value protection
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      onDateChange(date);
+    }
+  };
+
   return (
     <FiltersContainer>
       <FiltersGrid>
         <FilterSection>
-          <FilterLabel htmlFor="dateRange">Vremenski period</FilterLabel>
-          <Select
-            id="dateRange"
-            value={selectedRange}
-            onChange={e => onRangeChange(e.target.value)}>
-            <option value="7days">Zadnjih 7 dana</option>
-            <option value="30days">Zadnjih 30 dana</option>
-            <option value="all">Svi dokumenti</option>
-          </Select>
+          <FilterLabel htmlFor="date-picker">Datum</FilterLabel>
+          <StyledDatePickerWrapper>
+            <DatePicker
+              selected={selectedDate}
+              onChange={handleDateChange}
+              dateFormat="dd.MM.yyyy"
+              locale="hr"
+              maxDate={new Date()}
+              placeholderText="Odaberi datum"
+              className="date-picker"
+            />
+          </StyledDatePickerWrapper>
         </FilterSection>
 
         <FilterSection>
-          <FilterLabel htmlFor="workOrder">Radni nalog</FilterLabel>
+          <FilterLabel htmlFor="code-select">Radni nalog</FilterLabel>
           <Select
-            id="workOrder"
+            id="code-select"
             value={selectedCode}
             onChange={e => onCodeChange(e.target.value)}>
             <option value="all">Svi Radni Nalozi</option>
@@ -96,15 +155,15 @@ const DashboardFilters: React.FC<FiltersProps> = ({
         </FilterSection>
 
         <FilterSection>
-          <FilterLabel htmlFor="sortOrder">Sortiranje</FilterLabel>
+          <FilterLabel htmlFor="sort-select">Sortiranje</FilterLabel>
           <Select
-            id="sortOrder"
+            id="sort-select"
             value={sortOrder}
             onChange={e => onSortOrderChange(e.target.value)}>
+            <option value="pending-first">Na čekanju prvo</option>
             <option value="date-desc">Najnoviji prvo</option>
             <option value="date-asc">Najstariji prvo</option>
-            <option value="approved-first">Odobreni</option>
-            <option value="pending-first">Na čekanju</option>
+            <option value="approved-first">Odobreni prvo</option>
           </Select>
         </FilterSection>
       </FiltersGrid>
