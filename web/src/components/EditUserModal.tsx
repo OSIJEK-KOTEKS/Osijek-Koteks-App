@@ -243,7 +243,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     setError('');
 
     try {
-      console.log('Submitting form data:', formData); // Add this log
+      console.log('Submitting form data:', formData);
       await apiService.updateUser(user._id, formData);
       onSuccess();
       onClose();
