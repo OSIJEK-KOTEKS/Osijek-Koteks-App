@@ -25,7 +25,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
   const location = useLocation();
 
   if (isLoading) {
-    return <LoadingContainer>Loading...</LoadingContainer>;
+    return <LoadingContainer>Učitavanje...</LoadingContainer>;
   }
 
   if (!user) {
