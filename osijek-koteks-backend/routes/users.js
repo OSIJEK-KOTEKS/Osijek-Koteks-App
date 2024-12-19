@@ -130,7 +130,6 @@ router.patch('/:id/password', auth, async (req, res) => {
 // Update user profile
 router.patch('/:id', auth, async (req, res) => {
   try {
-    // Users can only update their own profile unless they're an admin
     if (
       req.user.role !== 'admin' &&
       req.user._id.toString() !== req.params.id
@@ -145,7 +144,7 @@ router.patch('/:id', auth, async (req, res) => {
 
     const updatableFields = ['firstName', 'lastName', 'company', 'phoneNumber'];
     if (req.user.role === 'admin') {
-      updatableFields.push('role', 'isVerified', 'codes');
+      updatableFields.push('role', 'isVerified', 'codes', 'hasFullAccess'); // Make sure hasFullAccess is included
     }
 
     // Update allowed fields
@@ -156,15 +155,14 @@ router.patch('/:id', auth, async (req, res) => {
     });
 
     const updatedUser = await user.save();
+    console.log('Updated user:', updatedUser); // Add this log
     res.json(updatedUser);
   } catch (error) {
     console.error('Error updating user:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({message: error.message});
-    }
     res.status(500).json({message: 'Server error'});
   }
 });
+
 router.post('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {

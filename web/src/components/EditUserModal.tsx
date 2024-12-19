@@ -227,6 +227,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   }, [isOpen]);
 
+  const handleFullAccessChange = (checked: boolean) => {
+    console.log('Setting hasFullAccess to:', checked); // Add this log
+    setFormData(prev => ({
+      ...prev,
+      hasFullAccess: checked,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?._id) return;
@@ -235,6 +243,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     setError('');
 
     try {
+      console.log('Submitting form data:', formData); // Add this log
       await apiService.updateUser(user._id, formData);
       onSuccess();
       onClose();
@@ -363,9 +372,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 <input
                   type="checkbox"
                   checked={formData.hasFullAccess || false}
-                  onChange={e =>
-                    setFormData({...formData, hasFullAccess: e.target.checked})
-                  }
+                  onChange={e => handleFullAccessChange(e.target.checked)}
                   id="hasFullAccess"
                 />
                 <label htmlFor="hasFullAccess">

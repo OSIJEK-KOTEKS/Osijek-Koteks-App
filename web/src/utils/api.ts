@@ -14,11 +14,9 @@ const API_URL =
   process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
 
 export const getImageUrl = (path: string) => {
-  // If it's an absolute URL (like Cloudinary URLs), return it as-is
   if (path?.startsWith('http')) {
     return path;
   }
-  // Otherwise, prepend the API URL for relative paths
   return `${API_URL}${path}`;
 };
 
@@ -72,7 +70,6 @@ export const apiService = {
         userId: response.data.user._id,
       });
 
-      // Store both token and user ID
       localStorage.setItem('userToken', response.data.token);
       localStorage.setItem('userId', response.data.user._id);
 
@@ -94,6 +91,7 @@ export const apiService = {
         '/api/auth/register',
         userData,
       );
+
       console.log('Registration successful:', {
         userId: response.data.user._id,
         email: response.data.user.email,
@@ -153,10 +151,15 @@ export const apiService = {
         password: '[REDACTED]',
       });
 
-      const response = await api.post<User>('/api/users', userData);
+      const response = await api.post<User>('/api/users', {
+        ...userData,
+        hasFullAccess: userData.hasFullAccess || false,
+      });
+
       console.log('User creation successful:', {
         userId: response.data._id,
         email: response.data.email,
+        hasFullAccess: response.data.hasFullAccess,
       });
 
       return response.data;
@@ -171,11 +174,40 @@ export const apiService = {
     userData: Partial<Omit<User, '_id'>>,
   ): Promise<User> => {
     try {
-      console.log('Updating user:', id, userData);
-      const response = await api.patch<User>(`/api/users/${id}`, userData);
+      console.log('Updating user:', id, {
+        ...userData,
+        hasFullAccess: userData.hasFullAccess || false,
+      });
+
+      const response = await api.patch<User>(`/api/users/${id}`, {
+        ...userData,
+        hasFullAccess: userData.hasFullAccess || false,
+      });
+
+      console.log('User update successful:', {
+        userId: response.data._id,
+        hasFullAccess: response.data.hasFullAccess,
+      });
+
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
+      throw error;
+    }
+  },
+
+  updateUserPassword: async (
+    userId: string,
+    newPassword: string,
+  ): Promise<User> => {
+    try {
+      console.log('Updating password for user:', userId);
+      const response = await api.patch<User>(`/api/users/${userId}/password`, {
+        password: newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating password:', error);
       throw error;
     }
   },
@@ -277,22 +309,6 @@ export const apiService = {
     }
   },
 
-  updateUserPassword: async (
-    userId: string,
-    newPassword: string,
-  ): Promise<User> => {
-    try {
-      console.log('Updating password for user:', userId);
-      const response = await api.patch<User>(`/api/users/${userId}/password`, {
-        password: newPassword,
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating password:', error);
-      throw error;
-    }
-  },
-
   deleteItem: async (id: string): Promise<void> => {
     try {
       console.log('Attempting to delete item with ID:', id);
@@ -300,6 +316,29 @@ export const apiService = {
       console.log('Successfully deleted item:', id);
     } catch (error) {
       console.error('Error details:', error);
+      throw error;
+    }
+  },
+
+  // Toggle user's full access
+  toggleUserFullAccess: async (
+    id: string,
+    hasFullAccess: boolean,
+  ): Promise<User> => {
+    try {
+      console.log('Toggling full access for user:', id, hasFullAccess);
+      const response = await api.patch<User>(`/api/users/${id}/access`, {
+        hasFullAccess,
+      });
+
+      console.log('Full access update successful:', {
+        userId: response.data._id,
+        hasFullAccess: response.data.hasFullAccess,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling user full access:', error);
       throw error;
     }
   },
