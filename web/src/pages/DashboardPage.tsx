@@ -251,7 +251,7 @@ const Dashboard: React.FC = () => {
       selectedCode,
       sortOrder,
     });
-    // Use fetchItems(false) instead of fetchItems(true)
+    // Use fetchItems(false) instead of  fetchItems(true)
     // This will replace items instead of appending
     fetchItems(false);
 
