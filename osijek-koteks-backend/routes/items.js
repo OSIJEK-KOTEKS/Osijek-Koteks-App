@@ -32,6 +32,7 @@ const upload = multer({
 const validateCode = code => /^\d{5}$/.test(code);
 
 // Get items by user's codes
+
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder} = req.query;
@@ -39,34 +40,22 @@ router.get('/', auth, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    console.log('Processing request:', {
-      page,
-      skip,
-      limit,
-      startDate,
-      endDate,
-      code,
-      sortOrder,
-      userRole: req.user.role,
-    });
+    // Build the base query - now considering hasFullAccess permission
+    let query = {};
 
-    // Build the base query
-    let query = req.user.role === 'admin' ? {} : {code: {$in: req.user.codes}};
+    // If user is not admin and doesn't have full access, filter by their codes
+    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      query.code = {$in: req.user.codes};
+    }
 
     // Add date filter if dates are provided
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-
       query.creationDate = {
         $gte: start,
         $lte: end,
       };
-
-      console.log('Date filter:', {
-        start: start.toISOString(),
-        end: end.toISOString(),
-      });
     }
 
     // Add code filter if specific code is requested
@@ -74,39 +63,30 @@ router.get('/', auth, async (req, res) => {
       query.code = code;
     }
 
-    console.log('Query:', query);
-
     let sortOptions = {creationDate: -1}; // Default sort
     if (sortOrder === 'date-asc') {
       sortOptions = {creationDate: 1};
     } else if (sortOrder === 'approved-first') {
       sortOptions = {
-        approvalStatus: -1, // This will put 'odobreno' first
+        approvalStatus: -1,
         creationDate: -1,
       };
     } else if (sortOrder === 'pending-first') {
       sortOptions = {
-        approvalStatus: 1, // This will put 'na čekanju' first
+        approvalStatus: 1,
         creationDate: -1,
       };
     }
-    // Execute the query with the updated sort options
+
     const items = await Item.find(query)
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');
+
     const total = await Item.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
-
-    console.log('Query results:', {
-      page,
-      totalItems: total,
-      itemsReturned: items.length,
-      totalPages,
-      hasMore,
-    });
 
     res.json({
       items,

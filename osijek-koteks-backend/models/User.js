@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// Validation function for 5-digit code format
 const validateCode = code => {
   return /^\d{5}$/.test(code);
 };
@@ -16,18 +15,17 @@ const UserSchema = new mongoose.Schema({
     type: [String],
     validate: {
       validator: function (codes) {
-        // Allow empty array
         if (codes.length === 0) return true;
-        // Check if all codes match the format
         return codes.every(code => validateCode(code));
       },
       message: 'Each code must be exactly 5 digits',
     },
-    default: [], // This ensures an empty array by default
+    default: [],
   },
   role: {type: String, enum: ['admin', 'user', 'bot'], default: 'user'},
   isVerified: {type: Boolean, default: false},
   phoneNumber: {type: String},
+  hasFullAccess: {type: Boolean, default: false}, // New field for full access permission
 });
 
 // Hash the password before saving
