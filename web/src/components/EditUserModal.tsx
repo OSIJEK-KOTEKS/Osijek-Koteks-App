@@ -161,6 +161,20 @@ const ErrorMessage = styled.div`
   font-size: 0.875rem;
 `;
 
+const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+`;
+
+const WarningText = styled.div`
+  color: ${({theme}) => theme.colors.error};
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  padding-left: 1.5rem;
+`;
+
 interface EditUserModalProps {
   user: User | null;
   isOpen: boolean;
@@ -193,6 +207,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         role: user.role,
         codes: [...user.codes],
         isVerified: user.isVerified,
+        hasFullAccess: user.hasFullAccess || false,
       });
       // Reset other state values
       setNewCode('');
@@ -340,6 +355,31 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <option value="bot">Bot</option>
             </Select>
           </FormGroup>
+
+          {formData.role !== 'admin' && (
+            <FormGroup>
+              <Label>Pristup dokumentima</Label>
+              <CheckboxContainer>
+                <input
+                  type="checkbox"
+                  checked={formData.hasFullAccess || false}
+                  onChange={e =>
+                    setFormData({...formData, hasFullAccess: e.target.checked})
+                  }
+                  id="hasFullAccess"
+                />
+                <label htmlFor="hasFullAccess">
+                  Dozvoli pristup svim dokumentima
+                </label>
+              </CheckboxContainer>
+              {formData.hasFullAccess && (
+                <WarningText>
+                  Korisnik će imati pristup svim dokumentima bez obzira na
+                  dodijeljene radne naloge.
+                </WarningText>
+              )}
+            </FormGroup>
+          )}
 
           <FormGroup>
             <Label>Radni nalozi</Label>

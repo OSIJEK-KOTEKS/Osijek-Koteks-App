@@ -8,6 +8,7 @@ export interface User {
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
   phoneNumber?: string;
+  hasFullAccess: boolean; // Add this new field
 }
 
 export interface RegistrationData {
@@ -18,6 +19,7 @@ export interface RegistrationData {
   company: string;
   role: 'admin' | 'user' | 'bot';
   codes: string[];
+  hasFullAccess?: boolean; // Add this new field
 }
 
 export interface Item {
