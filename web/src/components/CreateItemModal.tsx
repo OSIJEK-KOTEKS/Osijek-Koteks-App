@@ -224,6 +224,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
             <FormGroup>
               <Label>Naziv</Label>
               <Input
+                data-testid="title-input" // Add test IDs
                 type="text"
                 value={formData.title}
                 onChange={e =>
