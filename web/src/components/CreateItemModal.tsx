@@ -38,7 +38,7 @@ const ModalContent = styled.div`
   box-shadow: ${({theme}) => theme.shadows.main};
   overflow-y: auto;
 
-  /* Custom scrollbar styling */
+  /* Custom scrollbar styling  */
   &::-webkit-scrollbar {
     width: 8px;
   }
