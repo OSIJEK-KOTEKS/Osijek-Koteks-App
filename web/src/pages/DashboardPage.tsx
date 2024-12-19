@@ -9,6 +9,7 @@ import ImageViewerModal from '../components/ImageViewerModal';
 import LocationViewerModal from '../components/LocationViewerModal';
 import Logo from '../components/Logo';
 import DashboardFilters from '../components/DashboardFilters';
+import CreateItemModal from '../components/CreateItemModal';
 
 // Styled Components
 const Header = styled.div`
@@ -150,6 +151,8 @@ const Dashboard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalItems, setTotalItems] = useState(0);
+  const [isCreateModalVisible, setCreateModalVisible] =
+    useState<boolean>(false);
 
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
@@ -303,6 +306,13 @@ const Dashboard: React.FC = () => {
           </div>
         </HeaderLeft>
         <HeaderActions>
+          {(user?.role === 'admin' || user?.role === 'bot') && (
+            <S.Button
+              onClick={() => setCreateModalVisible(true)}
+              variant="primary">
+              Dodaj dokument
+            </S.Button>
+          )}
           {user?.role === 'admin' && (
             <S.Button onClick={() => navigate('/users')}>Korisnici</S.Button>
           )}
@@ -403,6 +413,16 @@ const Dashboard: React.FC = () => {
           location={selectedLocation.approvalLocation}
           onClose={() => setSelectedLocation(null)}
           approvalDate={selectedLocation.approvalDate}
+        />
+      )}
+      {(user?.role === 'admin' || user?.role === 'bot') && (
+        <CreateItemModal
+          isOpen={isCreateModalVisible}
+          onClose={() => setCreateModalVisible(false)}
+          onSuccess={() => {
+            setCreateModalVisible(false);
+            fetchItems(false);
+          }}
         />
       )}
     </S.PageContainer>
