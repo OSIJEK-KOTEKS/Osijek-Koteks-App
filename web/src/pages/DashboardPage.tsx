@@ -94,11 +94,22 @@ const ButtonGroup = styled.div`
   flex-wrap: wrap;
 `;
 
-const ActionButton = styled(S.Button)`
+const ActionButton = styled(S.Button)<{disabled?: boolean}>`
   flex: 1;
   min-width: auto;
   padding: 8px 16px;
   font-size: 0.9rem;
+
+  ${({disabled, theme}) =>
+    disabled &&
+    `
+    background-color: ${theme.colors.disabled};
+    cursor: not-allowed;
+    opacity: 0.6;
+    &:hover {
+      background-color: ${theme.colors.disabled};
+    }
+  `}
 `;
 
 const DeleteButton = styled(ActionButton)`
@@ -374,8 +385,22 @@ const Dashboard: React.FC = () => {
                 </ActionButton>
               )}
 
-              {item.approvalLocation && (
+              {item.approvalLocation?.coordinates?.latitude &&
+              item.approvalLocation?.coordinates?.longitude ? (
                 <ActionButton onClick={() => setSelectedLocation(item)}>
+                  Lokacija
+                </ActionButton>
+              ) : (
+                <ActionButton
+                  style={{
+                    backgroundColor: '#cccccc',
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
+                  }}
+                  onClick={e => {
+                    e.preventDefault();
+                    return false;
+                  }}>
                   Lokacija
                 </ActionButton>
               )}
