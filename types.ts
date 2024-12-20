@@ -43,8 +43,10 @@ export interface User {
   role: 'admin' | 'user' | 'bot';
   isVerified: boolean;
   phoneNumber?: string;
+  hasFullAccess?: boolean;
 }
 
+// Update RegistrationData to include hasFullAccess
 export interface RegistrationData {
   email: string;
   password: string;
@@ -53,6 +55,7 @@ export interface RegistrationData {
   company: string;
   role: 'admin' | 'user' | 'bot';
   codes: string[];
+  hasFullAccess?: boolean;
 }
 
 export interface LoginResponse {

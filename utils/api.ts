@@ -186,10 +186,15 @@ export const apiService = {
         password: '[REDACTED]',
       });
 
-      const response = await api.post<User>('/api/users', userData);
+      const response = await api.post<User>('/api/users', {
+        ...userData,
+        hasFullAccess: userData.hasFullAccess || false,
+      });
+
       console.log('User creation successful:', {
         userId: response.data._id,
         email: response.data.email,
+        hasFullAccess: response.data.hasFullAccess,
       });
 
       return response.data;
@@ -211,25 +216,27 @@ export const apiService = {
     userData: Partial<Omit<User, '_id'>>,
   ): Promise<User> => {
     try {
-      console.log('Updating user:', id, userData);
-      const response = await api.patch<User>(`/api/users/${id}`, userData);
+      console.log('Updating user:', id, {
+        ...userData,
+        hasFullAccess: userData.hasFullAccess || false,
+      });
+
+      const response = await api.patch<User>(`/api/users/${id}`, {
+        ...userData,
+        hasFullAccess: userData.hasFullAccess || false,
+      });
+
+      console.log('User update successful:', {
+        userId: response.data._id,
+        hasFullAccess: response.data.hasFullAccess,
+      });
+
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;
     }
   },
-
-  updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
-    try {
-      const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
-      return response.data;
-    } catch (error) {
-      console.error('Error updating user codes:', error);
-      throw error;
-    }
-  },
-
   // Item methods
   getItems: async (
     page: number = 1,

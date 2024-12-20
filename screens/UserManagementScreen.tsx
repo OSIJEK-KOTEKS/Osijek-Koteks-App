@@ -31,6 +31,7 @@ interface UserFormData {
   password?: string;
   newPassword?: string;
   isVerified?: boolean;
+  hasFullAccess?: boolean; // Add this field
 }
 
 interface DataExportFormat {
@@ -78,6 +79,7 @@ export const UserManagementScreen: React.FC = () => {
     codes: [],
     password: '',
     isVerified: false,
+    hasFullAccess: false,
   };
 
   const [formData, setFormData] = useState<UserFormData>(initialUserState);
@@ -146,9 +148,10 @@ export const UserManagementScreen: React.FC = () => {
       role: user.role,
       codes: user.codes,
       isVerified: user.isVerified,
-      newPassword: '', // Add this line
+      hasFullAccess: user.hasFullAccess || false,
+      newPassword: '',
     });
-    setShowPasswordField(false); // Reset password field visibility
+    setShowPasswordField(false);
     setModalVisible(true);
   };
 
@@ -374,6 +377,18 @@ export const UserManagementScreen: React.FC = () => {
           <Text>Firma: {item.company}</Text>
           <Text>Uloga: {item.role}</Text>
           <Text>Radni nalozi: {item.codes.join(', ') || 'Nema'}</Text>
+          {item.role !== 'admin' && (
+            <Text
+              style={
+                item.hasFullAccess
+                  ? styles.fullAccessEnabled
+                  : styles.fullAccessDisabled
+              }>
+              {item.hasFullAccess
+                ? 'Potpuni pristup dokumentima'
+                : 'Ograničen pristup dokumentima'}
+            </Text>
+          )}
         </View>
       </ListItem.Content>
       <View>
@@ -383,9 +398,6 @@ export const UserManagementScreen: React.FC = () => {
         <TouchableOpacity onPress={() => handleEditUser(item)}>
           <MaterialIcons name="edit" size={24} color="#2196F3" />
         </TouchableOpacity>
-        {/* <TouchableOpacity onPress={() => handleDeleteUser(item._id)}>
-          <MaterialIcons name="delete" size={24} color="#f44336" />
-        </TouchableOpacity> */}
       </View>
     </ListItem>
   );
@@ -558,7 +570,34 @@ export const UserManagementScreen: React.FC = () => {
                     </View>
                   )}
                 </View>
-
+                {formData.role !== 'admin' && (
+                  <View style={styles.fullAccessContainer}>
+                    <Text style={styles.fullAccessLabel}>
+                      Pristup dokumentima
+                    </Text>
+                    <View style={styles.checkboxRow}>
+                      <CheckBox
+                        checked={formData.hasFullAccess || false}
+                        onPress={() =>
+                          setFormData({
+                            ...formData,
+                            hasFullAccess: !formData.hasFullAccess,
+                          })
+                        }
+                        containerStyle={styles.fullAccessCheckbox}
+                      />
+                      <Text style={styles.fullAccessText}>
+                        Dozvoli pristup svim dokumentima
+                      </Text>
+                    </View>
+                    {formData.hasFullAccess && (
+                      <Text style={styles.warningText}>
+                        Korisnik će imati pristup svim dokumentima bez obzira na
+                        dodijeljene radne naloge.
+                      </Text>
+                    )}
+                  </View>
+                )}
                 <TouchableOpacity
                   style={styles.codesButton}
                   onPress={() => setCodesModalVisible(true)}>
@@ -1013,5 +1052,49 @@ const styles = StyleSheet.create({
   updatePasswordButtonText: {
     color: 'white',
     fontSize: 14,
+  },
+  fullAccessContainer: {
+    marginBottom: 15,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  fullAccessLabel: {
+    fontSize: 16,
+    color: '#86939e',
+    marginBottom: 5,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fullAccessCheckbox: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+    margin: 0,
+  },
+  fullAccessText: {
+    fontSize: 14,
+    color: '#000',
+    flex: 1,
+  },
+  warningText: {
+    color: '#f44336',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 30,
+  },
+  fullAccessEnabled: {
+    color: '#4CAF50',
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  fullAccessDisabled: {
+    color: '#757575',
+    fontWeight: '500',
+    marginTop: 4,
   },
 });
