@@ -1,4 +1,18 @@
 [build]
   base = "web/"
-  publish = "build/" # or "dist/" depending on your build output directory
-  command = "npm run build" # or "yarn build"
+  publish = "build/"
+  command = "npm run build:netlify"
+
+[build.environment]
+  GENERATE_SOURCEMAP = "false"
+  INLINE_RUNTIME_CHUNK = "false"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
