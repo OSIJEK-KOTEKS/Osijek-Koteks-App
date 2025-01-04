@@ -16,7 +16,7 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 3rem 1.5rem;
+  padding: 0rem 1.5rem;
   background-color: ${({theme}) => theme.colors.background};
 `;
 
