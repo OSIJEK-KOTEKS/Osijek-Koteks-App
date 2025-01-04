@@ -211,11 +211,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const handleManualCodeAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
-    if (!/^\d{5}$/.test(newCode)) {
-      setError('Kod mora sadržavati točno 5 brojeva');
-      return;
-    }
-
     if (formData.codes.includes(newCode)) {
       setError('Ovaj kod već postoji');
       return;
@@ -353,9 +348,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                   type="text"
                   value={newCode}
                   onChange={e => setNewCode(e.target.value)}
-                  placeholder="Unesi 5 brojeva"
-                  maxLength={5}
-                  pattern="\d{5}"
+                  placeholder="Unesi RN"
                   autoComplete="off"
                 />
                 <Button type="button" onClick={handleManualCodeAdd}>

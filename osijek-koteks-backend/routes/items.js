@@ -117,7 +117,7 @@ router.post('/', auth, async (req, res) => {
     const {title, code, pdfUrl, creationDate} = req.body;
 
     if (!validateCode(code)) {
-      return res.status(400).json({message: 'Code must be exactly 5 digits'});
+      return res.status(400).json({message: 'Code is not in valid form'});
     }
 
     const now = new Date();
@@ -316,7 +316,7 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     }
 
     if (code && !validateCode(code)) {
-      return res.status(400).json({message: 'Code must be exactly 5 digits'});
+      return res.status(400).json({message: 'Code is not in valid form'});
     }
 
     // Update basic fields

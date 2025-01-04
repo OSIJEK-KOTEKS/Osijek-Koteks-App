@@ -1,10 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const validateCode = code => {
-  return /^\d{5}$/.test(code);
-};
-
 const UserSchema = new mongoose.Schema({
   email: {type: String, required: true, unique: true},
   password: {type: String, required: true},
@@ -16,16 +12,16 @@ const UserSchema = new mongoose.Schema({
     validate: {
       validator: function (codes) {
         if (codes.length === 0) return true;
-        return codes.every(code => validateCode(code));
+        return codes.every(code => code && code.trim().length > 0);
       },
-      message: 'Each code must be exactly 5 digits',
+      message: 'Each code must be a non-empty string',
     },
     default: [],
   },
   role: {type: String, enum: ['admin', 'user', 'bot'], default: 'user'},
   isVerified: {type: Boolean, default: false},
   phoneNumber: {type: String},
-  hasFullAccess: {type: Boolean, default: false}, // New field for full access permission
+  hasFullAccess: {type: Boolean, default: false},
 });
 
 // Hash the password before saving

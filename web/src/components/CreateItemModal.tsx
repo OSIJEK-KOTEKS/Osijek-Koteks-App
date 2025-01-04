@@ -168,8 +168,8 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
       setError('Naziv je obavezan');
       return false;
     }
-    if (!/^\d{5}$/.test(formData.code)) {
-      setError('RN mora sadržavati točno 5 brojeva');
+    if (!formData.code.trim()) {
+      setError('RN je obavezan');
       return false;
     }
     if (!formData.pdfUrl.trim()) {
@@ -235,13 +235,12 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
             </FormGroup>
 
             <FormGroup>
-              <Label>RN (5 brojeva)</Label>
+              <Label>RN</Label>
               <Input
                 type="text"
                 value={formData.code}
                 onChange={e => setFormData({...formData, code: e.target.value})}
-                maxLength={5}
-                placeholder="Unesite RN (5 brojeva)"
+                placeholder="Unesite RN"
               />
             </FormGroup>
 

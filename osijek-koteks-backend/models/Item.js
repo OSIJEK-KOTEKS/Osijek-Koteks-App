@@ -11,9 +11,9 @@ const ItemSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: function (v) {
-          return /^\d{5}$/.test(v);
+          return v && v.trim().length > 0;
         },
-        message: 'Code must be exactly 5 digits',
+        message: 'Code cannot be empty',
       },
     },
     pdfUrl: {
@@ -94,7 +94,6 @@ ItemSchema.index({creationDate: -1});
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();
 
-  // Format creationDate
   if (obj.creationDate) {
     obj.creationDate = obj.creationDate.toLocaleDateString('hr-HR', {
       day: '2-digit',
@@ -104,7 +103,6 @@ ItemSchema.methods.toJSON = function () {
     });
   }
 
-  // Add creationTime if it doesn't exist
   if (!obj.creationTime && obj.createdAt) {
     obj.creationTime = obj.createdAt.toLocaleTimeString('hr-HR', {
       hour: '2-digit',
@@ -112,7 +110,7 @@ ItemSchema.methods.toJSON = function () {
       timeZone: 'Europe/Zagreb',
     });
   }
-  // Format approvalDate
+
   if (obj.approvalDate) {
     obj.approvalDate = obj.approvalDate.toLocaleDateString('hr-HR', {
       day: '2-digit',
@@ -121,7 +119,6 @@ ItemSchema.methods.toJSON = function () {
     });
   }
 
-  // Format photo upload date if exists
   if (obj.approvalPhoto && obj.approvalPhoto.uploadDate) {
     obj.approvalPhoto.uploadDate =
       obj.approvalPhoto.uploadDate.toLocaleDateString('hr-HR', {
@@ -135,28 +132,5 @@ ItemSchema.methods.toJSON = function () {
 
   return obj;
 };
-
-// Pre-save middleware to enforce approval photo requirement
-ItemSchema.pre('save', function (next) {
-  if (this.approvalStatus === 'odobreno' && !this.isNew) {
-    // Check if this is an update to 'approved' status
-    if (this.isModified('approvalStatus')) {
-      if (!this.approvalPhoto.url) {
-        const err = new Error(
-          'Approval photo is required when approving an item',
-        );
-        return next(err);
-      }
-      if (
-        !this.approvalLocation.coordinates.latitude ||
-        !this.approvalLocation.coordinates.longitude
-      ) {
-        const err = new Error('Location is required when approving an item');
-        return next(err);
-      }
-    }
-  }
-  next();
-});
 
 module.exports = mongoose.model('Item', ItemSchema);

@@ -31,15 +31,15 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
 
   const validateForm = () => {
     if (!formData.title.trim()) {
-      Alert.alert('Error', 'Title is required');
+      Alert.alert('Error', 'Naziv je obavezan');
       return false;
     }
-    if (!/^\d{5}$/.test(formData.code)) {
-      Alert.alert('Error', 'Code must be exactly 5 digits');
+    if (!formData.code.trim()) {
+      Alert.alert('Error', 'RN je obavezan');
       return false;
     }
     if (!formData.pdfUrl.trim()) {
-      Alert.alert('Error', 'PDF URL is required');
+      Alert.alert('Error', 'PDF link je obavezan');
       return false;
     }
     return true;
@@ -91,11 +91,10 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             onChangeText={text => setFormData({...formData, title: text})}
           />
           <Input
-            placeholder="RN (5 brojeva)"
+            placeholder="Radni nalog"
             value={formData.code}
             onChangeText={text => setFormData({...formData, code: text})}
-            keyboardType="numeric"
-            maxLength={5}
+            autoCapitalize="none"
           />
           <Input
             placeholder="PDF link"

@@ -181,11 +181,6 @@ export const UserManagementScreen: React.FC = () => {
 
   // Code Management Handlers
   const handleAddNewCode = () => {
-    if (!/^\d{5}$/.test(newCode)) {
-      Alert.alert('Neispravan kod', 'Kod mora sadržavati točno 5 znamenki');
-      return;
-    }
-
     if (selectedCodes.includes(newCode)) {
       Alert.alert('Duplikat', 'Ovaj kod je već odabran');
       return;
@@ -638,11 +633,10 @@ export const UserManagementScreen: React.FC = () => {
               </Text>
               <View style={styles.newCodeContainer}>
                 <Input
-                  placeholder="Dodaj novi RN (5 brojeva)"
+                  placeholder="Dodaj novi RN "
                   value={newCode}
                   onChangeText={setNewCode}
                   keyboardType="numeric"
-                  maxLength={5}
                   containerStyle={styles.inputContainer}
                   rightIcon={
                     <TouchableOpacity onPress={handleAddNewCode}>

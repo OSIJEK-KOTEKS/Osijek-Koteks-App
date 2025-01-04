@@ -77,12 +77,6 @@ router.patch('/:id/codes', auth, async (req, res) => {
       .filter(code => code.trim())
       .map(code => code.trim());
 
-    if (!validCodes.every(code => /^\d{5}$/.test(code))) {
-      return res
-        .status(400)
-        .json({message: 'Each code must be exactly 5 digits'});
-    }
-
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({message: 'User not found'});
