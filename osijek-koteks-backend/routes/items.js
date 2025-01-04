@@ -28,9 +28,6 @@ const upload = multer({
   },
 });
 
-// Validate 5-digit code format
-const validateCode = code => /^\d{5}$/.test(code);
-
 // Get items by user's codes
 
 router.get('/', auth, async (req, res) => {
@@ -106,6 +103,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 // Create a new item
+// In items.js, find this POST route
 router.post('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
@@ -115,10 +113,6 @@ router.post('/', auth, async (req, res) => {
     }
 
     const {title, code, pdfUrl, creationDate} = req.body;
-
-    if (!validateCode(code)) {
-      return res.status(400).json({message: 'Code is not in valid form'});
-    }
 
     const now = new Date();
     const creationTime = now.toLocaleTimeString('hr-HR', {
