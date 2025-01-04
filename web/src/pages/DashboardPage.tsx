@@ -263,7 +263,7 @@ const Dashboard: React.FC = () => {
       sortOrder,
     });
     // Use fetchItems(false) instead of  fetchItems(true)
-    // This will replace items instead of appending
+    // This will replace items instead of  appending
     fetchItems(false);
 
     // Reset the page when filters change
