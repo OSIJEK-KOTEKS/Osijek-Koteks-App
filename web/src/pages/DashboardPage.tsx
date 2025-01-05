@@ -320,7 +320,8 @@ const Dashboard: React.FC = () => {
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button
               onClick={() => setCreateModalVisible(true)}
-              variant="primary">
+              variant="primary"
+              id="create_item">
               Dodaj dokument
             </S.Button>
           )}

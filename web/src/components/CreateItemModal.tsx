@@ -231,6 +231,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                   setFormData({...formData, title: e.target.value})
                 }
                 placeholder="Unesite naziv dokumenta"
+                id="item_name"
               />
             </FormGroup>
 
@@ -241,6 +242,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 value={formData.code}
                 onChange={e => setFormData({...formData, code: e.target.value})}
                 placeholder="Unesite RN"
+                id="radni_nalog"
               />
             </FormGroup>
 
@@ -253,6 +255,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                   setFormData({...formData, pdfUrl: e.target.value})
                 }
                 placeholder="Unesite PDF link"
+                id="pdf_link"
               />
             </FormGroup>
 
@@ -264,7 +267,11 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 variant="secondary">
                 Odustani
               </Button>
-              <Button type="submit" disabled={loading} variant="primary">
+              <Button
+                type="submit"
+                disabled={loading}
+                variant="primary"
+                id="finish_item">
                 {loading ? 'Kreiranje...' : 'Kreiraj'}
               </Button>
             </ButtonContainer>

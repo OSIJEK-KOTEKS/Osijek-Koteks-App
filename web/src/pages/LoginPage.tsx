@@ -244,7 +244,11 @@ export default function LoginPage(): JSX.Element {
               />
             </FormGroup>
 
-            <Button type="submit" disabled={loading} isLoading={loading}>
+            <Button
+              type="submit"
+              disabled={loading}
+              isLoading={loading}
+              id="login_button">
               {loading ? 'Prijava u tijeku...' : 'Prijavi se'}
             </Button>
           </Form>
