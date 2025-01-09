@@ -26,12 +26,13 @@ export interface Item {
   _id: string;
   title: string;
   code: string;
+  registracija?: string; // New optional field
   pdfUrl: string;
   creationDate: string;
-  creationTime?: string; // Added this field
+  creationTime?: string;
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
-  approvalTime?: string; // Added this field for consistency
+  approvalTime?: string;
   approvedBy?: {
     _id: string;
     firstName: string;
@@ -40,7 +41,7 @@ export interface Item {
   approvalPhoto?: {
     url: string | null;
     uploadDate: string | null;
-    uploadTime?: string | null; // Added this field for consistency
+    uploadTime?: string | null;
     mimeType: string | null;
   } | null;
   approvalLocation?: {
@@ -70,10 +71,12 @@ export interface LoginResponse {
 export interface CreateItemInput {
   title: string;
   code: string;
+  registracija?: string; // New optional field
   pdfUrl: string;
   creationDate?: string;
-  creationTime?: string; // Added this field
+  creationTime?: string;
 }
+
 export interface ItemFilters {
   startDate?: string;
   endDate?: string;

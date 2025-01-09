@@ -31,14 +31,13 @@ const ModalContent = styled.div`
   position: relative;
   width: 100%;
   max-width: 32rem;
-  max-height: 60vh; /* Reduced by 40% from 100vh */
+  max-height: 60vh;
   background: white;
   padding: 1.5rem;
   border-radius: ${({theme}) => theme.borderRadius};
   box-shadow: ${({theme}) => theme.shadows.main};
   overflow-y: auto;
 
-  /* Custom scrollbar styling  */
   &::-webkit-scrollbar {
     width: 8px;
   }
@@ -158,6 +157,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
   const [formData, setFormData] = useState<CreateItemInput>({
     title: '',
     code: '',
+    registracija: '',
     pdfUrl: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -199,7 +199,12 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
       await apiService.createItem(itemData);
       onSuccess();
       onClose();
-      setFormData({title: '', code: '', pdfUrl: ''});
+      setFormData({
+        title: '',
+        code: '',
+        registracija: '',
+        pdfUrl: '',
+      });
       setError('');
     } catch (err) {
       console.error('Error creating item:', err);
@@ -224,7 +229,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
             <FormGroup>
               <Label>Naziv</Label>
               <Input
-                data-testid="title-input" // Add test IDs
+                data-testid="title-input"
                 type="text"
                 value={formData.title}
                 onChange={e =>
@@ -243,6 +248,19 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 onChange={e => setFormData({...formData, code: e.target.value})}
                 placeholder="Unesite RN"
                 id="radni_nalog"
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Registracija</Label>
+              <Input
+                type="text"
+                value={formData.registracija}
+                onChange={e =>
+                  setFormData({...formData, registracija: e.target.value})
+                }
+                placeholder="Unesite registraciju"
+                id="registracija"
               />
             </FormGroup>
 

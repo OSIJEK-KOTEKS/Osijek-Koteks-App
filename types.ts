@@ -46,7 +46,6 @@ export interface User {
   hasFullAccess?: boolean;
 }
 
-// Update RegistrationData to include hasFullAccess
 export interface RegistrationData {
   email: string;
   password: string;
@@ -68,11 +67,13 @@ export interface Item {
   _id: string;
   title: string;
   code: string;
+  registracija?: string;
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
+  approvalTime?: string;
   approvedBy?: {
     _id: string;
     firstName: string;
@@ -81,6 +82,7 @@ export interface Item {
   approvalPhoto?: {
     url: string | null;
     uploadDate: string | null;
+    uploadTime?: string | null;
     mimeType: string | null;
   } | null;
   approvalLocation?: {
@@ -96,6 +98,7 @@ export interface Item {
 export interface CreateItemFormData {
   title: string;
   code: string;
+  registracija?: string;
   pdfUrl: string;
   creationDate?: string;
 }
@@ -103,8 +106,10 @@ export interface CreateItemFormData {
 export interface CreateItemInput {
   title: string;
   code: string;
+  registracija?: string;
   pdfUrl: string;
   creationDate?: string;
+  creationTime?: string;
 }
 
 // Location Types
@@ -120,4 +125,24 @@ export interface LocationData {
 export interface PhotoCaptureResult {
   uri: string;
   location: LocationData;
+}
+
+// API Response Types
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  pages: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationInfo;
+}
+
+export interface ItemFilters {
+  startDate?: string;
+  endDate?: string;
+  code?: string;
+  sortOrder?: string;
 }

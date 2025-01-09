@@ -195,12 +195,11 @@ const Dashboard: React.FC = () => {
         };
 
         const response = await apiService.getItems(currentPage, 10, filters);
+        console.log('API Response:', response); // Debug log
 
         if (isLoadingMore) {
-          // Append items when loading more
           setItems(prevItems => [...prevItems, ...response.items]);
         } else {
-          // Replace items when filters change
           setItems(response.items);
         }
 
@@ -208,7 +207,6 @@ const Dashboard: React.FC = () => {
         setTotalItems(response.pagination.total);
         setPage(currentPage);
 
-        // Update available codes
         if (response.items.length > 0) {
           const newCodes = Array.from(
             new Set(response.items.map(item => item.code)),
@@ -232,6 +230,7 @@ const Dashboard: React.FC = () => {
     },
     [page, selectedDate, selectedCode, sortOrder],
   );
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading) {
       return;
@@ -245,28 +244,24 @@ const Dashboard: React.FC = () => {
     setPage(prevPage => prevPage + 1);
   }, [hasMore, loadingMore, loading, items.length, totalItems]);
 
-  // Add an effect to watch for page changes
   useEffect(() => {
     if (page > 1) {
       fetchItems(true);
     }
   }, [page, fetchItems]);
-  // Initial load
+
   useEffect(() => {
     console.log('DashboardPage mounted');
     fetchItems();
   }, []);
+
   useEffect(() => {
     console.log('Filters changed, refetching items with:', {
       selectedDate,
       selectedCode,
       sortOrder,
     });
-    // Use fetchItems(false) instead of fetchItems(true)
-    // This will replace items instead of  appending
     fetchItems(false);
-
-    // Reset the page when filters change
     setPage(1);
   }, [selectedDate, selectedCode, sortOrder]);
 
@@ -345,10 +340,16 @@ const Dashboard: React.FC = () => {
         sortOrder={sortOrder}
         onSortOrderChange={setSortOrder}
       />
+
       <ItemsGrid>
         {items.map(item => (
           <ItemCard key={item._id}>
             <ItemTitle>{item.title}</ItemTitle>
+            {item.registracija && (
+              <ItemDetails>
+                <strong>Registracija:</strong> {item.registracija}
+              </ItemDetails>
+            )}
             <ItemDetails>
               <strong>RN:</strong> {item.code}
             </ItemDetails>
@@ -441,6 +442,7 @@ const Dashboard: React.FC = () => {
           approvalDate={selectedLocation.approvalDate}
         />
       )}
+
       {(user?.role === 'admin' || user?.role === 'bot') && (
         <CreateItemModal
           isOpen={isCreateModalVisible}
@@ -454,5 +456,10 @@ const Dashboard: React.FC = () => {
     </S.PageContainer>
   );
 };
+
+// Add debug logging for development
+if (process.env.NODE_ENV === 'development') {
+  console.log('Dashboard component loaded');
+}
 
 export default Dashboard;

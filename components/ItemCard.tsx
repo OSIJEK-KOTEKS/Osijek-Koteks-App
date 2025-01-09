@@ -72,8 +72,18 @@ export const ItemCard = React.memo(
               <Text style={styles.itemTitle}>{item.title}</Text>
 
               <View style={styles.detailsContainer}>
+                {/* Registracija field first */}
+                {item.registracija && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Registracija:</Text>
+                    <Text style={styles.detailValue}>
+                      {item.registracija || '-'}
+                    </Text>
+                  </View>
+                )}
+
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Radni Nalog:</Text>
+                  <Text style={styles.detailLabel}>RN:</Text>
                   <Text style={styles.detailValue}>{item.code}</Text>
                 </View>
 
@@ -171,7 +181,6 @@ export const ItemCard = React.memo(
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison to prevent unnecessary re-renders
     return (
       prevProps.item._id === nextProps.item._id &&
       prevProps.item.approvalStatus === nextProps.item.approvalStatus &&
