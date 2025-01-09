@@ -1,3 +1,4 @@
+// models/Item.js
 const mongoose = require('mongoose');
 
 const ItemSchema = new mongoose.Schema(
@@ -15,6 +16,11 @@ const ItemSchema = new mongoose.Schema(
         },
         message: 'Code cannot be empty',
       },
+    },
+    registracija: {
+      // New field
+      type: String,
+      required: false, // Optional field
     },
     pdfUrl: {
       type: String,
@@ -84,7 +90,6 @@ const ItemSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-
 // Add indexes for better query performance
 ItemSchema.index({code: 1});
 ItemSchema.index({approvalStatus: 1});
