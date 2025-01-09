@@ -1,3 +1,4 @@
+// CreateItemModal.tsx
 import React, {useState} from 'react';
 import {
   View,
@@ -25,6 +26,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   const [formData, setFormData] = useState<CreateItemFormData>({
     title: '',
     code: '',
+    registracija: '', // Add this field
     pdfUrl: '',
   });
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,6 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
 
     setLoading(true);
     try {
-      // Add current time to the form data
       const now = new Date();
       const creationTime = now.toLocaleTimeString('hr-HR', {
         hour: '2-digit',
@@ -66,7 +67,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       Alert.alert('Uspjeh', 'Dokument je dodan');
       onSuccess();
       onClose();
-      setFormData({title: '', code: '', pdfUrl: ''});
+      setFormData({title: '', code: '', registracija: '', pdfUrl: ''});
     } catch (error) {
       console.error('Error creating item:', error);
       Alert.alert('Error', 'Greška');
@@ -74,6 +75,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       setLoading(false);
     }
   };
+
   return (
     <Modal
       isVisible={isVisible}
@@ -90,12 +92,24 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             value={formData.title}
             onChangeText={text => setFormData({...formData, title: text})}
           />
+
+          {/* Add Registracija field before RN */}
+          <Input
+            placeholder="Registracija"
+            value={formData.registracija}
+            onChangeText={text =>
+              setFormData({...formData, registracija: text})
+            }
+            autoCapitalize="characters" // This will auto-capitalize the input
+          />
+
           <Input
             placeholder="Radni nalog"
             value={formData.code}
             onChangeText={text => setFormData({...formData, code: text})}
             autoCapitalize="none"
           />
+
           <Input
             placeholder="PDF link"
             value={formData.pdfUrl}
@@ -164,3 +178,5 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+
+export default CreateItemModal;
