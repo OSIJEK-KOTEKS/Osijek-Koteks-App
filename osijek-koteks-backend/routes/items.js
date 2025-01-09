@@ -103,7 +103,6 @@ router.get('/', auth, async (req, res) => {
   }
 });
 // Create a new item
-// In items.js, find this POST route
 router.post('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
@@ -112,7 +111,7 @@ router.post('/', auth, async (req, res) => {
         .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
-    const {title, code, pdfUrl, creationDate} = req.body;
+    const {title, code, registracija, pdfUrl, creationDate} = req.body;
 
     const now = new Date();
     const creationTime = now.toLocaleTimeString('hr-HR', {
@@ -124,6 +123,7 @@ router.post('/', auth, async (req, res) => {
     const item = new Item({
       title,
       code,
+      registracija, // Add this field
       pdfUrl,
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,
@@ -140,7 +140,6 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-
 // Update approval status
 // Update approval status
 router.patch(
