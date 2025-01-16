@@ -28,8 +28,22 @@ const upload = multer({
   },
 });
 
-// Get items by user's codes
+router.get('/codes', auth, async (req, res) => {
+  try {
+    // If user is not admin and doesn't have full access, filter by their codes
+    let query = {};
+    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      query.code = {$in: req.user.codes};
+    }
 
+    const uniqueCodes = await Item.distinct('code', query);
+    res.json(uniqueCodes.sort());
+  } catch (err) {
+    console.error('Error fetching unique codes:', err);
+    res.status(500).json({message: 'Server error'});
+  }
+});
+// Get items by user's codes
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder} = req.query;
