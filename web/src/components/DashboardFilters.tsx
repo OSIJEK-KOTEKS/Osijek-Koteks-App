@@ -8,6 +8,89 @@ import 'react-datepicker/dist/react-datepicker.css';
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
 
+interface DashboardFiltersProps {
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  selectedCode: string;
+  onCodeChange: (code: string) => void;
+  availableCodes: string[];
+  sortOrder: string;
+  onSortOrderChange: (order: string) => void;
+}
+
+const DashboardFilters: React.FC<DashboardFiltersProps> = ({
+  selectedDate,
+  onDateChange,
+  selectedCode,
+  onCodeChange,
+  availableCodes,
+  sortOrder,
+  onSortOrderChange,
+}) => {
+  // Handle date change including null value
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      onDateChange(date);
+    }
+  };
+
+  const allCodesOptions = [
+    {value: 'all', label: 'Svi Radni Nalozi'},
+    ...availableCodes.map(code => ({
+      value: code,
+      label: code,
+    })),
+  ];
+
+  return (
+    <FiltersContainer>
+      <FiltersGrid>
+        <FilterSection>
+          <FilterLabel htmlFor="date-picker">Datum</FilterLabel>
+          <StyledDatePickerWrapper>
+            <DatePicker
+              selected={selectedDate}
+              onChange={handleDateChange}
+              dateFormat="dd.MM.yyyy"
+              locale="hr"
+              maxDate={new Date()}
+              placeholderText="Odaberi datum"
+              className="date-picker"
+            />
+          </StyledDatePickerWrapper>
+        </FilterSection>
+
+        <FilterSection>
+          <FilterLabel htmlFor="code-select">Radni nalog</FilterLabel>
+          <Select
+            id="code-select"
+            value={selectedCode}
+            onChange={e => onCodeChange(e.target.value)}>
+            {allCodesOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </FilterSection>
+
+        <FilterSection>
+          <FilterLabel htmlFor="sort-select">Sortiranje</FilterLabel>
+          <Select
+            id="sort-select"
+            value={sortOrder}
+            onChange={e => onSortOrderChange(e.target.value)}>
+            <option value="pending-first">Na čekanju prvo</option>
+            <option value="date-desc">Najnoviji prvo</option>
+            <option value="date-asc">Najstariji prvo</option>
+            <option value="approved-first">Odobreni prvo</option>
+          </Select>
+        </FilterSection>
+      </FiltersGrid>
+    </FiltersContainer>
+  );
+};
+
 const FiltersContainer = styled.div`
   background: white;
   padding: 1.5rem;
@@ -94,81 +177,5 @@ const StyledDatePickerWrapper = styled.div`
     }
   }
 `;
-
-interface DashboardFiltersProps {
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
-  selectedCode: string;
-  onCodeChange: (code: string) => void;
-  availableCodes: string[];
-  sortOrder: string;
-  onSortOrderChange: (order: string) => void;
-}
-
-const DashboardFilters: React.FC<DashboardFiltersProps> = ({
-  selectedDate,
-  onDateChange,
-  selectedCode,
-  onCodeChange,
-  availableCodes,
-  sortOrder,
-  onSortOrderChange,
-}) => {
-  // Handle date change including null value protection
-  const handleDateChange = (date: Date | null) => {
-    if (date) {
-      onDateChange(date);
-    }
-  };
-
-  return (
-    <FiltersContainer>
-      <FiltersGrid>
-        <FilterSection>
-          <FilterLabel htmlFor="date-picker">Datum</FilterLabel>
-          <StyledDatePickerWrapper>
-            <DatePicker
-              selected={selectedDate}
-              onChange={handleDateChange}
-              dateFormat="dd.MM.yyyy"
-              locale="hr"
-              maxDate={new Date()}
-              placeholderText="Odaberi datum"
-              className="date-picker"
-            />
-          </StyledDatePickerWrapper>
-        </FilterSection>
-
-        <FilterSection>
-          <FilterLabel htmlFor="code-select">Radni nalog</FilterLabel>
-          <Select
-            id="code-select"
-            value={selectedCode}
-            onChange={e => onCodeChange(e.target.value)}>
-            <option value="all">Svi Radni Nalozi</option>
-            {availableCodes.map(code => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </Select>
-        </FilterSection>
-
-        <FilterSection>
-          <FilterLabel htmlFor="sort-select">Sortiranje</FilterLabel>
-          <Select
-            id="sort-select"
-            value={sortOrder}
-            onChange={e => onSortOrderChange(e.target.value)}>
-            <option value="pending-first">Na čekanju prvo</option>
-            <option value="date-desc">Najnoviji prvo</option>
-            <option value="date-asc">Najstariji prvo</option>
-            <option value="approved-first">Odobreni prvo</option>
-          </Select>
-        </FilterSection>
-      </FiltersGrid>
-    </FiltersContainer>
-  );
-};
 
 export default DashboardFilters;

@@ -2,7 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {apiService, getImageUrl} from '../utils/api';
-import {Item, ItemFilters, PaginatedResponse} from '../types';
+import {Item, ItemFilters} from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
@@ -81,10 +81,6 @@ const ItemDetails = styled.p`
   margin: 4px 0;
   color: ${({theme}) => theme.colors.text};
   font-size: 0.9rem;
-
-  strong {
-    font-weight: 600;
-  }
 `;
 
 const ButtonGroup = styled.div`
@@ -94,22 +90,11 @@ const ButtonGroup = styled.div`
   flex-wrap: wrap;
 `;
 
-const ActionButton = styled(S.Button)<{disabled?: boolean}>`
+const ActionButton = styled(S.Button)`
   flex: 1;
   min-width: auto;
   padding: 8px 16px;
   font-size: 0.9rem;
-
-  ${({disabled, theme}) =>
-    disabled &&
-    `
-    background-color: ${theme.colors.disabled};
-    cursor: not-allowed;
-    opacity: 0.6;
-    &:hover {
-      background-color: ${theme.colors.disabled};
-    }
-  `}
 `;
 
 const DeleteButton = styled(ActionButton)`
@@ -169,7 +154,15 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
 
-  // Fetch items with filters
+  const fetchAvailableCodes = useCallback(async () => {
+    try {
+      const codes = await apiService.getUniqueCodes();
+      setAvailableCodes(codes);
+    } catch (error) {
+      console.error('Error fetching codes:', error);
+    }
+  }, []);
+
   const fetchItems = useCallback(
     async (isLoadingMore: boolean = false) => {
       try {
@@ -195,7 +188,6 @@ const Dashboard: React.FC = () => {
         };
 
         const response = await apiService.getItems(currentPage, 10, filters);
-        console.log('API Response:', response); // Debug log
 
         if (isLoadingMore) {
           setItems(prevItems => [...prevItems, ...response.items]);
@@ -206,16 +198,6 @@ const Dashboard: React.FC = () => {
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
         setPage(currentPage);
-
-        if (response.items.length > 0) {
-          const newCodes = Array.from(
-            new Set(response.items.map(item => item.code)),
-          );
-          setAvailableCodes(prev =>
-            Array.from(new Set([...prev, ...newCodes])),
-          );
-        }
-
         setError('');
       } catch (err) {
         console.error('Error fetching items:', err);
@@ -231,6 +213,27 @@ const Dashboard: React.FC = () => {
     [page, selectedDate, selectedCode, sortOrder],
   );
 
+  useEffect(() => {
+    fetchItems();
+    fetchAvailableCodes();
+  }, []);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchItems(true);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    console.log('Filters changed, refetching items with:', {
+      selectedDate,
+      selectedCode,
+      sortOrder,
+    });
+    fetchItems(false);
+    setPage(1);
+  }, [selectedDate, selectedCode, sortOrder]);
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading) {
       return;
@@ -243,27 +246,6 @@ const Dashboard: React.FC = () => {
 
     setPage(prevPage => prevPage + 1);
   }, [hasMore, loadingMore, loading, items.length, totalItems]);
-
-  useEffect(() => {
-    if (page > 1) {
-      fetchItems(true);
-    }
-  }, [page, fetchItems]);
-
-  useEffect(() => {
-    console.log('DashboardPage mounted');
-    fetchItems();
-  }, []);
-
-  useEffect(() => {
-    console.log('Filters changed, refetching items with:', {
-      selectedDate,
-      selectedCode,
-      sortOrder,
-    });
-    fetchItems(false);
-    setPage(1);
-  }, [selectedDate, selectedCode, sortOrder]);
 
   const handleLogout = async () => {
     try {
@@ -315,8 +297,7 @@ const Dashboard: React.FC = () => {
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button
               onClick={() => setCreateModalVisible(true)}
-              variant="primary"
-              id="create_item">
+              variant="primary">
               Dodaj dokument
             </S.Button>
           )}
@@ -388,24 +369,11 @@ const Dashboard: React.FC = () => {
               )}
 
               {item.approvalLocation?.coordinates?.latitude &&
-              item.approvalLocation?.coordinates?.longitude ? (
-                <ActionButton onClick={() => setSelectedLocation(item)}>
-                  Lokacija
-                </ActionButton>
-              ) : (
-                <ActionButton
-                  style={{
-                    backgroundColor: '#cccccc',
-                    cursor: 'not-allowed',
-                    opacity: 0.6,
-                  }}
-                  onClick={e => {
-                    e.preventDefault();
-                    return false;
-                  }}>
-                  Lokacija
-                </ActionButton>
-              )}
+                item.approvalLocation?.coordinates?.longitude && (
+                  <ActionButton onClick={() => setSelectedLocation(item)}>
+                    Lokacija
+                  </ActionButton>
+                )}
 
               {user?.role === 'admin' && (
                 <DeleteButton onClick={() => handleDelete(item._id)}>
@@ -456,10 +424,5 @@ const Dashboard: React.FC = () => {
     </S.PageContainer>
   );
 };
-
-// Add debug logging for development
-if (process.env.NODE_ENV === 'development') {
-  console.log('Dashboard component loaded');
-}
 
 export default Dashboard;
