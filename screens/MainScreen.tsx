@@ -125,8 +125,25 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       if (userProfile?.role === 'admin') {
         const codes = await apiService.getUniqueCodes();
         setAvailableCodes(codes);
-      } else {
-        setAvailableCodes(userProfile?.codes.sort() || []);
+      } else if (userProfile) {
+        const uniqueCodes = new Set<string>();
+
+        // Add user's assigned codes
+        userProfile.codes.forEach(code => uniqueCodes.add(code));
+
+        // Add codes from visible items
+        items.forEach(item => uniqueCodes.add(item.code));
+
+        // Convert to array and sort
+        const allCodes = Array.from(uniqueCodes).sort();
+
+        console.log('Available codes for user:', {
+          userCodes: userProfile.codes,
+          itemCodes: items.map(item => item.code),
+          combinedCodes: allCodes,
+        });
+
+        setAvailableCodes(allCodes);
       }
     } catch (error) {
       console.error('Error fetching available codes:', error);
@@ -155,11 +172,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         // Fetch user profile first
         const profile = await apiService.getUserProfile();
         setUserProfile(profile);
-
-        // Fetch available codes if needed
-        if (resetItems) {
-          await fetchAvailableCodes();
-        }
+        console.log('User profile fetched:', {
+          role: profile.role,
+          assignedCodes: profile.codes,
+        });
 
         const startOfDay = new Date(selectedDate);
         startOfDay.setHours(0, 0, 0, 0);
@@ -174,7 +190,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           sortOrder: sortOrder,
         };
 
+        console.log('Fetching items with filters:', filters);
+
         const response = await apiService.getItems(currentPage, 10, filters);
+        console.log('Items response:', {
+          itemCount: response.items.length,
+          pagination: response.pagination,
+          uniqueItemCodes: [...new Set(response.items.map(item => item.code))],
+        });
 
         setHasMore(response.pagination.hasMore);
         setTotalDocuments(response.pagination.total);
@@ -190,6 +213,28 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             return [...prevItems, ...newItems];
           });
         }
+
+        // Update available codes
+        const uniqueCodes = new Set<string>();
+
+        // Add user's assigned codes
+        if (profile && !profile.hasFullAccess) {
+          profile.codes.forEach(code => uniqueCodes.add(code));
+        }
+
+        // Add codes from visible items
+        response.items.forEach(item => uniqueCodes.add(item.code));
+
+        // Convert to array and sort
+        const allCodes = Array.from(uniqueCodes).sort();
+
+        console.log('Available codes updated:', {
+          userCodes: profile.codes,
+          itemCodes: response.items.map(item => item.code),
+          combinedCodes: allCodes,
+        });
+
+        setAvailableCodes(allCodes);
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert(
@@ -249,7 +294,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     if (userProfile) {
       fetchAvailableCodes();
     }
-  }, [userProfile]);
+  }, [userProfile, items]);
   // Effect for filter changes
   useEffect(() => {
     console.log('Filter changed:', {selectedDate, selectedCode, sortOrder});
