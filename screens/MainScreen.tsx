@@ -243,7 +243,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       setUserProfile(null);
     };
   }, []);
-  // useEffect to fetch codes when profile changes
+  // useEffect to fetch codes when profile  changes
 
   useEffect(() => {
     if (userProfile) {
