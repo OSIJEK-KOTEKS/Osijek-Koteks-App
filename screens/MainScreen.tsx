@@ -25,8 +25,8 @@ import {apiService, ItemFilters, PaginatedResponse} from '../utils/api';
 import {User, Item, LocationData, RootStackParamList} from '../types';
 import {AuthContext} from '../AuthContext';
 import ItemCard from '../components/ItemCard';
-import CustomAvatar from '../components//CustomAvatar';
-import PhotoCaptureModal from '../components//PhotoCaptureModal';
+import CustomAvatar from '../components/CustomAvatar';
+import PhotoCaptureModal from '../components/PhotoCaptureModal';
 import {CreateItemModal} from '../components/CreateItemModal';
 import DateRangeFilters from '../components/DateRangeFilters';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -87,89 +87,60 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [sortOrder, setSortOrder] = useState<string>('pending-first');
   const [isProfileMenuVisible, setProfileMenuVisible] = useState(false);
   const [totalDocuments, setTotalDocuments] = useState<number>(0);
-
-  // Pagination state
-  const [page, setPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
 
   // Refs
   const loadingRef = useRef(false);
   const flatListRef = useRef<FlatList>(null);
   const onEndReachedCalledDuringMomentum = useRef(false);
   const isLoadingRef = useRef(false);
+
   // Context
   const {signOut} = useContext(AuthContext);
 
   const calculateItemHeight = (item?: Item) => {
-    // Base height for the card
     let height = 180;
-
     if (item) {
-      // Add height for approval info if present
       if (item.approvalStatus === 'odobreno') {
         height += 80;
       }
-
-      // Add height for photo preview if present
       if (item.approvalPhoto?.url) {
         height += 100;
       }
     }
-
     return height;
   };
 
   const calculateItemOffset = (index: number) => {
-    // Calculate offset based on previous items
     let offset = 0;
     for (let i = 0; i < index; i++) {
       offset += calculateItemHeight(items[i]);
     }
     return offset;
   };
-
-  // Date Range Filter Helper
-  const getDateFilter = useCallback((date: Date) => {
-    // Create exact start and end of the selected day
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    return {
-      startDate: startOfDay.toISOString(),
-      endDate: endOfDay.toISOString(),
-    };
-  }, []);
-  // Token Effect
-  useEffect(() => {
-    const getToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        setUserToken(token);
-      } catch (error) {
-        console.error('Error getting token:', error);
+  const fetchAvailableCodes = async () => {
+    try {
+      if (userProfile?.role === 'admin') {
+        const codes = await apiService.getUniqueCodes();
+        setAvailableCodes(codes);
+      } else {
+        setAvailableCodes(userProfile?.codes.sort() || []);
       }
-    };
-    getToken();
-
-    return () => {
-      setItems([]);
-      setUserProfile(null);
-    };
-  }, []);
-
-  // Data Fetching
-  // Update these parts in your MainScreen.tsx
-
-  // Modify the fetchData function to handle proper pagination
+    } catch (error) {
+      console.error('Error fetching available codes:', error);
+    }
+  };
   const fetchData = useCallback(
     async (resetItems: boolean = true) => {
-      // Prevent multiple simultaneous requests
-      if (isLoadingRef.current) return;
+      if (isLoadingRef.current) {
+        console.log('Fetch already in progress, skipping...');
+        return;
+      }
+
       isLoadingRef.current = true;
+      console.log('Starting fetchData, resetItems:', resetItems);
 
       try {
         const currentPage = resetItems ? 1 : page;
@@ -181,8 +152,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           setIsLoadingMore(true);
         }
 
+        // Fetch user profile first
         const profile = await apiService.getUserProfile();
         setUserProfile(profile);
+
+        // Fetch available codes if needed
+        if (resetItems) {
+          await fetchAvailableCodes();
+        }
 
         const startOfDay = new Date(selectedDate);
         startOfDay.setHours(0, 0, 0, 0);
@@ -213,17 +190,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             return [...prevItems, ...newItems];
           });
         }
-
-        if (profile.role === 'admin') {
-          const codes = Array.from(
-            new Set(response.items.map(item => item.code)),
-          ).sort();
-          setAvailableCodes(prev =>
-            Array.from(new Set([...prev, ...codes])).sort(),
-          );
-        } else {
-          setAvailableCodes(profile.codes.sort());
-        }
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert(
@@ -234,71 +200,79 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         setLoading(false);
         setIsLoadingMore(false);
         isLoadingRef.current = false;
+        console.log('Fetch complete');
       }
     },
     [page, selectedDate, selectedCode, sortOrder],
   );
-  // Update the handleLoadMore function
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || isLoadingRef.current) {
+      console.log('Skipping load more:', {
+        hasMore,
+        isLoadingMore,
+        loading,
+        isLoadingRef: isLoadingRef.current,
+      });
       return;
     }
 
     if (items.length >= totalDocuments) {
+      console.log('All items loaded');
       setHasMore(false);
       return;
     }
 
+    console.log('Loading more items, increasing page');
     setPage(prevPage => prevPage + 1);
   }, [hasMore, isLoadingMore, loading, items.length, totalDocuments]);
 
-  // Update the effect that watches for page changes
   useEffect(() => {
-    if (page > 1) {
-      console.log('Page changed, fetching more items for page:', page);
-      fetchData(false);
-    }
-  }, [page, fetchData]);
+    const getToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        setUserToken(token);
+      } catch (error) {
+        console.error('Error getting token:', error);
+      }
+    };
+    getToken();
+
+    return () => {
+      setItems([]);
+      setUserProfile(null);
+    };
+  }, []);
+  // useEffect to fetch codes when profile changes
 
   useEffect(() => {
-    // Only fetch if we have a valid date
-    if (selectedDate) {
-      fetchData(true); // true to reset the items list
+    if (userProfile) {
+      fetchAvailableCodes();
     }
-  }, [selectedDate, fetchData]);
-  const handleDateChange = (newDate: Date) => {
-    setSelectedDate(newDate);
-    // Note: We don't need to call fetchData here because the useEffect will handle it
-  };
-
-  // Reset page when filters change
+  }, [userProfile]);
+  // Effect for filter changes
   useEffect(() => {
+    console.log('Filter changed:', {selectedDate, selectedCode, sortOrder});
     setPage(1);
     setItems([]);
     fetchData(true);
   }, [selectedDate, selectedCode, sortOrder]);
 
-  // Load more data when page changes
+  // Effect for pagination
   useEffect(() => {
     if (page > 1) {
+      console.log('Page changed to:', page);
       fetchData(false);
     }
   }, [page]);
 
-  // Remove duplicate effects that were fetching on page change
-  useEffect(() => {
-    if (page > 1) {
-      fetchData(false);
-    }
-  }, [page, fetchData]);
-
   const handleRefresh = useCallback(async () => {
+    console.log('Manual refresh triggered');
     setRefreshing(true);
     await fetchData(true);
     setRefreshing(false);
   }, [fetchData]);
 
-  // Logout Handler
   const handleLogout = useCallback(async () => {
     try {
       await apiService.logout();
@@ -309,7 +283,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     }
   }, [signOut]);
 
-  // Delete Handler
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
       Alert.alert(
@@ -340,7 +313,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     [fetchData],
   );
 
-  // Approve Handler
   const handleApproveItem = useCallback(
     async (photoUri: string, locationData: LocationData) => {
       if (!selectedItemId) return;
@@ -365,18 +337,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     [selectedItemId, fetchData],
   );
 
-  // Filter Handler
-  const handleFilterChange = useCallback(
-    (newDate: Date, newCode: string, newSortOrder: string) => {
-      setSelectedDate(newDate);
-      setSelectedCode(newCode);
-      setSortOrder(newSortOrder);
-      fetchData(true);
-    },
-    [fetchData],
-  );
-
-  // Render Functions
   const renderItem = useCallback(
     ({item}: {item: Item}) => {
       return (
@@ -400,6 +360,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     },
     [navigation, userProfile, userToken, handleDeleteItem],
   );
+
   const ListHeaderComponent = useCallback(() => {
     return (
       <>
@@ -434,7 +395,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
           <DateRangeFilters
             selectedDate={selectedDate}
-            onDateChange={handleDateChange}
+            onDateChange={setSelectedDate}
             selectedCode={selectedCode}
             onCodeChange={setSelectedCode}
             availableCodes={availableCodes}
@@ -496,21 +457,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     handleRefresh,
     refreshing,
   ]);
-  const renderFooter = useCallback(() => {
-    if (!isLoadingMore) return null;
-
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#2196F3" />
-        <Text style={styles.footerText}>Učitavam još dokumenata...</Text>
-      </View>
-    );
-  }, [isLoadingMore]);
-
-  // Effects
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Continue from previous part...
 
   // Main Render
   return (
@@ -564,12 +511,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             index,
           })}
           contentContainerStyle={styles.listContentContainer}
-          // Performance optimizations
           removeClippedSubviews={true}
           onMomentumScrollBegin={() => {
             onEndReachedCalledDuringMomentum.current = false;
           }}
         />
+
         {(userProfile?.role === 'admin' || userProfile?.role === 'bot') && (
           <TouchableOpacity
             style={[styles.fab, styles.addItemFab]}
@@ -677,7 +624,6 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontWeight: 'bold',
   },
-
   fab: {
     position: 'absolute',
     width: 56,
@@ -745,13 +691,12 @@ const styles = StyleSheet.create({
     transform: [{rotate: '360deg'}],
     opacity: 0.5,
   },
-
   itemContainer: {
-    marginVertical: 8, // Consistent spacing between items
+    marginVertical: 8,
     marginHorizontal: 16,
   },
   listContentContainer: {
-    paddingBottom: 120, // Space for FAB
+    paddingBottom: 120,
     flexGrow: 1,
   },
   centerContent: {

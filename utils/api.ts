@@ -168,6 +168,15 @@ export const apiService = {
       throw error;
     }
   },
+  getUniqueCodes: async (): Promise<string[]> => {
+    try {
+      const response = await api.get<string[]>('/api/items/codes');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unique codes:', error);
+      throw error;
+    }
+  },
 
   getUserById: async (id: string): Promise<User> => {
     try {
