@@ -49,6 +49,10 @@ const ItemSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    registracija: {
+      type: String,
+      required: false,
+    },
     approvalStatus: {
       type: String,
       enum: ['na čekanju', 'odobreno', 'odbijen'],
