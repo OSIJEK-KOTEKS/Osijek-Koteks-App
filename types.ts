@@ -62,29 +62,31 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface PhotoInfo {
+  url: string | null;
+  uploadDate: string | null;
+  mimeType: string | null;
+  publicId: string | null;
+}
+
 // Item Types
 export interface Item {
   _id: string;
   title: string;
   code: string;
-  registracija?: string;
+  registracija?: string; // Added this property
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
-  approvalTime?: string;
   approvedBy?: {
     _id: string;
     firstName: string;
     lastName: string;
   };
-  approvalPhoto?: {
-    url: string | null;
-    uploadDate: string | null;
-    uploadTime?: string | null;
-    mimeType: string | null;
-  } | null;
+  approvalPhotoFront?: PhotoInfo | null;
+  approvalPhotoBack?: PhotoInfo | null;
   approvalLocation?: {
     coordinates: {
       latitude: number;

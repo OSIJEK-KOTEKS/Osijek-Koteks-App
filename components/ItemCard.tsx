@@ -18,7 +18,7 @@ interface ItemCardProps {
   userProfile: User | null;
   userToken: string | null;
   onPress: () => void;
-  onPhotoPress: (photoUrl: string) => void;
+  onPhotoPress: (photoUrl: string, type: 'front' | 'back') => void;
   onApprove: (itemId: string) => void;
   onDelete: (itemId: string) => void;
 }
@@ -55,10 +55,44 @@ export const ItemCard = React.memo(
       onDelete(item._id);
     };
 
-    const handlePhotoPress = () => {
-      if (item.approvalPhoto?.url) {
-        onPhotoPress(item.approvalPhoto.url);
+    const handlePhotoPress = (type: 'front' | 'back') => {
+      const photo =
+        type === 'front' ? item.approvalPhotoFront : item.approvalPhotoBack;
+      if (photo?.url) {
+        onPhotoPress(photo.url, type);
       }
+    };
+
+    const renderPhotoPreview = (type: 'front' | 'back') => {
+      const photo =
+        type === 'front' ? item.approvalPhotoFront : item.approvalPhotoBack;
+      const label = type === 'front' ? 'Registracija' : 'Materijal';
+
+      if (photo?.url && userToken) {
+        return (
+          <TouchableOpacity
+            style={styles.photoPreviewContainer}
+            onPress={() => handlePhotoPress(type)}>
+            <View style={styles.previewImageWrapper}>
+              <Image
+                source={{
+                  uri: getImageUrl(photo.url),
+                  headers: {
+                    Authorization: `Bearer ${userToken}`,
+                  },
+                  cache: 'reload',
+                }}
+                style={styles.photoPreview}
+                resizeMode="cover"
+                resizeMethod="resize"
+                progressiveRenderingEnabled={true}
+              />
+            </View>
+            <Text style={styles.viewPhotoText}>{label}</Text>
+          </TouchableOpacity>
+        );
+      }
+      return null;
     };
 
     return (
@@ -133,28 +167,10 @@ export const ItemCard = React.memo(
                       </View>
                     )}
 
-                    {item.approvalPhoto?.url && userToken && (
-                      <TouchableOpacity
-                        style={styles.photoPreviewContainer}
-                        onPress={handlePhotoPress}>
-                        <View style={styles.previewImageWrapper}>
-                          <Image
-                            source={{
-                              uri: getImageUrl(item.approvalPhoto.url),
-                              headers: {
-                                Authorization: `Bearer ${userToken}`,
-                              },
-                              cache: 'reload',
-                            }}
-                            style={styles.photoPreview}
-                            resizeMode="cover"
-                            resizeMethod="resize"
-                            progressiveRenderingEnabled={true}
-                          />
-                        </View>
-                        <Text style={styles.viewPhotoText}>Pogledaj sliku</Text>
-                      </TouchableOpacity>
-                    )}
+                    <View style={styles.photosContainer}>
+                      {renderPhotoPreview('front')}
+                      {renderPhotoPreview('back')}
+                    </View>
                   </>
                 )}
 
@@ -274,8 +290,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  photoPreviewContainer: {
+  photosContainer: {
     marginTop: 10,
+    gap: 8,
+  },
+  photoPreviewContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,

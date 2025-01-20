@@ -10,8 +10,9 @@ import {
   Linking,
   Dimensions,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
-import {Button, Text} from '@rneui/themed';
+import {Text} from '@rneui/themed';
 import Modal from 'react-native-modal';
 import {
   launchCamera,
@@ -19,19 +20,23 @@ import {
   PhotoQuality,
 } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {LocationData} from '../types';
 
-// Optimized constants
-const LOCATION_TIMEOUT = 15000; // Reduced from 30000 to 15000
-const QUICK_LOCATION_TIMEOUT = 5000; // New constant for quick initial position
+const LOCATION_TIMEOUT = 15000;
+const QUICK_LOCATION_TIMEOUT = 5000;
 const LOCATION_UPDATE_INTERVAL = 1000;
-const REQUIRED_ACCURACY = 200; // Increased from 150 to 200 meters
+const REQUIRED_ACCURACY = 200;
 const MAX_RETRIES = 2;
 
 interface PhotoCaptureModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onConfirm: (photoUri: string, location: LocationData) => Promise<void>;
+  onConfirm: (
+    photoUriFront: string,
+    photoUriBack: string,
+    location: LocationData,
+  ) => Promise<void>;
 }
 
 const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
@@ -39,7 +44,8 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoFront, setPhotoFront] = useState<string | null>(null);
+  const [photoBack, setPhotoBack] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationStatus, setLocationStatus] = useState<
@@ -97,7 +103,6 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       let bestLocation: LocationData | null = null;
       let hasInitialLocation = false;
 
-      // First, try to get a quick position with lower accuracy
       Geolocation.getCurrentPosition(
         position => {
           hasInitialLocation = true;
@@ -112,7 +117,6 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           bestLocation = locationData;
           setAccuracyReading(locationData.accuracy);
 
-          // If accuracy is already good enough, resolve immediately
           if (locationData.accuracy <= REQUIRED_ACCURACY) {
             resolve(locationData);
             return;
@@ -128,7 +132,6 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
         },
       );
 
-      // Start watching for better accuracy after quick position
       const watchId = Geolocation.watchPosition(
         position => {
           const locationData: LocationData = {
@@ -170,7 +173,6 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
       setWatchId(watchId);
 
-      // Set timeout to resolve with best available location
       setTimeout(() => {
         Geolocation.clearWatch(watchId);
         if (bestLocation) {
@@ -184,19 +186,13 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
   const handleLocationError = async (error: any) => {
     console.error('Location error:', error);
-
     if (retryCount >= MAX_RETRIES) {
       setLocationStatus('error');
       showLocationErrorAlert();
       return;
     }
-
     setRetryCount(prev => prev + 1);
-    console.log(`Retrying location (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-
-    setTimeout(() => {
-      startLocationTracking();
-    }, 2000);
+    setTimeout(() => startLocationTracking(), 2000);
   };
 
   const showLocationErrorAlert = () => {
@@ -222,9 +218,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           onPress: () => {
             setRetryCount(0);
             setLocationStatus('idle');
-            setTimeout(() => {
-              startLocationTracking();
-            }, 1000);
+            setTimeout(() => startLocationTracking(), 1000);
           },
         },
         {
@@ -241,13 +235,11 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
   const startLocationTracking = async () => {
     setLocationStatus('searching');
-
     try {
       const hasPermission = await ensureLocationPermission();
       if (!hasPermission) {
         throw new Error('Location permission denied');
       }
-
       const locationData = await getAccurateLocation();
       setLocation(locationData);
       setLocationStatus('found');
@@ -256,7 +248,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
     }
   };
 
-  const handleTakePhoto = async () => {
+  const handleTakePhoto = async (isBackPhoto: boolean = false) => {
     if (locationStatus !== 'found') {
       Alert.alert(
         'Lokacija',
@@ -268,15 +260,14 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
     try {
       const options: CameraOptions = {
         mediaType: 'photo',
-        quality: 0.7 as PhotoQuality, // Reduced quality
+        quality: 0.7 as PhotoQuality,
         saveToPhotos: false,
         includeBase64: false,
         presentationStyle: 'fullScreen',
-        maxWidth: 1200, // Add max dimensions
+        maxWidth: 1200,
         maxHeight: 1200,
       };
 
-      // Launch camera without checking permissions - the library handles this internally
       const response = await launchCamera(options);
 
       if (response.errorCode === 'camera_unavailable') {
@@ -292,14 +283,8 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           'Potrebna dozvola',
           'Za fotografiranje je potrebna dozvola za pristup kameri. Molimo omogućite pristup kameri u postavkama.',
           [
-            {
-              text: 'Odustani',
-              style: 'cancel',
-            },
-            {
-              text: 'Otvori postavke',
-              onPress: () => Linking.openSettings(),
-            },
+            {text: 'Odustani', style: 'cancel'},
+            {text: 'Otvori postavke', onPress: () => Linking.openSettings()},
           ],
         );
         return;
@@ -312,7 +297,11 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       }
 
       if (response.assets?.[0]?.uri) {
-        setPhoto(response.assets[0].uri);
+        if (isBackPhoto) {
+          setPhotoBack(response.assets[0].uri);
+        } else {
+          setPhotoFront(response.assets[0].uri);
+        }
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -322,20 +311,21 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       );
     }
   };
+
   const handleConfirm = async () => {
-    if (!photo || !location) {
-      Alert.alert('Greška', 'Potrebna je i fotografija i lokacija');
+    if (!photoFront || !photoBack || !location) {
+      Alert.alert('Greška', 'Potrebne su obje fotografije i lokacija');
       return;
     }
 
     setLoading(true);
     try {
-      await onConfirm(photo, location);
+      await onConfirm(photoFront, photoBack, location);
       onClose();
     } catch (error) {
       Alert.alert(
         'Greška',
-        'Greška pri učitavanju fotografije i odobravanju dokumenta',
+        'Greška pri učitavanju fotografija i odobravanju dokumenta',
       );
     } finally {
       setLoading(false);
@@ -353,7 +343,8 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
   useEffect(() => {
     if (!isVisible) {
-      setPhoto(null);
+      setPhotoFront(null);
+      setPhotoBack(null);
       setLocation(null);
       setLocationStatus('idle');
       setRetryCount(0);
@@ -363,40 +354,72 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
     }
   }, [isVisible]);
 
-  const renderLocationStatus = () => {
-    return (
-      <View
-        style={[
-          styles.locationStatus,
-          locationStatus === 'found' && styles.locationStatusSuccess,
-          locationStatus === 'error' && styles.locationStatusError,
-        ]}>
-        {locationStatus === 'searching' && (
-          <>
-            <ActivityIndicator size="small" color="#2196F3" />
-            <Text style={styles.locationStatusText}>
-              Dohvaćam lokaciju...
-              {accuracyReading
-                ? ` (Točnost: ${Math.round(accuracyReading)}m)`
-                : ''}
-            </Text>
-          </>
-        )}
-        {locationStatus === 'found' && location && (
-          <>
-            <Text style={[styles.locationStatusText, styles.successText]}>
-              ✓ Lokacija spremna (Točnost: {Math.round(location.accuracy)}m)
-            </Text>
-          </>
-        )}
-        {locationStatus === 'error' && (
-          <Text style={[styles.locationStatusText, styles.errorText]}>
-            Problem s GPS signalom. Pokušajte ponovno.
+  const renderPhotoSection = (
+    type: 'front' | 'back',
+    photo: string | null,
+    setPhoto: (uri: string | null) => void,
+  ) => (
+    <View style={styles.photoSection}>
+      <Text style={styles.photoLabel}>
+        {type === 'front' ? 'Registracija' : 'Materijal'}
+      </Text>
+      {!photo ? (
+        <TouchableOpacity
+          style={[
+            styles.photoPlaceholder,
+            locationStatus !== 'found' && styles.disabledPlaceholder,
+          ]}
+          onPress={() => handleTakePhoto(type === 'back')}
+          disabled={locationStatus !== 'found' || loading}>
+          <MaterialIcons name="add-a-photo" size={40} color="#666" />
+          <Text style={styles.placeholderText}>
+            {`Uslikaj ${type === 'front' ? 'registraciju' : 'materijal'} `}
           </Text>
-        )}
-      </View>
-    );
-  };
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.photoPreview}>
+          <Image source={{uri: photo}} style={styles.previewImage} />
+          <TouchableOpacity
+            style={styles.retakeButton}
+            onPress={() => setPhoto(null)}
+            disabled={loading}>
+            <Text style={styles.retakeButtonText}>Uslikaj ponovno</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderLocationStatus = () => (
+    <View
+      style={[
+        styles.locationStatus,
+        locationStatus === 'found' && styles.locationStatusSuccess,
+        locationStatus === 'error' && styles.locationStatusError,
+      ]}>
+      {locationStatus === 'searching' && (
+        <>
+          <ActivityIndicator size="small" color="#2196F3" />
+          <Text style={styles.locationStatusText}>
+            Dohvaćam lokaciju...
+            {accuracyReading
+              ? ` (Točnost: ${Math.round(accuracyReading)}m)`
+              : ''}
+          </Text>
+        </>
+      )}
+      {locationStatus === 'found' && location && (
+        <Text style={[styles.locationStatusText, styles.successText]}>
+          ✓ Lokacija spremna (Točnost: {Math.round(location.accuracy)}m)
+        </Text>
+      )}
+      {locationStatus === 'error' && (
+        <Text style={[styles.locationStatusText, styles.errorText]}>
+          Problem s GPS signalom. Pokušajte ponovno.
+        </Text>
+      )}
+    </View>
+  );
 
   return (
     <Modal
@@ -409,45 +432,36 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           Odobri
         </Text>
 
-        {renderLocationStatus()}
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {renderLocationStatus()}
 
-        {!photo ? (
-          <View style={styles.photoPlaceholder}>
+          <View style={styles.photosContainer}>
+            {renderPhotoSection('front', photoFront, setPhotoFront)}
+            {renderPhotoSection('back', photoBack, setPhotoBack)}
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={onClose}
+              disabled={loading}>
+              <Text style={styles.buttonText}>Odustani</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[
-                styles.captureButton,
-                locationStatus !== 'found' && styles.captureButtonDisabled,
+                styles.button,
+                styles.confirmButton,
+                (!photoFront || !photoBack || !location) &&
+                  styles.buttonDisabled,
               ]}
-              onPress={handleTakePhoto}
-              disabled={locationStatus !== 'found' || loading}>
-              <Text style={styles.captureButtonText}>
-                {locationStatus === 'found'
-                  ? 'Uslikaj kamion'
-                  : 'Čekam lokaciju...'}
+              onPress={handleConfirm}
+              disabled={!photoFront || !photoBack || !location || loading}>
+              <Text style={styles.buttonText}>
+                {loading ? 'Učitavanje...' : 'Potvrdi'}
               </Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.previewContainer}>
-            <Image source={{uri: photo}} style={styles.preview} />
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.outlineButton]}
-                onPress={() => setPhoto(null)}
-                disabled={loading}>
-                <Text style={styles.outlineButtonText}>Uslikaj ponovno</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-                disabled={loading}>
-                <Text style={styles.confirmButtonText}>
-                  {loading ? 'Učitavanje...' : 'Potvrdi'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -480,8 +494,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
   },
+  photosContainer: {
+    flexDirection: 'column',
+    gap: 20,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  photoSection: {
+    width: '100%',
+  },
+  photoLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+    color: '#000',
+  },
   photoPlaceholder: {
-    height: 300,
+    height: 200,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -489,87 +518,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     borderStyle: 'dashed',
-    overflow: 'hidden',
   },
-  captureButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+  disabledPlaceholder: {
+    opacity: 0.5,
   },
-  captureButtonDisabled: {
-    backgroundColor: '#cccccc',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  captureButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  previewContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  preview: {
-    width: Dimensions.get('window').width - 40,
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+  placeholderText: {
     marginTop: 10,
+    color: '#666',
+    fontSize: 14,
   },
-  button: {
-    flex: 1,
-    minWidth: '45%',
-    marginHorizontal: 5,
+  photoPreview: {
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  outlineButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#2196F3',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
-  outlineButtonText: {
-    color: '#2196F3',
-    fontSize: 16,
-    fontWeight: '500',
+  retakeButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  confirmButton: {
-    backgroundColor: '#2196F3',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  confirmButtonText: {
+  retakeButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '500',
   },
   locationStatus: {
@@ -605,206 +585,34 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#f44336',
   },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
-  },
-  retryButton: {
+  buttonContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#2196F3',
+    justifyContent: 'space-between',
+    gap: 10,
     marginTop: 10,
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
-  retryButtonText: {
-    color: '#2196F3',
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 5,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 8,
-    zIndex: 1,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: '#666',
-    fontWeight: '300',
-  },
-  locationInfo: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 6,
-    width: '100%',
-  },
-  locationInfoText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  locationCoordinates: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 8,
-  },
-  coordinateBox: {
-    backgroundColor: '#fff',
-    padding: 6,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  coordinateText: {
-    fontSize: 12,
-    color: '#333',
-    fontFamily: Platform.select({ios: 'Menlo', android: 'monospace'}),
-  },
-  accuracyBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  accuracyText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  searchingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff3e0',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffcc80',
-    marginBottom: 15,
-  },
-  searchingText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#f57c00',
-    fontWeight: '500',
-  },
-  progressContainer: {
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  progressBar: {
-    height: 3,
-    backgroundColor: '#e0e0e0',
-    width: '100%',
-    borderRadius: 1.5,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#2196F3',
-    borderRadius: 1.5,
-  },
-  timeoutWarning: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#f57c00',
-    textAlign: 'center',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    color: '#666',
-  },
-  modalOverlay: {
+  button: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  statusIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
   },
-  statusIconSuccess: {
-    backgroundColor: '#4caf50',
+  cancelButton: {
+    backgroundColor: '#666',
   },
-  statusIconError: {
-    backgroundColor: '#f44336',
-  },
-  statusIconSearching: {
-    backgroundColor: '#ff9800',
-  },
-  gpsStatusContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  gpsStatusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
+  confirmButton: {
+    backgroundColor: '#2196F3',
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
-  buttonTextDisabled: {
-    color: '#999',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
-  dimmedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityIndicatorContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    position: 'relative',
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 
