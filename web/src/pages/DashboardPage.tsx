@@ -90,6 +90,12 @@ const ButtonGroup = styled.div`
   flex-wrap: wrap;
 `;
 
+const PhotoButtonsGroup = styled.div`
+  display: flex;
+  gap: ${({theme}) => theme.spacing.small};
+  width: 100%;
+`;
+
 const ActionButton = styled(S.Button)`
   flex: 1;
   min-width: auto;
@@ -133,7 +139,6 @@ const LoadMoreButton = styled(S.Button)`
 `;
 
 const Dashboard: React.FC = () => {
-  //State Management
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -280,6 +285,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Replace just the return section in DashboardPage.tsx
   return (
     <S.PageContainer>
       <Header>
@@ -360,13 +366,29 @@ const Dashboard: React.FC = () => {
                 Otvori PDF
               </ActionButton>
 
-              {item.approvalPhoto?.url && (
-                <ActionButton
-                  onClick={() =>
-                    setSelectedImage(getImageUrl(item.approvalPhoto!.url!))
-                  }>
-                  Pogledaj Sliku
-                </ActionButton>
+              {item.approvalStatus === 'odobreno' && (
+                <PhotoButtonsGroup>
+                  {item.approvalPhotoFront?.url && (
+                    <ActionButton
+                      onClick={() =>
+                        setSelectedImage(
+                          getImageUrl(item.approvalPhotoFront!.url!),
+                        )
+                      }>
+                      Registracija
+                    </ActionButton>
+                  )}
+                  {item.approvalPhotoBack?.url && (
+                    <ActionButton
+                      onClick={() =>
+                        setSelectedImage(
+                          getImageUrl(item.approvalPhotoBack!.url!),
+                        )
+                      }>
+                      Materijal
+                    </ActionButton>
+                  )}
+                </PhotoButtonsGroup>
               )}
 
               {item.approvalLocation?.coordinates?.latitude &&

@@ -26,23 +26,29 @@ export interface Item {
   _id: string;
   title: string;
   code: string;
-  registracija?: string; // New optional field
+  registracija?: string;
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
   approvalDate?: string;
-  approvalTime?: string;
   approvedBy?: {
     _id: string;
     firstName: string;
     lastName: string;
   };
-  approvalPhoto?: {
+  // Update the photo types to include front and back
+  approvalPhotoFront?: {
     url: string | null;
     uploadDate: string | null;
-    uploadTime?: string | null;
     mimeType: string | null;
+    publicId: string | null;
+  } | null;
+  approvalPhotoBack?: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+    publicId: string | null;
   } | null;
   approvalLocation?: {
     coordinates: {
