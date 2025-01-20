@@ -133,7 +133,7 @@ const LoadMoreButton = styled(S.Button)`
 `;
 
 const Dashboard: React.FC = () => {
-  // State Management
+  //State Management
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
