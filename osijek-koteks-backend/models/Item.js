@@ -1,5 +1,24 @@
-// models/Item.js
 const mongoose = require('mongoose');
+
+const photoSchema = new mongoose.Schema({
+  url: {
+    type: String,
+    default: null,
+  },
+  uploadDate: {
+    type: Date,
+    default: null,
+  },
+  mimeType: {
+    type: String,
+    default: null,
+    enum: [null, 'image/jpeg', 'image/png', 'image/heic'],
+  },
+  publicId: {
+    type: String,
+    default: null,
+  },
+});
 
 const ItemSchema = new mongoose.Schema(
   {
@@ -16,11 +35,6 @@ const ItemSchema = new mongoose.Schema(
         },
         message: 'Code cannot be empty',
       },
-    },
-    registracija: {
-      // New field
-      type: String,
-      required: false, // Optional field
     },
     pdfUrl: {
       type: String,
@@ -50,21 +64,9 @@ const ItemSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
-    approvalPhoto: {
-      url: {
-        type: String,
-        default: null,
-      },
-      uploadDate: {
-        type: Date,
-        default: null,
-      },
-      mimeType: {
-        type: String,
-        default: null,
-        enum: [null, 'image/jpeg', 'image/png', 'image/heic'],
-      },
-    },
+    // Updated to have two photos
+    approvalPhotoFront: photoSchema,
+    approvalPhotoBack: photoSchema,
     approvalLocation: {
       coordinates: {
         latitude: {
@@ -90,6 +92,7 @@ const ItemSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
 // Add indexes for better query performance
 ItemSchema.index({code: 1});
 ItemSchema.index({approvalStatus: 1});
@@ -122,17 +125,6 @@ ItemSchema.methods.toJSON = function () {
       month: '2-digit',
       year: 'numeric',
     });
-  }
-
-  if (obj.approvalPhoto && obj.approvalPhoto.uploadDate) {
-    obj.approvalPhoto.uploadDate =
-      obj.approvalPhoto.uploadDate.toLocaleDateString('hr-HR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
   }
 
   return obj;

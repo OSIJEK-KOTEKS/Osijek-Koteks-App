@@ -154,12 +154,15 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-// Update approval status
+
 // Update approval status
 router.patch(
   '/:id/approval',
   auth,
-  upload.single('photo'),
+  upload.fields([
+    {name: 'photoFront', maxCount: 1},
+    {name: 'photoBack', maxCount: 1},
+  ]),
   async (req, res) => {
     try {
       const {approvalStatus, locationData} = req.body;
@@ -180,16 +183,14 @@ router.patch(
       }
 
       if (approvalStatus === 'odobreno') {
-        if (!req.file) {
-          console.log('No file in request');
-          return res
-            .status(400)
-            .json({message: 'Photo is required for approval'});
+        const files = req.files;
+
+        if (!files?.photoFront?.[0] || !files?.photoBack?.[0]) {
+          console.log('Missing required photos');
+          return res.status(400).json({
+            message: 'Both front and back photos are required for approval',
+          });
         }
-        console.log('File received:', {
-          mimetype: req.file.mimetype,
-          size: req.file.size,
-        });
 
         let parsedLocationData;
         try {
@@ -204,15 +205,40 @@ router.patch(
         }
 
         try {
-          console.log('About to upload to Cloudinary...');
-          const cloudinaryResponse = await uploadToCloudinary(req.file);
-          console.log('Cloudinary response:', cloudinaryResponse);
+          console.log('Uploading front photo to Cloudinary...');
+          const frontPhotoResponse = await uploadToCloudinary(
+            files.photoFront[0],
+          );
+          console.log('Front photo uploaded:', frontPhotoResponse);
 
-          item.approvalPhoto = {
-            url: cloudinaryResponse.url,
+          console.log('Uploading back photo to Cloudinary...');
+          const backPhotoResponse = await uploadToCloudinary(
+            files.photoBack[0],
+          );
+          console.log('Back photo uploaded:', backPhotoResponse);
+
+          // Delete old photos if they exist
+          if (item.approvalPhotoFront?.publicId) {
+            await cloudinary.uploader.destroy(item.approvalPhotoFront.publicId);
+          }
+          if (item.approvalPhotoBack?.publicId) {
+            await cloudinary.uploader.destroy(item.approvalPhotoBack.publicId);
+          }
+
+          // Set front photo data
+          item.approvalPhotoFront = {
+            url: frontPhotoResponse.url,
             uploadDate: new Date(),
-            mimeType: req.file.mimetype,
-            publicId: cloudinaryResponse.publicId,
+            mimeType: files.photoFront[0].mimetype,
+            publicId: frontPhotoResponse.publicId,
+          };
+
+          // Set back photo data
+          item.approvalPhotoBack = {
+            url: backPhotoResponse.url,
+            uploadDate: new Date(),
+            mimeType: files.photoBack[0].mimetype,
+            publicId: backPhotoResponse.publicId,
           };
 
           item.approvalLocation = {
@@ -224,14 +250,11 @@ router.patch(
             timestamp: new Date(parsedLocationData.timestamp),
           };
 
-          console.log(
-            'Updated item with Cloudinary photo:',
-            item.approvalPhoto,
-          );
+          console.log('Updated item with Cloudinary photos');
         } catch (error) {
           console.error('Detailed upload error:', error);
           return res.status(500).json({
-            message: 'Error uploading image',
+            message: 'Error uploading images',
             error: error.message,
             stack: error.stack,
           });
@@ -245,12 +268,32 @@ router.patch(
       } else {
         item.approvalDate = null;
         item.approvedBy = null;
-        item.approvalPhoto = {
+
+        // If there are existing photos, delete them from Cloudinary
+        if (item.approvalPhotoFront?.publicId) {
+          await cloudinary.uploader.destroy(item.approvalPhotoFront.publicId);
+        }
+        if (item.approvalPhotoBack?.publicId) {
+          await cloudinary.uploader.destroy(item.approvalPhotoBack.publicId);
+        }
+
+        // Reset front photo data
+        item.approvalPhotoFront = {
           url: null,
           uploadDate: null,
           mimeType: null,
           publicId: null,
         };
+
+        // Reset back photo data
+        item.approvalPhotoBack = {
+          url: null,
+          uploadDate: null,
+          mimeType: null,
+          publicId: null,
+        };
+
+        // Reset location data
         item.approvalLocation = {
           coordinates: {
             latitude: null,
@@ -279,7 +322,6 @@ router.patch(
     }
   },
 );
-
 // Get a specific item
 router.get('/:id', auth, async (req, res) => {
   try {
