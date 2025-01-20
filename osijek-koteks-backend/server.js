@@ -148,7 +148,7 @@ mongoose
     process.exit(1);
   });
 
-// Handle server shutdown gracefully
+//Handle server shutdown gracefully
 process.on('SIGINT', async () => {
   try {
     await mongoose.connection.close();
