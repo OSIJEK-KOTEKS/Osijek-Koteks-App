@@ -101,13 +101,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const {signOut} = useContext(AuthContext);
 
   const calculateItemHeight = (item?: Item) => {
-    let height = 180;
+    let height = 180; // Base height
     if (item) {
       if (item.approvalStatus === 'odobreno') {
-        height += 80;
+        height += 80; // Add height for approval info
       }
-      if (item.approvalPhoto?.url) {
-        height += 100;
+      // Add height for photos if they exist
+      if (item.approvalPhotoFront?.url || item.approvalPhotoBack?.url) {
+        height += 100; // Add height for photo previews
       }
     }
     return height;
@@ -359,14 +360,19 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   );
 
   const handleApproveItem = useCallback(
-    async (photoUri: string, locationData: LocationData) => {
+    async (
+      photoUriFront: string,
+      photoUriBack: string,
+      locationData: LocationData,
+    ) => {
       if (!selectedItemId) return;
 
       try {
         await apiService.updateItemApproval(
           selectedItemId,
           'odobreno',
-          photoUri,
+          photoUriFront,
+          photoUriBack,
           locationData,
         );
         await fetchData(true);
@@ -392,7 +398,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           onPress={() =>
             navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})
           }
-          onPhotoPress={photoUrl =>
+          onPhotoPress={(photoUrl, type) =>
             navigation.navigate('PhotoViewer', {photoUrl})
           }
           onApprove={() => {
@@ -576,7 +582,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             setPhotoModalVisible(false);
             setSelectedItemId(null);
           }}
-          onConfirm={handleApproveItem}
+          onConfirm={(photoUriFront, photoUriBack, location) =>
+            handleApproveItem(photoUriFront, photoUriBack, location)
+          }
         />
 
         <CreateItemModal

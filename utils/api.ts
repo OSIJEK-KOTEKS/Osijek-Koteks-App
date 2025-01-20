@@ -311,18 +311,27 @@ export const apiService = {
   updateItemApproval: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
-    photoUri?: string,
+    photoUriFront?: string,
+    photoUriBack?: string,
     locationData?: LocationData,
   ): Promise<Item> => {
     try {
       const formData = new FormData();
-      formData.append('approvalStatus', 'odobreno');
+      formData.append('approvalStatus', approvalStatus);
 
-      if (photoUri) {
-        formData.append('photo', {
-          uri: photoUri,
+      if (photoUriFront) {
+        formData.append('photoFront', {
+          uri: photoUriFront,
           type: 'image/jpeg',
-          name: 'approval_photo.jpg',
+          name: 'approval_photo_front.jpg',
+        } as any);
+      }
+
+      if (photoUriBack) {
+        formData.append('photoBack', {
+          uri: photoUriBack,
+          type: 'image/jpeg',
+          name: 'approval_photo_back.jpg',
         } as any);
       }
 
@@ -330,12 +339,23 @@ export const apiService = {
         formData.append('locationData', JSON.stringify(locationData));
       }
 
+      console.log('Sending approval update with data:', {
+        id,
+        approvalStatus,
+        hasPhotoFront: !!photoUriFront,
+        hasPhotoBack: !!photoUriBack,
+        hasLocation: !!locationData,
+      });
+
       const response = await api.patch<Item>(
         `/api/items/${id}/approval`,
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data',
+          },
+          transformRequest: data => {
+            return data;
           },
         },
       );

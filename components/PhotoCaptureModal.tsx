@@ -320,12 +320,19 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
     setLoading(true);
     try {
+      console.log('Confirming with photos and location:', {
+        photoFrontExists: !!photoFront,
+        photoBackExists: !!photoBack,
+        locationExists: !!location,
+      });
+
       await onConfirm(photoFront, photoBack, location);
       onClose();
     } catch (error) {
+      console.error('Error approving item:', error);
       Alert.alert(
         'Greška',
-        'Greška pri učitavanju fotografija i odobravanju dokumenta',
+        'Došlo je do greške prilikom odobravanja dokumenta. Molimo pokušajte ponovno.',
       );
     } finally {
       setLoading(false);
