@@ -10,7 +10,6 @@
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
   }
 
   /* Hide unnecessary elements when printing */
@@ -55,5 +54,11 @@
   /* Ensure table header rows repeat across pages */
   thead {
     display: table-header-group;
+  }
+
+  /* Force background colors and images to print */
+  .print-force-background {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

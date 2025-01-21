@@ -1,4 +1,4 @@
-import React, {useRef} from 'react';
+import React, {useRef, useCallback} from 'react';
 import styled from 'styled-components';
 import {Item} from '../types';
 import PrintableItem from './PrintableItem';
@@ -8,19 +8,24 @@ interface PrintButtonProps {
 }
 
 const PrintIconButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: auto;
+  padding: 8px 16px;
+  font-size: 0.9rem;
   background-color: ${({theme}) => theme.colors.primary};
   color: white;
   border: none;
   border-radius: ${({theme}) => theme.borderRadius};
-  padding: 0.5rem 1rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease-in-out;
 
   &:hover {
     background-color: ${({theme}) => theme.colors.primaryDark};
+    opacity: 0.9;
   }
 
   svg {
@@ -36,38 +41,70 @@ const PrintContainer = styled.div`
 const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
   const printContainerRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow && printContainerRef.current) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print - ${item.title}</title>
-            <link rel="stylesheet" href="/print-styles.css">
-            <style>
-              @media print {
-                body { margin: 0; padding: 0; }
-                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-              }
-            </style>
-          </head>
-          <body>
-            ${printContainerRef.current.innerHTML}
-          </body>
-        </html>
-      `);
+  const tryPrint = useCallback(
+    (
+      printWindow: Window,
+      totalImages: number,
+      loadedImages: {current: number},
+    ) => {
+      if (loadedImages.current === totalImages) {
+        printWindow.print();
+        printWindow.close();
+      }
+    },
+    [],
+  );
 
-      // Wait for images to load before printing
-      printWindow.document.addEventListener(
-        'load',
-        () => {
-          printWindow.print();
-          printWindow.close();
-        },
-        {once: true},
-      );
+  const handlePrint = useCallback(() => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !printContainerRef.current) return;
+
+    const printContent = `
+      <html>
+        <head>
+          <title>Ispis - ${item.title}</title>
+          <link rel="stylesheet" href="/print-styles.css">
+          <style>
+            @media print {
+              body { margin: 0; padding: 0; }
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContainerRef.current.innerHTML}
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+
+    // Track loaded images
+    const images = printWindow.document.getElementsByTagName('img');
+    const loadedImages = {current: 0};
+    const totalImages = images.length;
+
+    if (totalImages > 0) {
+      Array.from(images).forEach(img => {
+        if (img.complete) {
+          loadedImages.current += 1;
+        } else {
+          img.onload = () => {
+            loadedImages.current += 1;
+            tryPrint(printWindow, totalImages, loadedImages);
+          };
+          img.onerror = () => {
+            loadedImages.current += 1;
+            tryPrint(printWindow, totalImages, loadedImages);
+          };
+        }
+      });
+      tryPrint(printWindow, totalImages, loadedImages);
+    } else {
+      printWindow.print();
+      printWindow.close();
     }
-  };
+  }, [item.title, tryPrint]);
 
   return (
     <>
