@@ -7,6 +7,7 @@ import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
 import LocationViewerModal from '../components/LocationViewerModal';
+import PrintButton from 'src/components/PrintButton';
 import Logo from '../components/Logo';
 import DashboardFilters from '../components/DashboardFilters';
 import CreateItemModal from '../components/CreateItemModal';
@@ -391,12 +392,13 @@ const Dashboard: React.FC = () => {
                 </PhotoButtonsGroup>
               )}
 
-              {item.approvalLocation?.coordinates?.latitude &&
-                item.approvalLocation?.coordinates?.longitude && (
-                  <ActionButton onClick={() => setSelectedLocation(item)}>
-                    Lokacija
-                  </ActionButton>
-                )}
+              {item.approvalLocation?.coordinates?.latitude && (
+                <ActionButton onClick={() => setSelectedLocation(item)}>
+                  Lokacija
+                </ActionButton>
+              )}
+
+              <PrintButton item={item} />
 
               {user?.role === 'admin' && (
                 <DeleteButton onClick={() => handleDelete(item._id)}>
