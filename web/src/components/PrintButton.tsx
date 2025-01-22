@@ -34,42 +34,117 @@ const PrintIconButton = styled.button`
   }
 `;
 
-const PrintContainer = styled.div`
-  display: none;
-`;
-
 const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
   const printContainerRef = useRef<HTMLDivElement>(null);
-
-  const tryPrint = useCallback(
-    (
-      printWindow: Window,
-      totalImages: number,
-      loadedImages: {current: number},
-    ) => {
-      if (loadedImages.current === totalImages) {
-        printWindow.print();
-        printWindow.close();
-      }
-    },
-    [],
-  );
 
   const handlePrint = useCallback(() => {
     const printWindow = window.open('', '_blank');
     if (!printWindow || !printContainerRef.current) return;
 
+    // Define print styles
+    const printStyles = `
+      .print-container {
+        padding: 20px;
+        max-width: 100%;
+        margin: 0 auto;
+        font-family: Arial, sans-serif;
+        color: #000;
+      }
+
+      .print-header {
+        margin-bottom: 30px;
+        text-align: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 20px;
+      }
+
+      .print-logo {
+        height: 60px;
+        margin-bottom: 10px;
+      }
+
+      .print-title {
+        font-size: 24px;
+        margin: 10px 0;
+      }
+
+      .print-info-section {
+        margin-bottom: 20px;
+      }
+
+      .print-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .print-info-item {
+        margin-bottom: 10px;
+      }
+
+      .print-label {
+        font-weight: bold;
+        margin-right: 10px;
+      }
+
+      .print-value {
+        color: #333;
+      }
+
+      .print-photos-section {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+        page-break-inside: avoid;
+      }
+
+      .print-photo-container {
+        text-align: center;
+      }
+
+      .print-photo {
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+      }
+
+      .print-photo-caption {
+        font-size: 14px;
+        color: #666;
+        margin: 5px 0;
+      }
+
+      .print-location-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #ccc;
+        page-break-inside: avoid;
+      }
+
+      .print-footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #ccc;
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+      }
+
+      @media print {
+        body { margin: 0; padding: 0; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      }
+    `;
+
     const printContent = `
+      <!DOCTYPE html>
       <html>
         <head>
           <title>Ispis - ${item.title}</title>
-          <link rel="stylesheet" href="/print-styles.css">
-          <style>
-            @media print {
-              body { margin: 0; padding: 0; }
-              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            }
-          </style>
+          <style>${printStyles}</style>
         </head>
         <body>
           ${printContainerRef.current.innerHTML}
@@ -84,27 +159,38 @@ const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
     const loadedImages = {current: 0};
     const totalImages = images.length;
 
+    const tryPrint = () => {
+      if (loadedImages.current === totalImages) {
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }
+    };
+
     if (totalImages > 0) {
       Array.from(images).forEach(img => {
         if (img.complete) {
           loadedImages.current += 1;
+          tryPrint();
         } else {
           img.onload = () => {
             loadedImages.current += 1;
-            tryPrint(printWindow, totalImages, loadedImages);
+            tryPrint();
           };
           img.onerror = () => {
             loadedImages.current += 1;
-            tryPrint(printWindow, totalImages, loadedImages);
+            tryPrint();
           };
         }
       });
-      tryPrint(printWindow, totalImages, loadedImages);
     } else {
+      printWindow.document.close();
+      printWindow.focus();
       printWindow.print();
       printWindow.close();
     }
-  }, [item.title, tryPrint]);
+  }, [item.title]);
 
   return (
     <>
@@ -124,9 +210,9 @@ const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
         Ispiši
       </PrintIconButton>
 
-      <PrintContainer ref={printContainerRef}>
+      <div style={{display: 'none'}} ref={printContainerRef}>
         <PrintableItem item={item} />
-      </PrintContainer>
+      </div>
     </>
   );
 };
