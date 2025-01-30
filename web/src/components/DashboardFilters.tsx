@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import DatePicker, {registerLocale} from 'react-datepicker';
-import hr from 'date-fns/locale/hr';
+import {hr} from 'date-fns/locale/hr';
 import type {Locale} from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 
