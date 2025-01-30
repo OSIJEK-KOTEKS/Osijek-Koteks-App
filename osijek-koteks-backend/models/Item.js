@@ -68,7 +68,7 @@ const ItemSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
-    // Updated to have two photos
+    //  Updated to have two photos
     approvalPhotoFront: photoSchema,
     approvalPhotoBack: photoSchema,
     approvalLocation: {
