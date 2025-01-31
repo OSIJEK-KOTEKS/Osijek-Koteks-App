@@ -323,6 +323,16 @@ const Dashboard: React.FC = () => {
     }
   }, [selectedDate, selectedCode, sortOrder, searchMode]); // searchMode is included but not searchValue
 
+  // First, ensure your useEffect looks like this
+  useEffect(() => {
+    const initializeDashboard = async () => {
+      await fetchItems();
+      await fetchAvailableCodes(); // Now TypeScript should see it's being used
+    };
+
+    initializeDashboard();
+  }, []); // Add both to dependency array
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading) {
       return;
