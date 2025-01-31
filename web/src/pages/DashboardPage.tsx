@@ -344,6 +344,7 @@ const Dashboard: React.FC = () => {
     }
 
     setPage(prevPage => prevPage + 1);
+    fetchItems(true); // Explicitly fetch next page
   }, [hasMore, loadingMore, loading, items.length, totalItems]);
 
   const handleLogout = async () => {
