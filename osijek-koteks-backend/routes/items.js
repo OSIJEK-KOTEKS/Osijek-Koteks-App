@@ -44,34 +44,42 @@ router.get('/codes', auth, async (req, res) => {
   }
 });
 // Get items by user's codes
+// In items.js route
 router.get('/', auth, async (req, res) => {
   try {
-    const {startDate, endDate, code, sortOrder} = req.query;
+    const {startDate, endDate, code, sortOrder, searchTitle} = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Build the base query - now considering hasFullAccess permission
+    // Build the base query
     let query = {};
 
-    // If user is not admin and doesn't have full access, filter by their codes
-    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
-      query.code = {$in: req.user.codes};
-    }
+    // If search mode is active (searchTitle is provided)
+    if (searchTitle) {
+      // Use case-insensitive regex search for title
+      query.title = {$regex: searchTitle, $options: 'i'};
+    } else {
+      // Apply regular filters only if not in search mode
+      // If user is not admin and doesn't have full access, filter by their codes
+      if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+        query.code = {$in: req.user.codes};
+      }
 
-    // Add date filter if dates are provided
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      query.creationDate = {
-        $gte: start,
-        $lte: end,
-      };
-    }
+      // Add date filter if dates are provided
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        query.creationDate = {
+          $gte: start,
+          $lte: end,
+        };
+      }
 
-    // Add code filter if specific code is requested
-    if (code && code !== 'all') {
-      query.code = code;
+      // Add code filter if specific code is requested
+      if (code && code !== 'all') {
+        query.code = code;
+      }
     }
 
     let sortOptions = {creationDate: -1}; // Default sort
@@ -116,6 +124,7 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
+
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
