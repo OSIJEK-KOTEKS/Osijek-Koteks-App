@@ -238,14 +238,24 @@ export const apiService = {
     filters?: ItemFilters,
   ): Promise<PaginatedResponse<Item>> => {
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...(filters?.startDate && {startDate: filters.startDate}),
-        ...(filters?.endDate && {endDate: filters.endDate}),
-        ...(filters?.code && filters.code !== 'all' && {code: filters.code}),
-        ...(filters?.sortOrder && {sortOrder: filters.sortOrder}),
-      });
+      console.log('Making API request with filters:', filters); // Debug log
+
+      const params = new URLSearchParams();
+
+      // Add base pagination params
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+
+      // Add filter params if they exist
+      if (filters?.startDate) params.append('startDate', filters.startDate);
+      if (filters?.endDate) params.append('endDate', filters.endDate);
+      if (filters?.code && filters.code !== 'all')
+        params.append('code', filters.code);
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+      if (filters?.searchTitle)
+        params.append('searchTitle', filters.searchTitle);
+
+      console.log('Request URL params:', params.toString()); // Debug log
 
       const response = await api.get<PaginatedResponse<Item>>(
         `/api/items?${params}`,

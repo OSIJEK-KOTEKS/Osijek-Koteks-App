@@ -88,6 +88,7 @@ export interface ItemFilters {
   endDate?: string;
   code?: string;
   sortOrder?: string;
+  searchTitle?: string; // Add this new field
 }
 
 export interface PaginationInfo {

@@ -152,6 +152,8 @@ const Dashboard: React.FC = () => {
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [totalItems, setTotalItems] = useState(0);
   const [isCreateModalVisible, setCreateModalVisible] =
     useState<boolean>(false);
@@ -180,20 +182,33 @@ const Dashboard: React.FC = () => {
           setLoading(true);
         }
 
-        const startOfDay = new Date(selectedDate);
-        startOfDay.setHours(0, 0, 0, 0);
+        let filters: ItemFilters = {};
 
-        const endOfDay = new Date(selectedDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        if (searchMode && searchValue) {
+          // If in search mode, only use search filter
+          filters = {
+            searchTitle: searchValue,
+          };
+          console.log('Searching with filters:', filters); // Debug log
+        } else {
+          // Otherwise use regular filters
+          const startOfDay = new Date(selectedDate);
+          startOfDay.setHours(0, 0, 0, 0);
 
-        const filters: ItemFilters = {
-          startDate: startOfDay.toISOString(),
-          endDate: endOfDay.toISOString(),
-          ...(selectedCode !== 'all' && {code: selectedCode}),
-          sortOrder,
-        };
+          const endOfDay = new Date(selectedDate);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          filters = {
+            startDate: startOfDay.toISOString(),
+            endDate: endOfDay.toISOString(),
+            ...(selectedCode !== 'all' && {code: selectedCode}),
+            sortOrder,
+          };
+          console.log('Using regular filters:', filters); // Debug log
+        }
 
         const response = await apiService.getItems(currentPage, 10, filters);
+        console.log('API Response:', response); // Debug log
 
         if (isLoadingMore) {
           setItems(prevItems => [...prevItems, ...response.items]);
@@ -216,8 +231,26 @@ const Dashboard: React.FC = () => {
         }
       }
     },
-    [page, selectedDate, selectedCode, sortOrder],
+    [page, selectedDate, selectedCode, sortOrder, searchMode, searchValue],
   );
+
+  // Add handleSearch function
+  const handleSearch = useCallback(() => {
+    if (searchValue.trim()) {
+      console.log('Search triggered with:', searchValue);
+      setSearchMode(true);
+      setPage(1);
+      fetchItems(false);
+    }
+  }, [searchValue, fetchItems]);
+
+  const clearSearch = useCallback(() => {
+    console.log('Clearing search');
+    setSearchMode(false);
+    setSearchValue('');
+    setPage(1);
+    fetchItems(false);
+  }, [fetchItems]);
 
   useEffect(() => {
     fetchItems();
@@ -231,14 +264,10 @@ const Dashboard: React.FC = () => {
   }, [page]);
 
   useEffect(() => {
-    console.log('Filters changed, refetching items with:', {
-      selectedDate,
-      selectedCode,
-      sortOrder,
-    });
+    console.log('Filters or search changed:', {searchMode, searchValue});
     fetchItems(false);
     setPage(1);
-  }, [selectedDate, selectedCode, sortOrder]);
+  }, [selectedDate, selectedCode, sortOrder, searchMode, searchValue]); // Added searchMode and searchValue
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading) {
@@ -328,6 +357,12 @@ const Dashboard: React.FC = () => {
         availableCodes={availableCodes}
         sortOrder={sortOrder}
         onSortOrderChange={setSortOrder}
+        searchMode={searchMode}
+        onSearchModeChange={setSearchMode}
+        searchValue={searchValue}
+        onSearchValueChange={setSearchValue}
+        onSearch={handleSearch}
+        onClearSearch={clearSearch} // Add this line
       />
 
       <ItemsGrid>
