@@ -182,16 +182,14 @@ const Dashboard: React.FC = () => {
           setLoading(true);
         }
 
-        let filters: ItemFilters = {};
+        let filters: ItemFilters;
 
         if (searchMode && searchValue) {
-          // If in search mode, only use search filter
           filters = {
             searchTitle: searchValue,
           };
-          console.log('Searching with filters:', filters); // Debug log
+          console.log('Using search filters:', filters);
         } else {
-          // Otherwise use regular filters
           const startOfDay = new Date(selectedDate);
           startOfDay.setHours(0, 0, 0, 0);
 
@@ -204,11 +202,13 @@ const Dashboard: React.FC = () => {
             ...(selectedCode !== 'all' && {code: selectedCode}),
             sortOrder,
           };
-          console.log('Using regular filters:', filters); // Debug log
+          console.log('Using regular filters:', filters);
         }
 
+        console.log('Making request with filters:', filters);
+
         const response = await apiService.getItems(currentPage, 10, filters);
-        console.log('API Response:', response); // Debug log
+        console.log('API Response:', response);
 
         if (isLoadingMore) {
           setItems(prevItems => [...prevItems, ...response.items]);
@@ -218,7 +218,6 @@ const Dashboard: React.FC = () => {
 
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
-        setPage(currentPage);
         setError('');
       } catch (err) {
         console.error('Error fetching items:', err);
@@ -233,41 +232,64 @@ const Dashboard: React.FC = () => {
     },
     [page, selectedDate, selectedCode, sortOrder, searchMode, searchValue],
   );
-
-  // Add handleSearch function
   const handleSearch = useCallback(() => {
     if (searchValue.trim()) {
       console.log('Search triggered with:', searchValue);
+      // First set all the states
+      setLoading(true);
       setSearchMode(true);
       setPage(1);
-      fetchItems(false);
+
+      // Wait for state updates to complete before fetching
+      Promise.resolve().then(() => {
+        const searchFilters: ItemFilters = {
+          searchTitle: searchValue,
+        };
+        console.log('Fetching with search filters:', searchFilters);
+
+        // Pass explicit search filters
+        apiService
+          .getItems(1, 10, searchFilters)
+          .then(response => {
+            setItems(response.items);
+            setHasMore(response.pagination.hasMore);
+            setTotalItems(response.pagination.total);
+            setError('');
+          })
+          .catch(err => {
+            console.error('Error fetching items:', err);
+            setError('Greška pri dohvaćanju dokumenata');
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      });
     }
-  }, [searchValue, fetchItems]);
+  }, [searchValue]);
 
   const clearSearch = useCallback(() => {
     console.log('Clearing search');
+    setLoading(true); // Set loading first
     setSearchMode(false);
     setSearchValue('');
     setPage(1);
-    fetchItems(false);
+
+    // Use a small timeout to ensure state updates have propagated
+    setTimeout(() => {
+      fetchItems(false);
+    }, 0);
   }, [fetchItems]);
 
   useEffect(() => {
-    fetchItems();
-    fetchAvailableCodes();
-  }, []);
-
-  useEffect(() => {
-    if (page > 1) {
-      fetchItems(true);
+    if (!searchMode) {
+      console.log('Filters changed, refetching items with:', {
+        selectedDate,
+        selectedCode,
+        sortOrder,
+      });
+      fetchItems(false);
     }
-  }, [page]);
-
-  useEffect(() => {
-    console.log('Filters or search changed:', {searchMode, searchValue});
-    fetchItems(false);
-    setPage(1);
-  }, [selectedDate, selectedCode, sortOrder, searchMode, searchValue]); // Added searchMode and searchValue
+  }, [selectedDate, selectedCode, sortOrder, searchMode]); // searchMode is included but not searchValue
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading) {
