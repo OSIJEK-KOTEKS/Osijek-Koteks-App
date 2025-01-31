@@ -269,16 +269,48 @@ const Dashboard: React.FC = () => {
 
   const clearSearch = useCallback(() => {
     console.log('Clearing search');
-    setLoading(true); // Set loading first
+    setLoading(true);
+
+    // Reset all filters to initial values
     setSearchMode(false);
     setSearchValue('');
     setPage(1);
+    setSelectedDate(new Date()); // Reset date to today
+    setSelectedCode('all'); // Reset code filter to 'all'
+    setSortOrder('date-desc'); // Reset sort to default
 
-    // Use a small timeout to ensure state updates have propagated
-    setTimeout(() => {
-      fetchItems(false);
-    }, 0);
-  }, [fetchItems]);
+    // Wait for state updates to complete
+    Promise.resolve().then(() => {
+      // Fetch items with initial filters
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const initialFilters: ItemFilters = {
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString(),
+        sortOrder: 'date-desc',
+      };
+
+      apiService
+        .getItems(1, 10, initialFilters)
+        .then(response => {
+          setItems(response.items);
+          setHasMore(response.pagination.hasMore);
+          setTotalItems(response.pagination.total);
+          setError('');
+        })
+        .catch(err => {
+          console.error('Error fetching items:', err);
+          setError('Greška pri dohvaćanju dokumenata');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    });
+  }, []);
 
   useEffect(() => {
     if (!searchMode) {
