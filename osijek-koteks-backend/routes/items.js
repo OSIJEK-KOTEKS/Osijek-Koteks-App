@@ -45,6 +45,7 @@ router.get('/codes', auth, async (req, res) => {
 });
 // Get items by user's codes
 // In items.js route
+// In your items.js route, update the GET route:
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder, searchTitle} = req.query;
@@ -82,6 +83,8 @@ router.get('/', auth, async (req, res) => {
       }
     }
 
+    console.log('Query:', query); // Add this for debugging
+
     let sortOptions = {creationDate: -1}; // Default sort
     if (sortOrder === 'date-asc') {
       sortOptions = {creationDate: 1};
@@ -106,6 +109,8 @@ router.get('/', auth, async (req, res) => {
     const total = await Item.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
+
+    console.log('Found items:', items.length); // Add this for debugging
 
     res.json({
       items,
