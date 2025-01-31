@@ -311,17 +311,20 @@ const Dashboard: React.FC = () => {
         });
     });
   }, []);
-
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    setPage(1);
+    setItems([]);
+    setHasMore(true);
+  };
   useEffect(() => {
     if (!searchMode) {
-      console.log('Filters changed, refetching items with:', {
-        selectedDate,
-        selectedCode,
-        sortOrder,
-      });
+      setPage(1); // Reset page when filters change
+      setItems([]); // Clear existing items
+      setHasMore(true); // Reset hasMore flag
       fetchItems(false);
     }
-  }, [selectedDate, selectedCode, sortOrder, searchMode]); // searchMode is included but not searchValue
+  }, [selectedDate, selectedCode, sortOrder]);
 
   // First, ensure your useEffect looks like this
   useEffect(() => {
@@ -333,7 +336,7 @@ const Dashboard: React.FC = () => {
     initializeDashboard();
   }, []); // Add both to dependency array
 
-  const handleLoadMore = useCallback(() => {
+  const handleLoadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading) {
       return;
     }
@@ -343,9 +346,63 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    setPage(prevPage => prevPage + 1);
-    fetchItems(true); // Explicitly fetch next page
-  }, [hasMore, loadingMore, loading, items.length, totalItems]);
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      setPage(nextPage);
+
+      let filters: ItemFilters;
+      if (searchMode && searchValue) {
+        filters = {
+          searchTitle: searchValue,
+        };
+      } else {
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        filters = {
+          startDate: startOfDay.toISOString(),
+          endDate: endOfDay.toISOString(),
+          ...(selectedCode !== 'all' && {code: selectedCode}),
+          sortOrder,
+        };
+      }
+
+      const response = await apiService.getItems(nextPage, 10, filters);
+
+      setItems(prevItems => {
+        // Filter out duplicates
+        const newItems = response.items.filter(
+          newItem =>
+            !prevItems.some(existingItem => existingItem._id === newItem._id),
+        );
+        return [...prevItems, ...newItems];
+      });
+
+      setHasMore(response.pagination.hasMore);
+      setTotalItems(response.pagination.total);
+    } catch (error) {
+      console.error('Error loading more items:', error);
+      setError('Greška pri učitavanju dodatnih dokumenata');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    hasMore,
+    loadingMore,
+    loading,
+    items.length,
+    totalItems,
+    page,
+    searchMode,
+    searchValue,
+    selectedDate,
+    selectedCode,
+    sortOrder,
+  ]);
 
   const handleLogout = async () => {
     try {
@@ -416,7 +473,7 @@ const Dashboard: React.FC = () => {
 
       <DashboardFilters
         selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
+        onDateChange={handleDateChange} // Use new handler
         selectedCode={selectedCode}
         onCodeChange={setSelectedCode}
         availableCodes={availableCodes}
@@ -427,7 +484,7 @@ const Dashboard: React.FC = () => {
         searchValue={searchValue}
         onSearchValueChange={setSearchValue}
         onSearch={handleSearch}
-        onClearSearch={clearSearch} // Add this line
+        onClearSearch={clearSearch}
       />
 
       <ItemsGrid>
@@ -514,7 +571,7 @@ const Dashboard: React.FC = () => {
         <EmptyMessage>Nema dostupnih dokumenata</EmptyMessage>
       )}
 
-      {hasMore && !loading && items.length > 0 && (
+      {hasMore && items.length > 0 && items.length < totalItems && (
         <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
           {loadingMore ? 'Učitavanje...' : 'Učitaj još'}
         </LoadMoreButton>

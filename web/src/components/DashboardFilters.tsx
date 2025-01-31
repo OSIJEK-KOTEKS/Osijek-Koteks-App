@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import styled from 'styled-components';
 import DatePicker, {registerLocale} from 'react-datepicker';
 import {hr} from 'date-fns/locale/hr';
@@ -39,8 +39,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   onSearch,
   onClearSearch, // Add this line
 }) => {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   // Handle date change including null value
   const handleDateChange = (date: Date | null) => {
+    setShowDatePicker(false);
     if (date) {
       onDateChange(date);
     }
