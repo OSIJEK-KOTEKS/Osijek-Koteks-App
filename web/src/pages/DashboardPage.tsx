@@ -12,6 +12,7 @@ import Logo from '../components/Logo';
 import DashboardFilters from '../components/DashboardFilters';
 import CreateItemModal from '../components/CreateItemModal';
 import PrintAllButton from '../components/PrintAllButton';
+import PrintTableButton from 'src/components/PrintTableButton';
 // Styled Components
 const Header = styled.div`
   display: flex;
@@ -497,6 +498,12 @@ const Dashboard: React.FC = () => {
           </div>
         </HeaderLeft>
         <HeaderActions>
+          <PrintTableButton
+            items={items}
+            totalItems={totalItems}
+            isLoading={loading}
+            onPrintAll={fetchAllItemsForPrinting}
+          />
           <PrintAllButton
             items={items}
             totalItems={totalItems}
