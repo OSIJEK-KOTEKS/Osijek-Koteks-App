@@ -232,6 +232,51 @@ const Dashboard: React.FC = () => {
     },
     [page, selectedDate, selectedCode, sortOrder, searchMode, searchValue],
   );
+
+  const fetchAllItemsForPrinting = async () => {
+    try {
+      setLoading(true);
+      let allItems: Item[] = [];
+      let currentPage = 1;
+      let hasMoreItems = true;
+
+      let filters: ItemFilters;
+      if (searchMode && searchValue) {
+        filters = {
+          searchTitle: searchValue,
+        };
+      } else {
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        filters = {
+          startDate: startOfDay.toISOString(),
+          endDate: endOfDay.toISOString(),
+          ...(selectedCode !== 'all' && {code: selectedCode}),
+          sortOrder,
+        };
+      }
+
+      // Fetch all pages
+      while (hasMoreItems) {
+        const response = await apiService.getItems(currentPage, 100, filters);
+        allItems = [...allItems, ...response.items];
+        hasMoreItems = response.pagination.hasMore;
+        currentPage++;
+      }
+
+      return allItems;
+    } catch (error) {
+      console.error('Error fetching all items:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = useCallback(() => {
     if (searchValue.trim()) {
       console.log('Search triggered with:', searchValue);
@@ -456,6 +501,7 @@ const Dashboard: React.FC = () => {
             items={items}
             totalItems={totalItems}
             isLoading={loading}
+            onPrintAll={fetchAllItemsForPrinting}
           />
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button
