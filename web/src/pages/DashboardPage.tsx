@@ -11,7 +11,7 @@ import PrintButton from 'src/components/PrintButton';
 import Logo from '../components/Logo';
 import DashboardFilters from '../components/DashboardFilters';
 import CreateItemModal from '../components/CreateItemModal';
-
+import PrintAllButton from '../components/PrintAllButton';
 // Styled Components
 const Header = styled.div`
   display: flex;
@@ -452,6 +452,11 @@ const Dashboard: React.FC = () => {
           </div>
         </HeaderLeft>
         <HeaderActions>
+          <PrintAllButton
+            items={items}
+            totalItems={totalItems}
+            isLoading={loading}
+          />
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button
               onClick={() => setCreateModalVisible(true)}
