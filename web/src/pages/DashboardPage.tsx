@@ -483,7 +483,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Replace just the return section in DashboardPage.tsx
+  //Replace just the return section in DashboardPage.tsx
   return (
     <S.PageContainer>
       <Header>
