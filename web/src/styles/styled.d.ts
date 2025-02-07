@@ -12,15 +12,8 @@ declare module 'styled-components' {
       white: string;
       gray: string;
       disabled: string;
-    };
-    spacing: {
-      small: string;
-      medium: string;
-      large: string;
-    };
-    borderRadius: string;
-    shadows: {
-      main: string;
+      success: string; // Add this line
+      successDark: string; // Add this line
     };
   }
 }
