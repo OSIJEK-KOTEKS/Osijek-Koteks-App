@@ -608,11 +608,14 @@ const Dashboard: React.FC = () => {
                 </PhotoButtonsGroup>
               )}
 
+              {item.approvalStatus === 'odobreno' && item.approvalLocation && (
+                <ActionButton onClick={() => setSelectedLocation(item)}>
+                  Lokacija
+                </ActionButton>
+              )}
+
               {user?.role === 'admin' && (
-                <ApproveButton
-                  item={item}
-                  onSuccess={() => fetchItems(true)} // Changed from fetchData to fetchItems
-                />
+                <ApproveButton item={item} onSuccess={() => fetchItems(true)} />
               )}
 
               <PrintButton item={item} />
