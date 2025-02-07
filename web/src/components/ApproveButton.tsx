@@ -4,13 +4,12 @@ import ApprovalModal from './ApprovalModal';
 import {Item} from '../types';
 import {Button} from './styled/Common';
 
-// Extend the existing ActionButton style
 const ApproveActionButton = styled(Button)`
   flex: 1;
   min-width: auto;
   padding: 8px 16px;
   font-size: 0.9rem;
-  background-color: #4caf50; // Green color for approve action
+  background-color: #4caf50;
 
   &:hover {
     background-color: #45a049;
@@ -30,9 +29,15 @@ const ApproveButton: React.FC<ApproveButtonProps> = ({item, onSuccess}) => {
     return null;
   }
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsModalOpen(true);
+  };
+
   return (
     <>
-      <ApproveActionButton onClick={() => setIsModalOpen(true)} type="button">
+      <ApproveActionButton onClick={handleClick} type="button">
         Odobri
       </ApproveActionButton>
 
