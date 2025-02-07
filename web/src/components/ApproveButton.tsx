@@ -1,10 +1,26 @@
 import React, {useState} from 'react';
+import styled from 'styled-components';
 import ApprovalModal from './ApprovalModal';
 import {Item} from '../types';
+import {Button} from './styled/Common';
+
+// Extend the existing ActionButton style
+const ApproveActionButton = styled(Button)`
+  flex: 1;
+  min-width: auto;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  background-color: #4caf50; // Green color for approve action
+
+  &:hover {
+    background-color: #45a049;
+    opacity: 0.9;
+  }
+`;
 
 interface ApproveButtonProps {
   item: Item;
-  onSuccess: () => void; // Explicitly typed as a function that returns void
+  onSuccess: () => void;
 }
 
 const ApproveButton: React.FC<ApproveButtonProps> = ({item, onSuccess}) => {
@@ -16,12 +32,9 @@ const ApproveButton: React.FC<ApproveButtonProps> = ({item, onSuccess}) => {
 
   return (
     <>
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm font-medium"
-        type="button">
+      <ApproveActionButton onClick={() => setIsModalOpen(true)} type="button">
         Odobri
-      </button>
+      </ApproveActionButton>
 
       <ApprovalModal
         isOpen={isModalOpen}
