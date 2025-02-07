@@ -13,6 +13,7 @@ import DashboardFilters from '../components/DashboardFilters';
 import CreateItemModal from '../components/CreateItemModal';
 import PrintAllButton from '../components/PrintAllButton';
 import PrintTableButton from 'src/components/PrintTableButton';
+import ApproveButton from '../components/ApproveButton';
 // Styled Components
 const Header = styled.div`
   display: flex;
@@ -607,10 +608,11 @@ const Dashboard: React.FC = () => {
                 </PhotoButtonsGroup>
               )}
 
-              {item.approvalLocation?.coordinates?.latitude && (
-                <ActionButton onClick={() => setSelectedLocation(item)}>
-                  Lokacija
-                </ActionButton>
+              {user?.role === 'admin' && (
+                <ApproveButton
+                  item={item}
+                  onSuccess={() => fetchItems(true)} // Changed from fetchData to fetchItems
+                />
               )}
 
               <PrintButton item={item} />

@@ -8,6 +8,7 @@ import {
   RegistrationData,
   ItemFilters,
   PaginatedResponse,
+  ApiService,
 } from '../types';
 
 const API_URL =
@@ -296,36 +297,27 @@ export const apiService = {
   updateItemApproval: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
-    photoFile?: File,
-    locationData?: LocationData,
+    photoFront: File,
+    photoBack: File,
+    locationData: LocationData,
   ): Promise<Item> => {
-    try {
-      const formData = new FormData();
-      formData.append('approvalStatus', approvalStatus);
+    const formData = new FormData();
+    formData.append('photoFront', photoFront);
+    formData.append('photoBack', photoBack);
+    formData.append('approvalStatus', approvalStatus);
+    formData.append('locationData', JSON.stringify(locationData));
 
-      if (photoFile) {
-        formData.append('photo', photoFile);
-      }
-
-      if (locationData) {
-        formData.append('locationData', JSON.stringify(locationData));
-      }
-
-      const response = await api.patch<Item>(
-        `/api/items/${id}/approval`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+    const response = await api.patch<Item>(
+      `/api/items/${id}/approval`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
         },
-      );
+      },
+    );
 
-      return response.data;
-    } catch (error) {
-      console.error('Error updating item approval:', error);
-      throw error;
-    }
+    return response.data;
   },
 
   deleteItem: async (id: string): Promise<void> => {

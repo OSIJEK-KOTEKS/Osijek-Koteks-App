@@ -102,3 +102,48 @@ export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationInfo;
 }
+export interface ApiServiceResponse<T = any> {
+  status: number;
+  data: T;
+  message?: string;
+}
+
+export interface ApiService {
+  // Auth methods
+  login: (email: string, password: string) => Promise<LoginResponse>;
+  register: (userData: RegistrationData) => Promise<User>;
+  logout: () => Promise<void>;
+
+  // User methods
+  getUsers: () => Promise<User[]>;
+  getUserProfile: () => Promise<User>;
+  getUniqueCodes: () => Promise<string[]>;
+  createUser: (userData: RegistrationData) => Promise<User>;
+  updateUser: (
+    id: string,
+    userData: Partial<Omit<User, '_id'>>,
+  ) => Promise<User>;
+  updateUserPassword: (userId: string, newPassword: string) => Promise<User>;
+
+  // Item methods
+  getItems: (
+    page?: number,
+    limit?: number,
+    filters?: ItemFilters,
+  ) => Promise<PaginatedResponse<Item>>;
+  createItem: (itemData: CreateItemInput) => Promise<Item>;
+  updateItem: (
+    id: string,
+    itemData: Partial<
+      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
+    >,
+  ) => Promise<Item>;
+  updateItemApproval: (
+    id: string,
+    approvalStatus: Item['approvalStatus'],
+    photoFront: File,
+    photoBack: File,
+    locationData: LocationData,
+  ) => Promise<Item>;
+  deleteItem: (id: string) => Promise<void>;
+}
