@@ -90,7 +90,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-
+  const REFRESH_INTERVAL = 30000; // 30 seconds
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
+    null,
+  );
+  interface ItemChanges {
+    newItems: boolean;
+    updatedItems: boolean;
+  }
   // Refs
   const loadingRef = useRef(false);
   const flatListRef = useRef<FlatList>(null);
@@ -150,6 +157,58 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       console.error('Error fetching available codes:', error);
     }
   };
+
+  const backgroundRefresh = useCallback(async () => {
+    if (isLoadingRef.current) {
+      console.log('Background refresh skipped - fetch in progress');
+      return;
+    }
+
+    isLoadingRef.current = true;
+    try {
+      const profile = await apiService.getUserProfile();
+      setUserProfile(profile);
+
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const filters: ItemFilters = {
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString(),
+        ...(selectedCode !== 'all' && {code: selectedCode}),
+        sortOrder: sortOrder,
+      };
+
+      const response = await apiService.getItems(1, 10, filters);
+
+      // Check for changes in first page only
+      const hasChanges = response.items.some(newItem => {
+        const existingItem = items.find(item => item._id === newItem._id);
+        return (
+          !existingItem ||
+          existingItem.approvalStatus !== newItem.approvalStatus ||
+          existingItem.approvalDate !== newItem.approvalDate ||
+          existingItem.approvedBy?._id !== newItem.approvedBy?._id
+        );
+      });
+
+      if (hasChanges) {
+        console.log('Changes detected in background refresh');
+        // Reset to first page when changes detected
+        setPage(1);
+        setItems(response.items);
+        setHasMore(response.pagination.hasMore);
+        setTotalDocuments(response.pagination.total);
+      }
+    } catch (error) {
+      console.error('Background refresh error:', error);
+    } finally {
+      isLoadingRef.current = false;
+    }
+  }, [selectedDate, selectedCode, sortOrder, items]);
+
   const fetchData = useCallback(
     async (resetItems: boolean = true) => {
       if (isLoadingRef.current) {
@@ -170,17 +229,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           setIsLoadingMore(true);
         }
 
-        // Fetch user profile first
         const profile = await apiService.getUserProfile();
         setUserProfile(profile);
-        console.log('User profile fetched:', {
-          role: profile.role,
-          assignedCodes: profile.codes,
-        });
 
         const startOfDay = new Date(selectedDate);
         startOfDay.setHours(0, 0, 0, 0);
-
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
 
@@ -191,14 +244,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           sortOrder: sortOrder,
         };
 
-        console.log('Fetching items with filters:', filters);
+        console.log(
+          'Fetching items with filters:',
+          filters,
+          'Page:',
+          currentPage,
+        );
 
         const response = await apiService.getItems(currentPage, 10, filters);
-        console.log('Items response:', {
-          itemCount: response.items.length,
-          pagination: response.pagination,
-          uniqueItemCodes: [...new Set(response.items.map(item => item.code))],
-        });
 
         setHasMore(response.pagination.hasMore);
         setTotalDocuments(response.pagination.total);
@@ -217,25 +270,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
         // Update available codes
         const uniqueCodes = new Set<string>();
-
-        // Add user's assigned codes
         if (profile && !profile.hasFullAccess) {
           profile.codes.forEach(code => uniqueCodes.add(code));
         }
-
-        // Add codes from visible items
         response.items.forEach(item => uniqueCodes.add(item.code));
-
-        // Convert to array and sort
-        const allCodes = Array.from(uniqueCodes).sort();
-
-        console.log('Available codes updated:', {
-          userCodes: profile.codes,
-          itemCodes: response.items.map(item => item.code),
-          combinedCodes: allCodes,
-        });
-
-        setAvailableCodes(allCodes);
+        setAvailableCodes(Array.from(uniqueCodes).sort());
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert(
@@ -246,12 +285,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         setLoading(false);
         setIsLoadingMore(false);
         isLoadingRef.current = false;
-        console.log('Fetch complete');
       }
     },
     [page, selectedDate, selectedCode, sortOrder],
   );
-
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || isLoadingRef.current) {
       console.log('Skipping load more:', {
@@ -289,7 +326,24 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       setUserProfile(null);
     };
   }, []);
-  // useEffect to fetch codes when profile  changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('Auto-refresh triggered with current filters:', {
+        selectedDate,
+        selectedCode,
+        sortOrder,
+      });
+      backgroundRefresh();
+    }, REFRESH_INTERVAL);
+
+    setRefreshInterval(interval);
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [selectedDate, selectedCode, sortOrder, backgroundRefresh]);
 
   useEffect(() => {
     if (userProfile) {
