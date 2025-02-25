@@ -121,6 +121,7 @@ router.patch('/:id/password', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+
 // Update user profile
 router.patch('/:id', auth, async (req, res) => {
   try {
