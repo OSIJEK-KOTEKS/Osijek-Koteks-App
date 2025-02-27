@@ -107,18 +107,110 @@ const LoadingState = styled.div`
   color: ${({theme}) => theme.colors.primary};
 `;
 
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+`;
+
+const PaginationButton = styled.button<{isActive?: boolean}>`
+  padding: 8px 12px;
+  margin: 0 5px;
+  border-radius: 4px;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  background-color: ${({theme, isActive}) =>
+    isActive ? theme.colors.primary : theme.colors.white};
+  color: ${({theme, isActive}) =>
+    isActive ? theme.colors.white : theme.colors.text};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${({theme, isActive}) =>
+      isActive ? theme.colors.primary : theme.colors.gray};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const SortContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+`;
+
+const SortSelect = styled.select`
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+  background-color: ${({theme}) => theme.colors.white};
+  cursor: pointer;
+`;
+
 const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
+  const [sortOption, setSortOption] = useState('name-asc');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const usersPerPage = 10;
+
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Apply sorting and pagination when users or sort option changes
+  useEffect(() => {
+    if (allUsers.length > 0) {
+      const sortedUsers = [...allUsers].sort((a, b) => {
+        switch (sortOption) {
+          case 'name-asc':
+            return `${a.firstName} ${a.lastName}`.localeCompare(
+              `${b.firstName} ${b.lastName}`,
+            );
+          case 'name-desc':
+            return `${b.firstName} ${b.lastName}`.localeCompare(
+              `${a.firstName} ${a.lastName}`,
+            );
+          case 'email-asc':
+            return a.email.localeCompare(b.email);
+          case 'email-desc':
+            return b.email.localeCompare(a.email);
+          case 'company-asc':
+            return a.company.localeCompare(b.company);
+          case 'company-desc':
+            return b.company.localeCompare(a.company);
+          case 'role-asc':
+            return a.role.localeCompare(b.role);
+          case 'role-desc':
+            return b.role.localeCompare(a.role);
+          default:
+            return 0;
+        }
+      });
+
+      // Calculate total pages
+      setTotalPages(Math.ceil(sortedUsers.length / usersPerPage));
+
+      // Get current page users
+      const indexOfLastUser = currentPage * usersPerPage;
+      const indexOfFirstUser = indexOfLastUser - usersPerPage;
+      setUsers(sortedUsers.slice(indexOfFirstUser, indexOfLastUser));
+    }
+  }, [allUsers, currentPage, sortOption]);
 
   const updateAvailableCodes = (fetchedUsers: User[]) => {
     // Extract all codes from all users
@@ -138,7 +230,7 @@ const UserManagementPage: React.FC = () => {
     try {
       setLoading(true);
       const fetchedUsers = await apiService.getUsers();
-      setUsers(fetchedUsers);
+      setAllUsers(fetchedUsers);
       updateAvailableCodes(fetchedUsers);
       setError('');
     } catch (err) {
@@ -151,6 +243,15 @@ const UserManagementPage: React.FC = () => {
 
   const handleEdit = (user: User) => {
     setSelectedUser(user);
+  };
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortOption(e.target.value);
+    setCurrentPage(1); // Reset to first page when sorting changes
   };
 
   const getRolePermissions = (role: User['role']) => {
@@ -265,6 +366,48 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
+  // Generate pagination buttons
+  const renderPagination = () => {
+    const pageButtons = [];
+
+    // Previous button
+    pageButtons.push(
+      <PaginationButton
+        key="prev"
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1}>
+        &laquo;
+      </PaginationButton>,
+    );
+
+    // Show maximum 5 page buttons
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, startPage + 4);
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageButtons.push(
+        <PaginationButton
+          key={i}
+          isActive={i === currentPage}
+          onClick={() => handlePageChange(i)}>
+          {i}
+        </PaginationButton>,
+      );
+    }
+
+    // Next button
+    pageButtons.push(
+      <PaginationButton
+        key="next"
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}>
+        &raquo;
+      </PaginationButton>,
+    );
+
+    return pageButtons;
+  };
+
   if (loading) {
     return (
       <S.PageContainer>
@@ -293,6 +436,14 @@ const UserManagementPage: React.FC = () => {
       </Header>
 
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
+
+      {/* Sort controls */}
+      <SortContainer>
+        <SortSelect value={sortOption} onChange={handleSortChange}>
+          <option value="name-asc">Ime (A-Ž)</option>
+          <option value="name-desc">Ime (Ž-A)</option>
+        </SortSelect>
+      </SortContainer>
 
       {users.map(user => (
         <UserCard key={user._id}>
@@ -336,6 +487,11 @@ const UserManagementPage: React.FC = () => {
 
       {users.length === 0 && !loading && (
         <EmptyState>Nema pronađenih korisnika</EmptyState>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <PaginationContainer>{renderPagination()}</PaginationContainer>
       )}
 
       <EditUserModal

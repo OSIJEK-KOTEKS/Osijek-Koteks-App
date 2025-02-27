@@ -153,7 +153,29 @@ export const apiService = {
       throw error;
     }
   },
+  // Get users with optional pagination and sorting
+  getUsersPaginated: async (
+    page: number = 1,
+    limit: number = 10,
+    sortBy: string = 'firstName',
+    sortOrder: 'asc' | 'desc' = 'asc',
+  ): Promise<PaginatedResponse<User>> => {
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', sortOrder);
 
+      const response = await api.get<PaginatedResponse<User>>(
+        `/api/users?${params}`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching paginated users:', error);
+      throw error;
+    }
+  },
   createUser: async (userData: RegistrationData): Promise<User> => {
     try {
       console.log('Creating new user:', {
