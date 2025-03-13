@@ -68,6 +68,11 @@ const ItemSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    // Added new field for in transit status
+    in_transit: {
+      type: Boolean,
+      default: false,
+    },
     //  Updated to have two photos
     approvalPhotoFront: photoSchema,
     approvalPhotoBack: photoSchema,

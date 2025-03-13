@@ -179,8 +179,9 @@ router.patch(
   ]),
   async (req, res) => {
     try {
-      const {approvalStatus, locationData} = req.body;
+      const {approvalStatus, locationData, inTransit} = req.body;
       console.log('Starting approval update with status:', approvalStatus);
+      console.log('In Transit value:', inTransit);
 
       if (
         !approvalStatus ||
@@ -264,7 +265,13 @@ router.patch(
             timestamp: new Date(parsedLocationData.timestamp),
           };
 
-          console.log('Updated item with Cloudinary photos');
+          // Set in_transit field based on checkbox
+          item.in_transit = inTransit === 'true';
+
+          console.log(
+            'Updated item with Cloudinary photos and in_transit status:',
+            item.in_transit,
+          );
         } catch (error) {
           console.error('Detailed upload error:', error);
           return res.status(500).json({
@@ -282,6 +289,7 @@ router.patch(
       } else {
         item.approvalDate = null;
         item.approvedBy = null;
+        item.in_transit = false; // Reset in_transit flag if not approved
 
         // If there are existing photos, delete them from Cloudinary
         if (item.approvalPhotoFront?.publicId) {
