@@ -43,12 +43,10 @@ router.get('/codes', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-// Get items by user's codes
-// In items.js route
-// In your items.js route, update the GET route:
 router.get('/', auth, async (req, res) => {
   try {
-    const {startDate, endDate, code, sortOrder, searchTitle} = req.query;
+    const {startDate, endDate, code, sortOrder, searchTitle, inTransitOnly} =
+      req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -80,6 +78,11 @@ router.get('/', auth, async (req, res) => {
       // Add code filter if specific code is requested
       if (code && code !== 'all') {
         query.code = code;
+      }
+
+      // Add in_transit filter if requested
+      if (inTransitOnly === 'true') {
+        query.in_transit = true;
       }
     }
 
@@ -129,7 +132,6 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
-
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
