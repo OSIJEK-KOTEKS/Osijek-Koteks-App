@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import {Text} from '@rneui/themed';
+import {Text, CheckBox} from '@rneui/themed'; // Import CheckBox component
 import Modal from 'react-native-modal';
 import {
   launchCamera,
@@ -36,6 +36,7 @@ interface PhotoCaptureModalProps {
     photoUriFront: string,
     photoUriBack: string,
     location: LocationData,
+    inTransit: boolean, // Add inTransit parameter
   ) => Promise<void>;
 }
 
@@ -54,6 +55,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [accuracyReading, setAccuracyReading] = useState<number | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
+  const [inTransit, setInTransit] = useState(false); // Add state for in_transit checkbox
 
   const clearLocationWatchers = () => {
     if (watchId !== null) {
@@ -320,13 +322,14 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
     setLoading(true);
     try {
-      console.log('Confirming with photos and location:', {
+      console.log('Confirming with photos, location, and in_transit status:', {
         photoFrontExists: !!photoFront,
         photoBackExists: !!photoBack,
         locationExists: !!location,
+        inTransit,
       });
 
-      await onConfirm(photoFront, photoBack, location);
+      await onConfirm(photoFront, photoBack, location, inTransit);
       onClose();
     } catch (error) {
       console.error('Error approving item:', error);
@@ -357,6 +360,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       setRetryCount(0);
       setLoading(false);
       setAccuracyReading(null);
+      setInTransit(false); // Reset inTransit when modal closes
       clearLocationWatchers();
     }
   }, [isVisible]);
@@ -445,6 +449,16 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           <View style={styles.photosContainer}>
             {renderPhotoSection('front', photoFront, setPhotoFront)}
             {renderPhotoSection('back', photoBack, setPhotoBack)}
+          </View>
+
+          {/* Add in_transit checkbox */}
+          <View style={styles.transitCheckboxContainer}>
+            <CheckBox
+              title="U tranzitu"
+              checked={inTransit}
+              onPress={() => setInTransit(!inTransit)}
+              containerStyle={styles.transitCheckbox}
+            />
           </View>
 
           <View style={styles.buttonContainer}>
@@ -620,6 +634,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+  },
+  // New styles for the in_transit checkbox
+  transitCheckboxContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  transitCheckbox: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    padding: 0,
   },
 });
 

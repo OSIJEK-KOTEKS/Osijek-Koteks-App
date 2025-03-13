@@ -74,7 +74,7 @@ export interface Item {
   _id: string;
   title: string;
   code: string;
-  registracija?: string; // Added this property
+  registracija?: string;
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
@@ -85,8 +85,19 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
-  approvalPhotoFront?: PhotoInfo | null;
-  approvalPhotoBack?: PhotoInfo | null;
+  in_transit: boolean; // Add the in_transit field
+  approvalPhotoFront?: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+    publicId: string | null;
+  } | null;
+  approvalPhotoBack?: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+    publicId: string | null;
+  } | null;
   approvalLocation?: {
     coordinates: {
       latitude: number;

@@ -149,6 +149,16 @@ export const ItemCard = React.memo(
                   </View>
                 </View>
 
+                {/* Add in_transit badge */}
+                {item.in_transit && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}></Text>
+                    <View style={styles.transitBadge}>
+                      <Text style={styles.transitText}>U tranzitu</Text>
+                    </View>
+                  </View>
+                )}
+
                 {item.approvalStatus === 'odobreno' && item.approvedBy && (
                   <>
                     <View style={styles.detailRow}>
@@ -200,6 +210,7 @@ export const ItemCard = React.memo(
     return (
       prevProps.item._id === nextProps.item._id &&
       prevProps.item.approvalStatus === nextProps.item.approvalStatus &&
+      prevProps.item.in_transit === nextProps.item.in_transit && // Add in_transit to memo check
       prevProps.userToken === nextProps.userToken &&
       prevProps.userProfile?.role === nextProps.userProfile?.role
     );
@@ -272,6 +283,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#000',
+  },
+  // Add styles for in_transit badge
+  transitBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#e3f2fd', // Light blue background
+    marginTop: 2,
+  },
+  transitText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1976d2', // Blue text
   },
   approveButton: {
     backgroundColor: '#4CAF50',

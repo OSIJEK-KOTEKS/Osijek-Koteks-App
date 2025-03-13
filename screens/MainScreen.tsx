@@ -412,12 +412,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     },
     [fetchData],
   );
-
   const handleApproveItem = useCallback(
     async (
       photoUriFront: string,
       photoUriBack: string,
       locationData: LocationData,
+      inTransit: boolean, // Add inTransit parameter
     ) => {
       if (!selectedItemId) return;
 
@@ -428,6 +428,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           photoUriFront,
           photoUriBack,
           locationData,
+          inTransit, // Pass inTransit flag to API
         );
         await fetchData(true);
         Alert.alert('Uspjeh', 'Dokument uspješno odobren');
@@ -636,8 +637,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             setPhotoModalVisible(false);
             setSelectedItemId(null);
           }}
-          onConfirm={(photoUriFront, photoUriBack, location) =>
-            handleApproveItem(photoUriFront, photoUriBack, location)
+          onConfirm={(photoUriFront, photoUriBack, location, inTransit) =>
+            handleApproveItem(photoUriFront, photoUriBack, location, inTransit)
           }
         />
 

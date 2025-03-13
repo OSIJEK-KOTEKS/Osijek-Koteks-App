@@ -314,10 +314,12 @@ export const apiService = {
     photoUriFront?: string,
     photoUriBack?: string,
     locationData?: LocationData,
+    inTransit: boolean = false, // Add inTransit parameter with default value
   ): Promise<Item> => {
     try {
       const formData = new FormData();
       formData.append('approvalStatus', approvalStatus);
+      formData.append('inTransit', inTransit.toString()); // Add inTransit flag to form data
 
       if (photoUriFront) {
         formData.append('photoFront', {
@@ -345,6 +347,7 @@ export const apiService = {
         hasPhotoFront: !!photoUriFront,
         hasPhotoBack: !!photoUriBack,
         hasLocation: !!locationData,
+        inTransit,
       });
 
       const response = await api.patch<Item>(
@@ -366,7 +369,6 @@ export const apiService = {
       throw error;
     }
   },
-
   updateUserPassword: async (
     userId: string,
     newPassword: string,
