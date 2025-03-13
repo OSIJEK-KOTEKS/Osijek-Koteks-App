@@ -277,6 +277,7 @@ export const apiService = {
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
       if (filters?.searchTitle)
         params.append('searchTitle', filters.searchTitle);
+      if (filters?.inTransitOnly) params.append('inTransitOnly', 'true'); // Add this line
 
       console.log('Request URL params:', params.toString()); // Debug log
 
@@ -289,7 +290,6 @@ export const apiService = {
       throw error;
     }
   },
-
   createItem: async (itemData: CreateItemInput): Promise<Item> => {
     try {
       console.log('Creating new item:', itemData);
@@ -316,18 +316,21 @@ export const apiService = {
     }
   },
 
+  // Update the updateItemApproval method in api.ts (web version)
   updateItemApproval: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
     photoFront: File,
     photoBack: File,
     locationData: LocationData,
+    inTransit: boolean = false, // Add inTransit parameter with default value
   ): Promise<Item> => {
     const formData = new FormData();
     formData.append('photoFront', photoFront);
     formData.append('photoBack', photoBack);
     formData.append('approvalStatus', approvalStatus);
     formData.append('locationData', JSON.stringify(locationData));
+    formData.append('inTransit', inTransit.toString()); // Add inTransit flag
 
     const response = await api.patch<Item>(
       `/api/items/${id}/approval`,
@@ -341,7 +344,6 @@ export const apiService = {
 
     return response.data;
   },
-
   deleteItem: async (id: string): Promise<void> => {
     try {
       console.log('Attempting to delete item with ID:', id);

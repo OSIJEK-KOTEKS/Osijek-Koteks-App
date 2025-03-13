@@ -37,6 +37,7 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
+  in_transit: boolean; // Add the in_transit field
   // Update the photo types to include front and back
   approvalPhotoFront?: {
     url: string | null;
@@ -88,7 +89,8 @@ export interface ItemFilters {
   endDate?: string;
   code?: string;
   sortOrder?: string;
-  searchTitle?: string; // Add this new field
+  searchTitle?: string;
+  inTransitOnly?: boolean;
 }
 
 export interface PaginationInfo {

@@ -160,12 +160,35 @@ const SuccessText = styled.div`
   }
 `;
 
+// Add checkbox styles
+const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-top: ${({theme}) => theme.spacing.medium};
+  background: ${({theme}) => theme.colors.background};
+  padding: ${({theme}) => theme.spacing.medium};
+  border-radius: ${({theme}) => theme.borderRadius};
+  border: 1px solid ${({theme}) => theme.colors.gray};
+`;
+
+const Checkbox = styled.input`
+  margin-right: ${({theme}) => theme.spacing.small};
+  cursor: pointer;
+`;
+
+const CheckboxLabel = styled.label`
+  color: ${({theme}) => theme.colors.text};
+  font-weight: 500;
+  cursor: pointer;
+`;
+
 interface ApprovalModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: Item;
   onSuccess: () => void;
 }
+
 const ApprovalModal: React.FC<ApprovalModalProps> = ({
   isOpen,
   onClose,
@@ -175,6 +198,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [photoFront, setPhotoFront] = useState<File | null>(null);
   const [photoBack, setPhotoBack] = useState<File | null>(null);
+  const [inTransit, setInTransit] = useState(false); // Add state for in_transit checkbox
 
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
@@ -218,13 +242,24 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
         timestamp: new Date(),
       };
 
+      // Add inTransit parameter to the form data
+      const formData = new FormData();
+      formData.append('photoFront', photoFront);
+      formData.append('photoBack', photoBack);
+      formData.append('approvalStatus', 'odobreno');
+      formData.append('locationData', JSON.stringify(fixedLocation));
+      formData.append('inTransit', inTransit.toString()); // Add inTransit flag
+
+      // Make the API call
       await apiService.updateItemApproval(
         item._id,
         'odobreno',
         photoFront,
         photoBack,
         fixedLocation,
+        inTransit,
       );
+
       onSuccess();
       onClose();
       alert('Dokument uspješno odobren');
@@ -275,6 +310,17 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
               <SuccessText>Fotografija uspješno odabrana</SuccessText>
             )}
           </FileInputSection>
+
+          {/* Add in_transit checkbox */}
+          <CheckboxContainer>
+            <Checkbox
+              type="checkbox"
+              id="inTransit"
+              checked={inTransit}
+              onChange={() => setInTransit(!inTransit)}
+            />
+            <CheckboxLabel htmlFor="inTransit">U tranzitu</CheckboxLabel>
+          </CheckboxContainer>
 
           <Alert>Lokacija će biti automatski dodana prilikom odobrenja.</Alert>
         </ContentSection>

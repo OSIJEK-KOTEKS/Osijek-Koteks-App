@@ -67,6 +67,18 @@ const StatusBadge = styled.span<{status: Item['approvalStatus']}>`
   margin-top: 8px;
 `;
 
+// Add this right after the StatusBadge component:
+const TransitBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  margin-top: 8px;
+  margin-left: 10px;
+`;
+
 const UserInfo = styled.div`
   margin-bottom: ${({theme}) => theme.spacing.medium};
   color: ${({theme}) => theme.colors.text};
@@ -143,6 +155,7 @@ const LoadMoreButton = styled(S.Button)`
 
 const Dashboard: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [inTransitOnly, setInTransitOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
@@ -203,6 +216,7 @@ const Dashboard: React.FC = () => {
             endDate: endOfDay.toISOString(),
             ...(selectedCode !== 'all' && {code: selectedCode}),
             sortOrder,
+            ...(inTransitOnly && {inTransitOnly: true}), // Add this line
           };
           console.log('Using regular filters:', filters);
         }
@@ -232,7 +246,15 @@ const Dashboard: React.FC = () => {
         }
       }
     },
-    [page, selectedDate, selectedCode, sortOrder, searchMode, searchValue],
+    [
+      page,
+      selectedDate,
+      selectedCode,
+      sortOrder,
+      searchMode,
+      searchValue,
+      inTransitOnly,
+    ], // Add inTransitOnly to dependencies
   );
 
   const fetchAllItemsForPrinting = async () => {
@@ -259,6 +281,7 @@ const Dashboard: React.FC = () => {
           endDate: endOfDay.toISOString(),
           ...(selectedCode !== 'all' && {code: selectedCode}),
           sortOrder,
+          ...(inTransitOnly && {inTransitOnly: true}), // Add this line
         };
       }
 
@@ -313,7 +336,6 @@ const Dashboard: React.FC = () => {
       });
     }
   }, [searchValue]);
-
   const clearSearch = useCallback(() => {
     console.log('Clearing search');
     setLoading(true);
@@ -325,6 +347,7 @@ const Dashboard: React.FC = () => {
     setSelectedDate(new Date()); // Reset date to today
     setSelectedCode('all'); // Reset code filter to 'all'
     setSortOrder('date-desc'); // Reset sort to default
+    setInTransitOnly(false); // Reset inTransitOnly filter
 
     // Wait for state updates to complete
     Promise.resolve().then(() => {
@@ -371,7 +394,7 @@ const Dashboard: React.FC = () => {
       setHasMore(true); // Reset hasMore flag
       fetchItems(false);
     }
-  }, [selectedDate, selectedCode, sortOrder]);
+  }, [selectedDate, selectedCode, sortOrder, inTransitOnly]); // Add inTransitOnly as dependency
 
   // First, ensure your useEffect looks like this
   useEffect(() => {
@@ -415,6 +438,7 @@ const Dashboard: React.FC = () => {
           endDate: endOfDay.toISOString(),
           ...(selectedCode !== 'all' && {code: selectedCode}),
           sortOrder,
+          ...(inTransitOnly && {inTransitOnly: true}), // Add this line
         };
       }
 
@@ -449,6 +473,7 @@ const Dashboard: React.FC = () => {
     selectedDate,
     selectedCode,
     sortOrder,
+    inTransitOnly, // Add inTransitOnly to dependencies
   ]);
 
   const handleLogout = async () => {
@@ -532,7 +557,7 @@ const Dashboard: React.FC = () => {
 
       <DashboardFilters
         selectedDate={selectedDate}
-        onDateChange={handleDateChange} // Use new handler
+        onDateChange={handleDateChange}
         selectedCode={selectedCode}
         onCodeChange={setSelectedCode}
         availableCodes={availableCodes}
@@ -544,6 +569,8 @@ const Dashboard: React.FC = () => {
         onSearchValueChange={setSearchValue}
         onSearch={handleSearch}
         onClearSearch={clearSearch}
+        inTransitOnly={inTransitOnly} // Add these two lines
+        onInTransitChange={setInTransitOnly}
       />
 
       <ItemsGrid>
@@ -567,6 +594,8 @@ const Dashboard: React.FC = () => {
             <StatusBadge status={item.approvalStatus}>
               {item.approvalStatus}
             </StatusBadge>
+            {/* Add the in_transit badge here */}
+            {item.in_transit && <TransitBadge>U tranzitu</TransitBadge>}
             {item.approvedBy && (
               <ItemDetails>
                 <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}

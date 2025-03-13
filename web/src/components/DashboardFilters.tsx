@@ -21,7 +21,9 @@ interface DashboardFiltersProps {
   searchValue: string;
   onSearchValueChange: (value: string) => void;
   onSearch: () => void;
-  onClearSearch: () => void; // Add this line
+  onClearSearch: () => void;
+  inTransitOnly: boolean;
+  onInTransitChange: (inTransitOnly: boolean) => void;
 }
 
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
@@ -37,7 +39,9 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   searchValue,
   onSearchValueChange,
   onSearch,
-  onClearSearch, // Add this line
+  onClearSearch,
+  inTransitOnly,
+  onInTransitChange,
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -142,6 +146,25 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
             <option value="date-asc">Najstariji prvo</option>
             <option value="approved-first">Odobreni prvo</option>
           </Select>
+        </FilterSection>
+
+        <FilterSection>
+          <FilterLabel htmlFor="in-transit-filter" $disabled={searchMode}>
+            Status tranzita
+          </FilterLabel>
+          <CheckboxContainer $disabled={searchMode}>
+            <Checkbox
+              id="in-transit-filter"
+              type="checkbox"
+              checked={inTransitOnly}
+              onChange={e => onInTransitChange(e.target.checked)}
+              disabled={searchMode}
+            />
+            <CheckboxLabel htmlFor="in-transit-filter" $disabled={searchMode}>
+              <TransitIcon>🚚</TransitIcon>
+              Samo oni u tranzitu
+            </CheckboxLabel>
+          </CheckboxContainer>
         </FilterSection>
       </FiltersGrid>
     </FiltersContainer>
@@ -261,6 +284,59 @@ const Select = styled.select<{$disabled?: boolean}>`
     border-color: ${({theme, $disabled}) =>
       $disabled ? theme.colors.disabled : theme.colors.primary};
   }
+`;
+
+// Enhanced styling for the transit filter
+const CheckboxContainer = styled.div<{$disabled?: boolean}>`
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: ${({$disabled}) => ($disabled ? '#f5f5f5' : 'white')};
+  border: 1px solid
+    ${({theme, $disabled}) =>
+      $disabled ? theme.colors.disabled : theme.colors.gray};
+  border-radius: ${({theme}) => theme.borderRadius};
+  cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
+  transition: all 0.2s ease-in-out;
+
+  &:hover:not([disabled]) {
+    border-color: ${({theme}) => theme.colors.primary};
+    background-color: ${({theme}) => theme.colors.background};
+  }
+`;
+
+const Checkbox = styled.input`
+  margin-right: 10px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: ${({theme}) => theme.colors.primary};
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+const CheckboxLabel = styled.label<{$disabled?: boolean}>`
+  color: ${({theme, $disabled}) =>
+    $disabled ? theme.colors.disabled : theme.colors.text};
+  cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
+  font-weight: 500;
+  user-select: none;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: ${({theme, $disabled}) =>
+      $disabled ? theme.colors.disabled : theme.colors.primary};
+  }
+`;
+
+const TransitIcon = styled.span`
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 16px;
 `;
 
 const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
