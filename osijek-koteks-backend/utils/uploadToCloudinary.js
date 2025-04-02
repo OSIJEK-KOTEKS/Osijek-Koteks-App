@@ -16,7 +16,7 @@ const uploadToCloudinary = async file => {
 
     // Handle different file types
     if (file.mimetype === 'application/pdf') {
-      // For PDFs, just convert buffer to base64 without processing with Sharp
+      // For PDFs, just convert buffer to base64 without processing with  Sharp
       console.log('Processing PDF file...');
       const b64 = fileBuffer.toString('base64');
       dataURI = 'data:' + file.mimetype + ';base64,' + b64;
