@@ -20,22 +20,26 @@ const uploadToCloudinary = async file => {
 
     // Handle different file types
     if (file.mimetype === 'application/pdf') {
-      // Generate a unique filename with PDF extension
-      const timestamp = Date.now();
-      const filename = file.originalname
+      // Generate a unique filename - remove any existing .pdf extension first
+      let filename = file.originalname
         ? path.parse(file.originalname).name // Get filename without extension
         : `document`;
 
+      // Remove .pdf if it's already in the filename to avoid duplicates
+      filename = filename.replace(/\.pdf$/i, '');
+
+      const timestamp = Date.now();
+      const uniqueFilename = `${filename}-${timestamp}`;
+
       // For PDFs, just convert buffer to base64 without processing with Sharp
-      console.log('Processing PDF file:', filename);
+      console.log('Processing PDF file:', uniqueFilename);
       const b64 = fileBuffer.toString('base64');
       dataURI = 'data:' + file.mimetype + ';base64,' + b64;
 
-      // Set resource_type to 'auto' for PDFs and ensure .pdf extension in public_id
-      uploadOptions.resource_type = 'auto';
-      uploadOptions.public_id = `${filename}-${timestamp}.pdf`; // Force .pdf extension
-      uploadOptions.format = 'pdf';
-      uploadOptions.flags = 'attachment';
+      // Use application/pdf type instead of image or raw
+      uploadOptions.resource_type = 'raw';
+      uploadOptions.public_id = uniqueFilename; // No extension in public_id
+      uploadOptions.type = 'upload';
 
       console.log('Using PDF upload options:', uploadOptions);
     } else {
