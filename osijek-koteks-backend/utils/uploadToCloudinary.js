@@ -1,10 +1,14 @@
 const cloudinary = require('../config/cloudinary');
 const sharp = require('sharp');
+const path = require('path');
 
 const uploadToCloudinary = async file => {
   try {
     console.log('Starting file upload process...');
-    console.log('File mimetype:', file.mimetype);
+    console.log('File details:', {
+      mimetype: file.mimetype,
+      originalname: file.originalname || 'document.pdf',
+    });
 
     let fileBuffer = file.buffer;
     let dataURI;
@@ -16,13 +20,23 @@ const uploadToCloudinary = async file => {
 
     // Handle different file types
     if (file.mimetype === 'application/pdf') {
-      // For PDFs, just convert buffer to base64 without processing with  Sharp
-      console.log('Processing PDF file...');
+      // Extract original filename and make sure it has .pdf extension
+      const filename = file.originalname
+        ? path.parse(file.originalname).name // Get filename without extension
+        : `document-${Date.now()}`;
+
+      // For PDFs, just convert buffer to base64 without processing with Sharp
+      console.log('Processing PDF file:', filename);
       const b64 = fileBuffer.toString('base64');
       dataURI = 'data:' + file.mimetype + ';base64,' + b64;
 
-      // Set resource_type to 'raw' for PDFs
+      // Set resource_type to 'raw' for PDFs and ensure .pdf extension in public_id
       uploadOptions.resource_type = 'raw';
+      uploadOptions.public_id = `${filename}.pdf`; // Force .pdf extension
+
+      // Add attachment flag to make it download with correct filename
+      uploadOptions.use_filename = true;
+      uploadOptions.unique_filename = true;
     } else {
       // For images, process with Sharp
       console.log('Processing image file...');
