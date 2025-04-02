@@ -18,7 +18,11 @@ const UserSchema = new mongoose.Schema({
     },
     default: [],
   },
-  role: {type: String, enum: ['admin', 'user', 'bot'], default: 'user'},
+  role: {
+    type: String,
+    enum: ['admin', 'user', 'bot', 'pc-user'],
+    default: 'user',
+  },
   isVerified: {type: Boolean, default: false},
   phoneNumber: {type: String},
   hasFullAccess: {type: Boolean, default: false},

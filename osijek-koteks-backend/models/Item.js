@@ -96,7 +96,27 @@ const ItemSchema = new mongoose.Schema(
         default: null,
       },
     },
+    approvalDocument: {
+      url: {
+        type: String,
+        default: null,
+      },
+      uploadDate: {
+        type: Date,
+        default: null,
+      },
+      mimeType: {
+        type: String,
+        default: null,
+        enum: [null, 'application/pdf'],
+      },
+      publicId: {
+        type: String,
+        default: null,
+      },
+    },
   },
+
   {
     timestamps: true,
   },

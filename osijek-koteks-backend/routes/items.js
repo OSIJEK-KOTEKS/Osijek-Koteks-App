@@ -9,15 +9,25 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
+
 // Configure multer for file upload
 const storage = multer.memoryStorage();
 
-// File filter for images
+// Updated file filter to accept both images and PDF
 const fileFilter = (req, file, cb) => {
-  if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
-    return cb(new Error('Only image files are allowed!'), false);
+  if (file.fieldname === 'pdfDocument') {
+    // Allow PDFs for pc-users
+    if (file.mimetype === 'application/pdf') {
+      return cb(null, true);
+    }
+    return cb(new Error('Only PDF files are allowed for pdfDocument!'), false);
+  } else {
+    // For photos (photoFront and photoBack fields)
+    if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
+      return cb(new Error('Only image files are allowed for photos!'), false);
+    }
+    cb(null, true);
   }
-  cb(null, true);
 };
 
 const upload = multer({
@@ -43,6 +53,7 @@ router.get('/codes', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder, searchTitle, inTransitOnly} =
@@ -132,6 +143,7 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
+
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
@@ -153,7 +165,7 @@ router.post('/', auth, async (req, res) => {
     const item = new Item({
       title,
       code,
-      registracija, // Add this field
+      registracija,
       pdfUrl,
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,
@@ -178,12 +190,14 @@ router.patch(
   upload.fields([
     {name: 'photoFront', maxCount: 1},
     {name: 'photoBack', maxCount: 1},
+    {name: 'pdfDocument', maxCount: 1}, // New field for pc-user PDF upload
   ]),
   async (req, res) => {
     try {
       const {approvalStatus, locationData, inTransit} = req.body;
       console.log('Starting approval update with status:', approvalStatus);
       console.log('In Transit value:', inTransit);
+      console.log('User role:', req.user.role);
 
       if (
         !approvalStatus ||
@@ -202,85 +216,145 @@ router.patch(
       if (approvalStatus === 'odobreno') {
         const files = req.files;
 
-        if (!files?.photoFront?.[0] || !files?.photoBack?.[0]) {
-          console.log('Missing required photos');
-          return res.status(400).json({
-            message: 'Both front and back photos are required for approval',
-          });
-        }
-
-        let parsedLocationData;
-        try {
-          parsedLocationData = JSON.parse(locationData);
-          console.log('Location data parsed:', parsedLocationData);
-        } catch (error) {
-          console.error('Location data parsing error:', error);
-          return res.status(400).json({
-            message: 'Invalid location data format',
-            error: error.message,
-          });
-        }
-
-        try {
-          console.log('Uploading front photo to Cloudinary...');
-          const frontPhotoResponse = await uploadToCloudinary(
-            files.photoFront[0],
-          );
-          console.log('Front photo uploaded:', frontPhotoResponse);
-
-          console.log('Uploading back photo to Cloudinary...');
-          const backPhotoResponse = await uploadToCloudinary(
-            files.photoBack[0],
-          );
-          console.log('Back photo uploaded:', backPhotoResponse);
-
-          // Delete old photos if they exist
-          if (item.approvalPhotoFront?.publicId) {
-            await cloudinary.uploader.destroy(item.approvalPhotoFront.publicId);
-          }
-          if (item.approvalPhotoBack?.publicId) {
-            await cloudinary.uploader.destroy(item.approvalPhotoBack.publicId);
+        // Handle different approval methods based on user role
+        if (req.user.role === 'pc-user') {
+          // PC-users upload PDFs
+          if (!files?.pdfDocument?.[0]) {
+            console.log('Missing required PDF document');
+            return res.status(400).json({
+              message: 'PDF document is required for approval by PC-user',
+            });
           }
 
-          // Set front photo data
-          item.approvalPhotoFront = {
-            url: frontPhotoResponse.url,
-            uploadDate: new Date(),
-            mimeType: files.photoFront[0].mimetype,
-            publicId: frontPhotoResponse.publicId,
-          };
+          try {
+            console.log('Uploading PDF document to Cloudinary...');
+            const pdfResponse = await uploadToCloudinary(files.pdfDocument[0]);
+            console.log('PDF document uploaded:', pdfResponse);
 
-          // Set back photo data
-          item.approvalPhotoBack = {
-            url: backPhotoResponse.url,
-            uploadDate: new Date(),
-            mimeType: files.photoBack[0].mimetype,
-            publicId: backPhotoResponse.publicId,
-          };
+            // Delete old PDF if it exists
+            if (item.approvalDocument?.publicId) {
+              await cloudinary.uploader.destroy(item.approvalDocument.publicId);
+            }
 
-          item.approvalLocation = {
-            coordinates: {
-              latitude: parsedLocationData.coordinates.latitude,
-              longitude: parsedLocationData.coordinates.longitude,
-            },
-            accuracy: parsedLocationData.accuracy,
-            timestamp: new Date(parsedLocationData.timestamp),
-          };
+            // Set document data
+            item.approvalDocument = {
+              url: pdfResponse.url,
+              uploadDate: new Date(),
+              mimeType: files.pdfDocument[0].mimetype,
+              publicId: pdfResponse.publicId,
+            };
 
-          // Set in_transit field based on checkbox
-          item.in_transit = inTransit === 'true';
+            // Set default location for PC-user (office coordinates)
+            item.approvalLocation = {
+              coordinates: {
+                latitude: 45.56204169974961,
+                longitude: 18.678308891755552,
+              },
+              accuracy: 10,
+              timestamp: new Date(),
+            };
 
-          console.log(
-            'Updated item with Cloudinary photos and in_transit status:',
-            item.in_transit,
-          );
-        } catch (error) {
-          console.error('Detailed upload error:', error);
-          return res.status(500).json({
-            message: 'Error uploading images',
-            error: error.message,
-            stack: error.stack,
-          });
+            // Set in_transit field based on checkbox
+            item.in_transit = inTransit === 'true';
+
+            console.log(
+              'Updated item with PDF document and in_transit status:',
+              item.in_transit,
+            );
+          } catch (error) {
+            console.error('Detailed PDF upload error:', error);
+            return res.status(500).json({
+              message: 'Error uploading PDF document',
+              error: error.message,
+              stack: error.stack,
+            });
+          }
+        } else {
+          // Regular users upload photos
+          if (!files?.photoFront?.[0] || !files?.photoBack?.[0]) {
+            console.log('Missing required photos');
+            return res.status(400).json({
+              message: 'Both front and back photos are required for approval',
+            });
+          }
+
+          let parsedLocationData;
+          try {
+            parsedLocationData = JSON.parse(locationData);
+            console.log('Location data parsed:', parsedLocationData);
+          } catch (error) {
+            console.error('Location data parsing error:', error);
+            return res.status(400).json({
+              message: 'Invalid location data format',
+              error: error.message,
+            });
+          }
+
+          try {
+            console.log('Uploading front photo to Cloudinary...');
+            const frontPhotoResponse = await uploadToCloudinary(
+              files.photoFront[0],
+            );
+            console.log('Front photo uploaded:', frontPhotoResponse);
+
+            console.log('Uploading back photo to Cloudinary...');
+            const backPhotoResponse = await uploadToCloudinary(
+              files.photoBack[0],
+            );
+            console.log('Back photo uploaded:', backPhotoResponse);
+
+            // Delete old photos if they exist
+            if (item.approvalPhotoFront?.publicId) {
+              await cloudinary.uploader.destroy(
+                item.approvalPhotoFront.publicId,
+              );
+            }
+            if (item.approvalPhotoBack?.publicId) {
+              await cloudinary.uploader.destroy(
+                item.approvalPhotoBack.publicId,
+              );
+            }
+
+            // Set front photo data
+            item.approvalPhotoFront = {
+              url: frontPhotoResponse.url,
+              uploadDate: new Date(),
+              mimeType: files.photoFront[0].mimetype,
+              publicId: frontPhotoResponse.publicId,
+            };
+
+            // Set back photo data
+            item.approvalPhotoBack = {
+              url: backPhotoResponse.url,
+              uploadDate: new Date(),
+              mimeType: files.photoBack[0].mimetype,
+              publicId: backPhotoResponse.publicId,
+            };
+
+            item.approvalLocation = {
+              coordinates: {
+                latitude: parsedLocationData.coordinates.latitude,
+                longitude: parsedLocationData.coordinates.longitude,
+              },
+              accuracy: parsedLocationData.accuracy,
+              timestamp: new Date(parsedLocationData.timestamp),
+            };
+
+            // Set in_transit field based on checkbox
+            item.in_transit = inTransit === 'true';
+
+            console.log(
+              'Updated item with Cloudinary photos and in_transit status:',
+              item.in_transit,
+            );
+          } catch (error) {
+            console.error('Detailed upload error:', error);
+            return res.status(500).json({
+              message: 'Error uploading images',
+              error: error.message,
+              stack: error.stack,
+            });
+          }
         }
       }
 
@@ -293,6 +367,7 @@ router.patch(
         item.approvedBy = null;
         item.in_transit = false; // Reset in_transit flag if not approved
 
+        // Delete and reset all approval assets
         // If there are existing photos, delete them from Cloudinary
         if (item.approvalPhotoFront?.publicId) {
           await cloudinary.uploader.destroy(item.approvalPhotoFront.publicId);
@@ -300,17 +375,26 @@ router.patch(
         if (item.approvalPhotoBack?.publicId) {
           await cloudinary.uploader.destroy(item.approvalPhotoBack.publicId);
         }
+        if (item.approvalDocument?.publicId) {
+          await cloudinary.uploader.destroy(item.approvalDocument.publicId);
+        }
 
-        // Reset front photo data
+        // Reset photo data
         item.approvalPhotoFront = {
           url: null,
           uploadDate: null,
           mimeType: null,
           publicId: null,
         };
-
-        // Reset back photo data
         item.approvalPhotoBack = {
+          url: null,
+          uploadDate: null,
+          mimeType: null,
+          publicId: null,
+        };
+
+        // Reset document data
+        item.approvalDocument = {
           url: null,
           uploadDate: null,
           mimeType: null,
@@ -346,6 +430,7 @@ router.patch(
     }
   },
 );
+
 // Get a specific item
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -388,7 +473,7 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
       return res.status(404).json({message: 'Item not found'});
     }
 
-    if (code && !validateCode(code)) {
+    if (code && typeof validateCode === 'function' && !validateCode(code)) {
       return res.status(400).json({message: 'Code is not in valid form'});
     }
 
