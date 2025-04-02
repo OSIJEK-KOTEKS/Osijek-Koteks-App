@@ -41,7 +41,7 @@ const PCUserApproveButton: React.FC<PCUserApproveButtonProps> = ({
   return (
     <>
       <ApproveActionButton onClick={handleClick} type="button">
-        Odobri PDF
+        Potvrdi
       </ApproveActionButton>
 
       <PCUserApprovalModal
