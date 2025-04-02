@@ -645,9 +645,40 @@ const Dashboard: React.FC = () => {
                   {/* Display PDF document when available */}
                   {item.approvalDocument?.url && (
                     <ActionButton
-                      onClick={() =>
-                        window.open(item.approvalDocument!.url!, '_blank')
-                      }>
+                      onClick={async () => {
+                        try {
+                          const pdfUrl = item.approvalDocument!.url!;
+
+                          // Get the filename from the URL
+                          const urlParts = pdfUrl.split('/');
+                          const filename = `${
+                            urlParts[urlParts.length - 1]
+                          }.pdf`;
+
+                          // Fetch the file as a blob
+                          const response = await fetch(pdfUrl);
+                          const blob = await response.blob();
+
+                          // Create a blob URL
+                          const blobUrl = window.URL.createObjectURL(
+                            new Blob([blob], {type: 'application/pdf'}),
+                          );
+
+                          // Create a temporary link and trigger download
+                          const a = document.createElement('a');
+                          a.href = blobUrl;
+                          a.download = filename;
+                          document.body.appendChild(a);
+                          a.click();
+
+                          // Clean up
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                          console.error('Error downloading PDF:', error);
+                          window.open(item.approvalDocument!.url!, '_blank');
+                        }
+                      }}>
                       Dokumentacija PDF
                     </ActionButton>
                   )}
