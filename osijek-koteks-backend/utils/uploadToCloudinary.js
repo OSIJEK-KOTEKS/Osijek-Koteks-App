@@ -20,38 +20,36 @@ const uploadToCloudinary = async file => {
 
     // Handle different file types
     if (file.mimetype === 'application/pdf') {
-      // Extract original filename and make sure it has .pdf extension
+      // Generate a unique filename with PDF extension
+      const timestamp = Date.now();
       const filename = file.originalname
         ? path.parse(file.originalname).name // Get filename without extension
-        : `document-${Date.now()}`;
+        : `document`;
 
       // For PDFs, just convert buffer to base64 without processing with Sharp
       console.log('Processing PDF file:', filename);
       const b64 = fileBuffer.toString('base64');
       dataURI = 'data:' + file.mimetype + ';base64,' + b64;
 
-      // Set resource_type to 'raw' for PDFs and ensure .pdf extension in public_id
-      uploadOptions.resource_type = 'raw';
-      uploadOptions.public_id = `${filename}.pdf`; // Force .pdf extension
+      // Set resource_type to 'auto' for PDFs and ensure .pdf extension in public_id
+      uploadOptions.resource_type = 'auto';
+      uploadOptions.public_id = `${filename}-${timestamp}.pdf`; // Force .pdf extension
+      uploadOptions.format = 'pdf';
+      uploadOptions.flags = 'attachment';
 
-      // Add attachment flag to make it download with correct filename
-      uploadOptions.use_filename = true;
-      uploadOptions.unique_filename = true;
+      console.log('Using PDF upload options:', uploadOptions);
     } else {
-      // For images, process with Sharp
+      // For images, process with Sharp (unchanged)
       console.log('Processing image file...');
       try {
-        // Process the image with Sharp
         const processedImageBuffer = await sharp(fileBuffer)
           .resize(1200, 1200, {
-            // Max dimensions
             fit: 'inside',
             withoutEnlargement: true,
           })
           .jpeg({
-            // Convert to JPEG
-            quality: 70, // Reduce quality
-            mozjpeg: true, // Use mozjpeg compression
+            quality: 70,
+            mozjpeg: true,
           })
           .toBuffer();
 
@@ -66,17 +64,14 @@ const uploadToCloudinary = async file => {
           ) + '%',
         );
 
-        // Convert the processed buffer to base64
         const b64 = processedImageBuffer.toString('base64');
         dataURI = 'data:' + file.mimetype + ';base64,' + b64;
       } catch (error) {
         console.error('Error in image processing:', error);
-        // Fallback to original file if Sharp processing fails
         const b64 = fileBuffer.toString('base64');
         dataURI = 'data:' + file.mimetype + ';base64,' + b64;
       }
 
-      // Set resource_type and options for images
       uploadOptions.resource_type = 'image';
       uploadOptions.quality_analysis = true;
       uploadOptions.transformation = [{quality: 'auto:good'}];
