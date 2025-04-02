@@ -539,11 +539,16 @@ export const UserManagementScreen: React.FC = () => {
                     <Picker
                       selectedValue={formData.role}
                       onValueChange={value =>
-                        setFormData({...formData, role: value as User['role']})
+                        setFormData({
+                          ...formData,
+                          role: value as User['role'],
+                        })
                       }
                       style={styles.picker}
-                      itemStyle={styles.pickerItem}>
+                      dropdownIconColor="#2196F3"
+                      mode="dropdown">
                       <Picker.Item label="Korisnik" value="user" />
+                      <Picker.Item label="PC Korisnik" value="pc-user" />
                       <Picker.Item label="Administrator" value="admin" />
                       <Picker.Item label="Bot" value="bot" />
                     </Picker>

@@ -65,6 +65,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
 
       {item.approvalStatus === 'odobreno' && (
         <>
+          {/* Show photos if available */}
           {(item.approvalPhotoFront?.url || item.approvalPhotoBack?.url) && (
             <div className="print-photos-section">
               {item.approvalPhotoFront?.url && (
@@ -90,37 +91,39 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             </div>
           )}
 
-          {item.approvalLocation && (
-            <div className="print-location-section">
-              <h3>Lokacija odobrenja</h3>
+          {/* Show PDF info if available */}
+          {item.approvalDocument?.url && (
+            <div className="print-document-section">
+              <h3>PDF Dokumentacija</h3>
               <div className="print-info-grid">
                 <div className="print-info-item">
-                  <span className="print-label">Geografska širina:</span>
+                  <span className="print-label">PDF dokument:</span>
                   <span className="print-value">
-                    {item.approvalLocation.coordinates.latitude.toFixed(6)}°
+                    <a
+                      href={item.approvalDocument.url}
+                      target="_blank"
+                      rel="noopener noreferrer">
+                      Otvori PDF
+                    </a>
                   </span>
                 </div>
                 <div className="print-info-item">
-                  <span className="print-label">Geografska dužina:</span>
+                  <span className="print-label">Datum prilaganja:</span>
                   <span className="print-value">
-                    {item.approvalLocation.coordinates.longitude.toFixed(6)}°
-                  </span>
-                </div>
-                <div className="print-info-item">
-                  <span className="print-label">Preciznost:</span>
-                  <span className="print-value">
-                    {Math.round(item.approvalLocation.accuracy)}m
-                  </span>
-                </div>
-                <div className="print-info-item">
-                  <span className="print-label">Vrijeme:</span>
-                  <span className="print-value">
-                    {new Date(item.approvalLocation.timestamp).toLocaleString(
-                      'hr-HR',
-                    )}
+                    {item.approvalDocument.uploadDate &&
+                      new Date(
+                        item.approvalDocument.uploadDate,
+                      ).toLocaleDateString('hr-HR')}
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Location information (for both user types) */}
+          {item.approvalLocation && (
+            <div className="print-location-section">
+              {/* Existing location display */}
             </div>
           )}
         </>

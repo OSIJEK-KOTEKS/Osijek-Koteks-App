@@ -227,6 +227,42 @@ export const apiService = {
       throw error;
     }
   },
+  updateItemApprovalWithPdf: async (
+    id: string,
+    approvalStatus: Item['approvalStatus'],
+    pdfDocument: File,
+    inTransit: boolean = false,
+  ): Promise<Item> => {
+    try {
+      console.log('Sending PDF approval request:', {
+        id,
+        approvalStatus,
+        pdfName: pdfDocument.name,
+        pdfSize: pdfDocument.size,
+        inTransit,
+      });
+
+      const formData = new FormData();
+      formData.append('pdfDocument', pdfDocument);
+      formData.append('approvalStatus', approvalStatus);
+      formData.append('inTransit', inTransit.toString());
+
+      const response = await api.patch<Item>(
+        `/api/items/${id}/approval`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Error in PDF approval:', error);
+      throw error;
+    }
+  },
 
   updateUserPassword: async (
     userId: string,

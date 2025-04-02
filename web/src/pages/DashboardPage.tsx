@@ -14,6 +14,7 @@ import CreateItemModal from '../components/CreateItemModal';
 import PrintAllButton from '../components/PrintAllButton';
 import PrintTableButton from 'src/components/PrintTableButton';
 import ApproveButton from '../components/ApproveButton';
+import PCUserApproveButton from '../components/PCUserApproveButton';
 // Styled Components
 const Header = styled.div`
   display: flex;
@@ -613,28 +614,44 @@ const Dashboard: React.FC = () => {
               </ActionButton>
 
               {item.approvalStatus === 'odobreno' && (
-                <PhotoButtonsGroup>
-                  {item.approvalPhotoFront?.url && (
+                <>
+                  {/* Display Photos when available */}
+                  {(item.approvalPhotoFront?.url ||
+                    item.approvalPhotoBack?.url) && (
+                    <PhotoButtonsGroup>
+                      {item.approvalPhotoFront?.url && (
+                        <ActionButton
+                          onClick={() =>
+                            setSelectedImage(
+                              getImageUrl(item.approvalPhotoFront!.url!),
+                            )
+                          }>
+                          Registracija
+                        </ActionButton>
+                      )}
+                      {item.approvalPhotoBack?.url && (
+                        <ActionButton
+                          onClick={() =>
+                            setSelectedImage(
+                              getImageUrl(item.approvalPhotoBack!.url!),
+                            )
+                          }>
+                          Materijal
+                        </ActionButton>
+                      )}
+                    </PhotoButtonsGroup>
+                  )}
+
+                  {/* Display PDF document when available */}
+                  {item.approvalDocument?.url && (
                     <ActionButton
                       onClick={() =>
-                        setSelectedImage(
-                          getImageUrl(item.approvalPhotoFront!.url!),
-                        )
+                        window.open(item.approvalDocument!.url!, '_blank')
                       }>
-                      Registracija
+                      Dokumentacija PDF
                     </ActionButton>
                   )}
-                  {item.approvalPhotoBack?.url && (
-                    <ActionButton
-                      onClick={() =>
-                        setSelectedImage(
-                          getImageUrl(item.approvalPhotoBack!.url!),
-                        )
-                      }>
-                      Materijal
-                    </ActionButton>
-                  )}
-                </PhotoButtonsGroup>
+                </>
               )}
 
               {item.approvalStatus === 'odobreno' && item.approvalLocation && (
@@ -643,8 +660,22 @@ const Dashboard: React.FC = () => {
                 </ActionButton>
               )}
 
-              {user?.role === 'admin' && (
-                <ApproveButton item={item} onSuccess={() => fetchItems(true)} />
+              {/* Show appropriate approval button based on user role */}
+              {item.approvalStatus === 'na čekanju' && (
+                <>
+                  {user?.role === 'admin' && (
+                    <ApproveButton
+                      item={item}
+                      onSuccess={() => fetchItems(true)}
+                    />
+                  )}
+                  {user?.role === 'pc-user' && (
+                    <PCUserApproveButton
+                      item={item}
+                      onSuccess={() => fetchItems(true)}
+                    />
+                  )}
+                </>
               )}
 
               <PrintButton item={item} />

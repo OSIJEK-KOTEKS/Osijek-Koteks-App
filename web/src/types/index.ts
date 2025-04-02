@@ -5,7 +5,7 @@ export interface User {
   lastName: string;
   company: string;
   codes: string[];
-  role: 'admin' | 'user' | 'bot';
+  role: 'admin' | 'user' | 'bot' | 'pc-user';
   isVerified: boolean;
   phoneNumber?: string;
   hasFullAccess: boolean;
@@ -17,7 +17,7 @@ export interface RegistrationData {
   firstName: string;
   lastName: string;
   company: string;
-  role: 'admin' | 'user' | 'bot';
+  role: 'admin' | 'user' | 'bot' | 'pc-user';
   codes: string[];
   hasFullAccess?: boolean;
 }
@@ -37,8 +37,8 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
-  in_transit: boolean; // Add the in_transit field
-  // Update the photo types to include front and back
+  in_transit: boolean;
+  // Photos for regular users
   approvalPhotoFront?: {
     url: string | null;
     uploadDate: string | null;
@@ -46,6 +46,13 @@ export interface Item {
     publicId: string | null;
   } | null;
   approvalPhotoBack?: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+    publicId: string | null;
+  } | null;
+  // PDF for PC-users
+  approvalDocument?: {
     url: string | null;
     uploadDate: string | null;
     mimeType: string | null;
@@ -148,4 +155,10 @@ export interface ApiService {
     locationData: LocationData,
   ) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
+  updateItemApprovalWithPdf: (
+    id: string,
+    approvalStatus: Item['approvalStatus'],
+    pdfDocument: File,
+    inTransit: boolean,
+  ) => Promise<Item>;
 }

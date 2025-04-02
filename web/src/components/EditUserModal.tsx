@@ -355,6 +355,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 })
               }>
               <option value="user">Korisnik</option>
+              <option value="pc-user">PC Korisnik</option>
               <option value="admin">Administrator</option>
               <option value="bot">Bot</option>
             </Select>

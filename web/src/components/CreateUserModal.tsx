@@ -327,7 +327,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
           <FormGroup>
             <Label>Uloga</Label>
             <Select
-              value={formData.role}
+              value={formData.role || 'user'}
               onChange={e =>
                 setFormData({
                   ...formData,
@@ -335,6 +335,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 })
               }>
               <option value="user">Korisnik</option>
+              <option value="pc-user">PC Korisnik</option>
               <option value="admin">Administrator</option>
               <option value="bot">Bot</option>
             </Select>
