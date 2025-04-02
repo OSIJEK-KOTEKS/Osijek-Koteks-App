@@ -16,15 +16,18 @@ const storage = multer.memoryStorage();
 // Updated file filter to accept both images and PDF
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === 'pdfDocument') {
-    // Allow PDFs for pc-users
+    // Check mime type for PDFs
     if (file.mimetype === 'application/pdf') {
       return cb(null, true);
     }
-    return cb(new Error('Only PDF files are allowed for pdfDocument!'), false);
+    return cb(
+      new Error('Samo PDF datoteke su dozvoljene za pdfDocument!'),
+      false,
+    );
   } else {
     // For photos (photoFront and photoBack fields)
     if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
-      return cb(new Error('Only image files are allowed for photos!'), false);
+      return cb(new Error('Samo slike su dozvoljene za fotografije!'), false);
     }
     cb(null, true);
   }
