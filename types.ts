@@ -69,12 +69,12 @@ export interface PhotoInfo {
   publicId: string | null;
 }
 
-// Item Types
 export interface Item {
   _id: string;
   title: string;
   code: string;
   registracija?: string;
+  neto?: number; // Add the new field
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
@@ -85,7 +85,7 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
-  in_transit: boolean; // Add the in_transit field
+  in_transit: boolean;
   approvalPhotoFront?: {
     url: string | null;
     uploadDate: string | null;
@@ -93,6 +93,12 @@ export interface Item {
     publicId: string | null;
   } | null;
   approvalPhotoBack?: {
+    url: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+    publicId: string | null;
+  } | null;
+  approvalDocument?: {
     url: string | null;
     uploadDate: string | null;
     mimeType: string | null;
@@ -112,14 +118,15 @@ export interface CreateItemFormData {
   title: string;
   code: string;
   registracija?: string;
+  neto?: number; // Add the new field
   pdfUrl: string;
   creationDate?: string;
 }
-
 export interface CreateItemInput {
   title: string;
   code: string;
   registracija?: string;
+  neto?: number; // Add the new field
   pdfUrl: string;
   creationDate?: string;
   creationTime?: string;

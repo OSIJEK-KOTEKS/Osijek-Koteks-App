@@ -156,7 +156,7 @@ router.post('/', auth, async (req, res) => {
         .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
-    const {title, code, registracija, pdfUrl, creationDate} = req.body;
+    const {title, code, registracija, neto, pdfUrl, creationDate} = req.body;
 
     const now = new Date();
     const creationTime = now.toLocaleTimeString('hr-HR', {
@@ -165,6 +165,7 @@ router.post('/', auth, async (req, res) => {
       timeZone: 'Europe/Zagreb',
     });
 
+    // Create the item object with optional neto field
     const item = new Item({
       title,
       code,
@@ -174,6 +175,11 @@ router.post('/', auth, async (req, res) => {
       creationTime,
       approvalStatus: 'na čekanju',
     });
+
+    // Add neto field if it exists
+    if (neto !== undefined) {
+      item.neto = neto;
+    }
 
     const newItem = await item.save();
     res.status(201).json(newItem);
@@ -463,13 +469,58 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Update an item (admin only)
+router.post('/', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'bot') {
+      return res
+        .status(403)
+        .json({message: 'Access denied. Admin or Bot users only.'});
+    }
+
+    const {title, code, registracija, neto, pdfUrl, creationDate} = req.body;
+
+    const now = new Date();
+    const creationTime = now.toLocaleTimeString('hr-HR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
+    });
+
+    // Create the item object with optional neto field
+    const item = new Item({
+      title,
+      code,
+      registracija,
+      pdfUrl,
+      creationDate: creationDate ? new Date(creationDate) : now,
+      creationTime,
+      approvalStatus: 'na čekanju',
+    });
+
+    // Add neto field if it exists
+    if (neto !== undefined) {
+      item.neto = neto;
+    }
+
+    const newItem = await item.save();
+    res.status(201).json(newItem);
+  } catch (err) {
+    console.error('Error creating item:', err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({message: err.message});
+    }
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
+// Update an item (admin only)
 router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({message: 'Access denied. Admin only.'});
     }
 
-    const {title, code, pdfUrl, creationDate} = req.body;
+    const {title, code, neto, pdfUrl, creationDate} = req.body;
     const item = await Item.findById(req.params.id);
 
     if (!item) {
@@ -486,7 +537,12 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     if (pdfUrl) item.pdfUrl = pdfUrl;
     if (creationDate) item.creationDate = new Date(creationDate);
 
-    // Handle photo upload if present
+    // Update neto field - note we check if it's in the request body because 0 is a valid value
+    if (neto !== undefined) {
+      item.neto = neto;
+    }
+
+    // Handle photo upload if present (existing code)
     if (req.file) {
       try {
         console.log('Uploading new photo to Cloudinary...');
@@ -525,7 +581,6 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-
 // Delete an item (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {

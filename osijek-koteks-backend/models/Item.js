@@ -1,3 +1,4 @@
+// Item.js (MongoDB Schema)
 const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
@@ -35,6 +36,10 @@ const ItemSchema = new mongoose.Schema(
         },
         message: 'Code cannot be empty',
       },
+    },
+    neto: {
+      type: Number,
+      required: false,
     },
     pdfUrl: {
       type: String,
