@@ -1,3 +1,4 @@
+// Complete updated PrintButton.tsx
 import React, {useRef, useCallback} from 'react';
 import styled from 'styled-components';
 import {Item} from '../types';

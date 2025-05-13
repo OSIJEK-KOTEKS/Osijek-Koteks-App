@@ -7,8 +7,8 @@ import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
 import LocationViewerModal from '../components/LocationViewerModal';
-import PrintButton from 'src/components/PrintButton';
 import Logo from '../components/Logo';
+import PrintButton from '../components/PrintButton';
 import DashboardFilters from '../components/DashboardFilters';
 import CreateItemModal from '../components/CreateItemModal';
 import PrintAllButton from '../components/PrintAllButton';
@@ -586,6 +586,12 @@ const Dashboard: React.FC = () => {
             <ItemDetails>
               <strong>RN:</strong> {item.code}
             </ItemDetails>
+            {/* Add the neto field display here */}
+            {item.neto !== undefined && (
+              <ItemDetails>
+                <strong>Neto:</strong> {item.neto}
+              </ItemDetails>
+            )}
             <ItemDetails>
               <strong>Datum i vrijeme:</strong>{' '}
               {item.creationTime
@@ -595,7 +601,6 @@ const Dashboard: React.FC = () => {
             <StatusBadge status={item.approvalStatus}>
               {item.approvalStatus}
             </StatusBadge>
-            {/* Add the in_transit badge here */}
             {item.in_transit && <TransitBadge>U tranzitu</TransitBadge>}
             {item.approvedBy && (
               <ItemDetails>
@@ -612,7 +617,7 @@ const Dashboard: React.FC = () => {
               <ActionButton onClick={() => window.open(item.pdfUrl, '_blank')}>
                 Otvori PDF
               </ActionButton>
-
+              <PrintButton item={item} />
               {item.approvalStatus === 'odobreno' && (
                 <>
                   {/* Display Photos when available */}
@@ -684,13 +689,11 @@ const Dashboard: React.FC = () => {
                   )}
                 </>
               )}
-
               {item.approvalStatus === 'odobreno' && item.approvalLocation && (
                 <ActionButton onClick={() => setSelectedLocation(item)}>
                   Lokacija
                 </ActionButton>
               )}
-
               {/* Show appropriate approval button based on user role */}
               {item.approvalStatus === 'na čekanju' && (
                 <>
@@ -708,9 +711,6 @@ const Dashboard: React.FC = () => {
                   )}
                 </>
               )}
-
-              <PrintButton item={item} />
-
               {user?.role === 'admin' && (
                 <DeleteButton onClick={() => handleDelete(item._id)}>
                   Izbriši

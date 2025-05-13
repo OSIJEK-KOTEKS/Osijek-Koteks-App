@@ -158,6 +158,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     title: '',
     code: '',
     registracija: '',
+    neto: undefined, // Initialize neto as undefined
     pdfUrl: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -174,6 +175,11 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     }
     if (!formData.pdfUrl.trim()) {
       setError('PDF link je obavezan');
+      return false;
+    }
+    // Validate that neto is a number if provided
+    if (formData.neto !== undefined && isNaN(Number(formData.neto))) {
+      setError('Neto mora biti broj');
       return false;
     }
     return true;
@@ -203,6 +209,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
         title: '',
         code: '',
         registracija: '',
+        neto: undefined,
         pdfUrl: '',
       });
       setError('');
@@ -261,6 +268,26 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 }
                 placeholder="Unesite registraciju"
                 id="registracija"
+              />
+            </FormGroup>
+
+            {/* Add the new neto field */}
+            <FormGroup>
+              <Label>Neto</Label>
+              <Input
+                type="number"
+                value={formData.neto === undefined ? '' : formData.neto}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    neto:
+                      e.target.value === ''
+                        ? undefined
+                        : Number(e.target.value),
+                  })
+                }
+                placeholder="Unesite neto"
+                id="neto"
               />
             </FormGroup>
 

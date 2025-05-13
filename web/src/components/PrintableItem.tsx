@@ -34,6 +34,13 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               <span className="print-value">{item.registracija}</span>
             </div>
           )}
+          {/* Add the new neto field to the printed view */}
+          {item.neto !== undefined && (
+            <div className="print-info-item">
+              <span className="print-label">Neto:</span>
+              <span className="print-value">{item.neto}</span>
+            </div>
+          )}
           <div className="print-info-item">
             <span className="print-label">Datum kreiranja:</span>
             <span className="print-value">
@@ -94,19 +101,8 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           {/* Show PDF info if available */}
           {item.approvalDocument?.url && (
             <div className="print-document-section">
-              <h3>PDF Dokumentacija</h3>
               <div className="print-info-grid">
-                <div className="print-info-item">
-                  <span className="print-label">PDF dokument:</span>
-                  <span className="print-value">
-                    <a
-                      href={item.approvalDocument.url}
-                      target="_blank"
-                      rel="noopener noreferrer">
-                      Otvori PDF
-                    </a>
-                  </span>
-                </div>
+                <div className="print-info-item"></div>
                 <div className="print-info-item">
                   <span className="print-label">Datum prilaganja:</span>
                   <span className="print-value">
@@ -120,7 +116,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             </div>
           )}
 
-          {/* Location information (for both user types) */}
+          {/* Location information */}
           {item.approvalLocation && (
             <div className="print-location-section">
               {/* Existing location display */}

@@ -1,3 +1,4 @@
+// Modified PrintTableButton.tsx that can handle both item and items props
 import React, {useCallback, useRef, useState} from 'react';
 import ReactDOMServer from 'react-dom/server';
 import styled from 'styled-components';
@@ -47,6 +48,7 @@ const PrintableTable = ({items}: {items: Item[]}) => {
             <th>Naziv</th>
             <th>RN</th>
             <th>Registracija</th>
+            <th>Neto</th>
             <th>Datum kreiranja</th>
             <th>Status</th>
             <th>Odobrio</th>
@@ -59,6 +61,7 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               <td>{item.title}</td>
               <td>{item.code}</td>
               <td>{item.registracija || '-'}</td>
+              <td>{item.neto !== undefined ? item.neto : '-'}</td>
               <td>
                 {item.creationTime
                   ? `${item.creationDate} ${item.creationTime}`
@@ -149,26 +152,40 @@ const PrintableTable = ({items}: {items: Item[]}) => {
   );
 };
 
+// Updated interface to handle both a single item or an array of items
 interface PrintTableButtonProps {
-  items: Item[];
-  totalItems: number;
-  isLoading: boolean;
-  onPrintAll: () => Promise<Item[]>;
+  items?: Item[];
+  item?: Item;
+  totalItems?: number;
+  isLoading?: boolean;
+  onPrintAll?: () => Promise<Item[]>;
 }
 
 const PrintTableButton: React.FC<PrintTableButtonProps> = ({
   items,
-  totalItems,
-  isLoading,
+  item,
+  totalItems = 0,
+  isLoading = false,
   onPrintAll,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
   const printContainerRef = useRef<HTMLDivElement>(null);
 
+  // Convert single item to array if needed
+  const itemsToDisplay = item ? [item] : items || [];
+
   const handlePrint = useCallback(async () => {
     try {
       setIsPrinting(true);
-      const allItems = await onPrintAll();
+
+      // If we have a single item, just use that
+      // Otherwise, if we have onPrintAll function, use that to get all items
+      // Otherwise, just use the items we have
+      let allItems = item
+        ? [item]
+        : onPrintAll
+        ? await onPrintAll()
+        : itemsToDisplay;
 
       if (!allItems.length) {
         alert('Nema dokumenata za ispis');
@@ -238,18 +255,18 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
     } finally {
       setIsPrinting(false);
     }
-  }, [onPrintAll]);
+  }, [item, items, itemsToDisplay, onPrintAll]);
 
   return (
     <>
       <PrintButton
         onClick={handlePrint}
-        disabled={isLoading || isPrinting || totalItems === 0}>
+        disabled={isLoading || isPrinting || (!item && totalItems === 0)}>
         {isPrinting ? 'Priprema ispisa...' : 'Ispiši tablicu'}
       </PrintButton>
 
       <div style={{display: 'none'}} ref={printContainerRef}>
-        <PrintableTable items={items} />
+        <PrintableTable items={itemsToDisplay} />
       </div>
     </>
   );

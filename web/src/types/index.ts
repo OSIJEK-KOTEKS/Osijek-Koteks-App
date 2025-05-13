@@ -27,6 +27,7 @@ export interface Item {
   title: string;
   code: string;
   registracija?: string;
+  neto?: number; // Add the new field
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
@@ -38,7 +39,6 @@ export interface Item {
     lastName: string;
   };
   in_transit: boolean;
-  // Photos for regular users
   approvalPhotoFront?: {
     url: string | null;
     uploadDate: string | null;
@@ -51,7 +51,6 @@ export interface Item {
     mimeType: string | null;
     publicId: string | null;
   } | null;
-  // PDF for PC-users
   approvalDocument?: {
     url: string | null;
     uploadDate: string | null;
@@ -85,7 +84,8 @@ export interface LoginResponse {
 export interface CreateItemInput {
   title: string;
   code: string;
-  registracija?: string; // New optional field
+  registracija?: string;
+  neto?: number; // Add the new field
   pdfUrl: string;
   creationDate?: string;
   creationTime?: string;
