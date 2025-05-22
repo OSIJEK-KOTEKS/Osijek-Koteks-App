@@ -158,6 +158,51 @@ router.post('/', auth, async (req, res) => {
 
     const {title, code, registracija, neto, pdfUrl, creationDate} = req.body;
 
+    // Check if an item with the same title already exists
+    const existingItem = await Item.findOne({title: title.trim()});
+
+    if (existingItem) {
+      console.log('Found existing item with same title:', existingItem._id);
+
+      // Delete the existing item (including any associated files)
+      if (existingItem.approvalPhotoFront?.publicId) {
+        try {
+          await cloudinary.uploader.destroy(
+            existingItem.approvalPhotoFront.publicId,
+          );
+          console.log('Deleted old front photo from Cloudinary');
+        } catch (error) {
+          console.error('Error deleting old front photo:', error);
+        }
+      }
+
+      if (existingItem.approvalPhotoBack?.publicId) {
+        try {
+          await cloudinary.uploader.destroy(
+            existingItem.approvalPhotoBack.publicId,
+          );
+          console.log('Deleted old back photo from Cloudinary');
+        } catch (error) {
+          console.error('Error deleting old back photo:', error);
+        }
+      }
+
+      if (existingItem.approvalDocument?.publicId) {
+        try {
+          await cloudinary.uploader.destroy(
+            existingItem.approvalDocument.publicId,
+          );
+          console.log('Deleted old document from Cloudinary');
+        } catch (error) {
+          console.error('Error deleting old document:', error);
+        }
+      }
+
+      // Delete the item from database
+      await Item.findByIdAndDelete(existingItem._id);
+      console.log('Deleted existing item from database:', existingItem._id);
+    }
+
     const now = new Date();
     const creationTime = now.toLocaleTimeString('hr-HR', {
       hour: '2-digit',
@@ -165,9 +210,9 @@ router.post('/', auth, async (req, res) => {
       timeZone: 'Europe/Zagreb',
     });
 
-    // Create the item object with optional neto field
+    // Create the new item object
     const item = new Item({
-      title,
+      title: title.trim(), // Trim whitespace for consistency
       code,
       registracija,
       pdfUrl,
@@ -182,6 +227,8 @@ router.post('/', auth, async (req, res) => {
     }
 
     const newItem = await item.save();
+    console.log('Created new item:', newItem._id);
+
     res.status(201).json(newItem);
   } catch (err) {
     console.error('Error creating item:', err);
