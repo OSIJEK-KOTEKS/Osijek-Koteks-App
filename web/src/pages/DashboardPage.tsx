@@ -258,6 +258,14 @@ const Dashboard: React.FC = () => {
     ], // Add inTransitOnly to dependencies
   );
 
+  const handleApprovalSuccess = useCallback(() => {
+    // Simple refresh - reset pagination and fetch fresh data
+    setPage(1);
+    setItems([]);
+    setHasMore(true);
+    fetchItems(false); // false means refresh, not load more
+  }, [fetchItems]);
+
   const fetchAllItemsForPrinting = async () => {
     try {
       setLoading(true);
@@ -700,13 +708,13 @@ const Dashboard: React.FC = () => {
                   {user?.role === 'admin' && (
                     <ApproveButton
                       item={item}
-                      onSuccess={() => fetchItems(true)}
+                      onSuccess={handleApprovalSuccess} // Use the refresh handler
                     />
                   )}
                   {user?.role === 'pc-user' && (
                     <PCUserApproveButton
                       item={item}
-                      onSuccess={() => fetchItems(true)}
+                      onSuccess={handleApprovalSuccess} // Use the refresh handler
                     />
                   )}
                 </>
