@@ -17,7 +17,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
         />
         <h1 className="print-title">Detalji dokumenta</h1>
       </div>
-
+      // In PrintableItem.tsx, update the print info section:
       <div className="print-info-section">
         <div className="print-info-grid">
           <div className="print-info-item">
@@ -34,8 +34,8 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               <span className="print-value">{item.registracija}</span>
             </div>
           )}
-          {/* Add the new neto field to the printed view */}
-          {item.neto !== undefined && (
+          {/* Only show neto field when item is approved */}
+          {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
             <div className="print-info-item">
               <span className="print-label">Neto:</span>
               <span className="print-value">{item.neto}</span>
@@ -53,6 +53,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             <span className="print-label">Status:</span>
             <span className="print-value">{item.approvalStatus}</span>
           </div>
+          {/* Rest of the approved status section remains the same */}
           {item.approvalStatus === 'odobreno' && (
             <>
               <div className="print-info-item">
@@ -69,7 +70,6 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           )}
         </div>
       </div>
-
       {item.approvalStatus === 'odobreno' && (
         <>
           {/* Show photos if available */}
@@ -124,7 +124,6 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           )}
         </>
       )}
-
       <div className="print-footer">
         <p>Ispisano: {new Date().toLocaleString('hr-HR')}</p>
         <p>© Osijek-Koteks d.d. Sva prava pridržana.</p>

@@ -594,8 +594,8 @@ const Dashboard: React.FC = () => {
             <ItemDetails>
               <strong>RN:</strong> {item.code}
             </ItemDetails>
-            {/* Add the neto field display here */}
-            {item.neto !== undefined && (
+            {/* Only show neto field when item is approved */}
+            {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
               <ItemDetails>
                 <strong>Neto:</strong> {item.neto}
               </ItemDetails>
@@ -610,6 +610,8 @@ const Dashboard: React.FC = () => {
               {item.approvalStatus}
             </StatusBadge>
             {item.in_transit && <TransitBadge>U tranzitu</TransitBadge>}
+
+            {/* Rest of the component remains the same */}
             {item.approvedBy && (
               <ItemDetails>
                 <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
