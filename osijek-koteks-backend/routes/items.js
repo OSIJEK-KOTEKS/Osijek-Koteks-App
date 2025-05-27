@@ -240,6 +240,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update approval status
+// Update approval status
 router.patch(
   '/:id/approval',
   auth,
@@ -250,9 +251,10 @@ router.patch(
   ]),
   async (req, res) => {
     try {
-      const {approvalStatus, locationData, inTransit} = req.body;
+      const {approvalStatus, locationData, inTransit, neto} = req.body; // Add neto to destructuring
       console.log('Starting approval update with status:', approvalStatus);
       console.log('In Transit value:', inTransit);
+      console.log('Neto value:', neto); // Log neto value
       console.log('User role:', req.user.role);
 
       if (
@@ -313,9 +315,21 @@ router.patch(
             // Set in_transit field based on checkbox
             item.in_transit = inTransit === 'true';
 
+            // Update neto field if provided by PC user
+            if (neto !== undefined && neto !== '') {
+              const netoValue = parseFloat(neto);
+              if (!isNaN(netoValue)) {
+                item.neto = netoValue;
+                console.log('Updated neto value:', netoValue);
+              }
+            }
+
             console.log(
-              'Updated item with PDF document and in_transit status:',
-              item.in_transit,
+              'Updated item with PDF document, neto, and in_transit status:',
+              {
+                in_transit: item.in_transit,
+                neto: item.neto,
+              },
             );
           } catch (error) {
             console.error('Detailed PDF upload error:', error);
@@ -486,7 +500,6 @@ router.patch(
     }
   },
 );
-
 // Get a specific item
 router.get('/:id', auth, async (req, res) => {
   try {
