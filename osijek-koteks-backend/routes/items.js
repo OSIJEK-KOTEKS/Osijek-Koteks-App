@@ -240,7 +240,6 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update approval status
-
 router.patch(
   '/:id/approval',
   auth,
@@ -319,10 +318,11 @@ router.patch(
             if (neto !== undefined && neto !== '') {
               const netoValue = parseFloat(neto);
               if (!isNaN(netoValue)) {
-                item.neto = netoValue;
+                // Round to 2 decimal places before saving
+                item.neto = Math.round(netoValue * 100) / 100;
                 console.log(
-                  'Updated neto with calculated percentage:',
-                  netoValue,
+                  'Updated neto with calculated percentage (rounded to 2 decimal places):',
+                  item.neto,
                 );
               }
             }
