@@ -55,14 +55,12 @@ const PrintableTable = ({items}: {items: Item[]}) => {
             <th>Datum odobrenja</th>
           </tr>
         </thead>
-        // In PrintTableButton.tsx, update the table body rendering:
         <tbody>
           {items.map(item => (
             <tr key={item._id}>
               <td>{item.title}</td>
               <td>{item.code}</td>
               <td>{item.registracija || '-'}</td>
-              {/* Only show neto value when item is approved */}
               <td>
                 {item.approvalStatus === 'odobreno' && item.neto !== undefined
                   ? item.neto
