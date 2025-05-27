@@ -64,19 +64,23 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               <td>
                 {item.approvalStatus === 'odobreno' &&
                 item.neto !== undefined ? (
-                  <span
-                    style={{
-                      color:
-                        item.neto < -5
-                          ? '#f44336'
-                          : item.neto > 5
-                          ? '#4caf50'
-                          : '#000',
-                      fontWeight:
-                        item.neto < -5 || item.neto > 5 ? 'bold' : 'normal',
-                    }}>
-                    {item.neto}%
-                  </span>
+                  item.neto > 1000 ? (
+                    <span>/</span>
+                  ) : (
+                    <span
+                      style={{
+                        color:
+                          item.neto < -5
+                            ? '#f44336'
+                            : item.neto > 5
+                            ? '#4caf50'
+                            : '#000',
+                        fontWeight:
+                          item.neto < -5 || item.neto > 5 ? 'bold' : 'normal',
+                      }}>
+                      {item.neto}%
+                    </span>
+                  )
                 ) : (
                   '-'
                 )}

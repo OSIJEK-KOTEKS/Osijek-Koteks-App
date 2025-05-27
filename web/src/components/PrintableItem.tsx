@@ -38,7 +38,9 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
             <div className="print-info-item">
               <span className="print-label">Razlika u vaganju:</span>
-              <span className="print-value">{item.neto}%</span>
+              <span className="print-value">
+                {item.neto > 1000 ? '/' : `${item.neto}%`}
+              </span>
             </div>
           )}
           <div className="print-info-item">
