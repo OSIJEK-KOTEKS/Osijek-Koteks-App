@@ -240,7 +240,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update approval status
-// Update approval status
+
 router.patch(
   '/:id/approval',
   auth,
@@ -315,20 +315,23 @@ router.patch(
             // Set in_transit field based on checkbox
             item.in_transit = inTransit === 'true';
 
-            // Update neto field if provided by PC user
+            // Update neto field with calculated percentage if provided by PC user
             if (neto !== undefined && neto !== '') {
               const netoValue = parseFloat(neto);
               if (!isNaN(netoValue)) {
                 item.neto = netoValue;
-                console.log('Updated neto value:', netoValue);
+                console.log(
+                  'Updated neto with calculated percentage:',
+                  netoValue,
+                );
               }
             }
 
             console.log(
-              'Updated item with PDF document, neto, and in_transit status:',
+              'Updated item with PDF document, calculated neto percentage, and in_transit status:',
               {
                 in_transit: item.in_transit,
-                neto: item.neto,
+                neto_percentage: item.neto,
               },
             );
           } catch (error) {
