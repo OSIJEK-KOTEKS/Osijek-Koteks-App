@@ -597,7 +597,20 @@ const Dashboard: React.FC = () => {
             {/* Only show neto field when item is approved */}
             {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
               <ItemDetails>
-                <strong>Neto:</strong> {item.neto}
+                <strong>Razlika u vaganju:</strong>{' '}
+                <span
+                  style={{
+                    color:
+                      item.neto < -5
+                        ? '#f44336'
+                        : item.neto > 5
+                        ? '#4caf50'
+                        : 'inherit',
+                    fontWeight:
+                      item.neto < -5 || item.neto > 5 ? '600' : 'normal',
+                  }}>
+                  {item.neto}%
+                </span>
               </ItemDetails>
             )}
             <ItemDetails>

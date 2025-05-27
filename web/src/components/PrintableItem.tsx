@@ -37,8 +37,8 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           {/* Only show neto field when item is approved */}
           {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
             <div className="print-info-item">
-              <span className="print-label">Neto:</span>
-              <span className="print-value">{item.neto}</span>
+              <span className="print-label">Razlika u vaganju:</span>
+              <span className="print-value">{item.neto}%</span>
             </div>
           )}
           <div className="print-info-item">

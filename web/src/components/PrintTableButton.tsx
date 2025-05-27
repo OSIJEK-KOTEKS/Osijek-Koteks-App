@@ -48,7 +48,7 @@ const PrintableTable = ({items}: {items: Item[]}) => {
             <th>Naziv</th>
             <th>RN</th>
             <th>Registracija</th>
-            <th>Neto</th>
+            <th>Razlika u vaganju</th>
             <th>Datum kreiranja</th>
             <th>Status</th>
             <th>Odobrio</th>
@@ -62,9 +62,24 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               <td>{item.code}</td>
               <td>{item.registracija || '-'}</td>
               <td>
-                {item.approvalStatus === 'odobreno' && item.neto !== undefined
-                  ? item.neto
-                  : '-'}
+                {item.approvalStatus === 'odobreno' &&
+                item.neto !== undefined ? (
+                  <span
+                    style={{
+                      color:
+                        item.neto < -5
+                          ? '#f44336'
+                          : item.neto > 5
+                          ? '#4caf50'
+                          : '#000',
+                      fontWeight:
+                        item.neto < -5 || item.neto > 5 ? 'bold' : 'normal',
+                    }}>
+                    {item.neto}%
+                  </span>
+                ) : (
+                  '-'
+                )}
               </td>
               <td>
                 {item.creationTime
