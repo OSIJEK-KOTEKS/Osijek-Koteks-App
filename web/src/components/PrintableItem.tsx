@@ -17,7 +17,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
         />
         <h1 className="print-title">Detalji dokumenta</h1>
       </div>
-      // In PrintableItem.tsx, update the print info section:
+
       <div className="print-info-section">
         <div className="print-info-grid">
           <div className="print-info-item">
@@ -34,7 +34,6 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               <span className="print-value">{item.registracija}</span>
             </div>
           )}
-          {/* Only show neto field when item is approved */}
           {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
             <div className="print-info-item">
               <span className="print-label">Razlika u vaganju:</span>
@@ -55,7 +54,6 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             <span className="print-label">Status:</span>
             <span className="print-value">{item.approvalStatus}</span>
           </div>
-          {/* Rest of the approved status section remains the same */}
           {item.approvalStatus === 'odobreno' && (
             <>
               <div className="print-info-item">
@@ -74,7 +72,6 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
       </div>
       {item.approvalStatus === 'odobreno' && (
         <>
-          {/* Show photos if available */}
           {(item.approvalPhotoFront?.url || item.approvalPhotoBack?.url) && (
             <div className="print-photos-section">
               {item.approvalPhotoFront?.url && (
@@ -100,7 +97,6 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             </div>
           )}
 
-          {/* Show PDF info if available */}
           {item.approvalDocument?.url && (
             <div className="print-document-section">
               <div className="print-info-grid">
@@ -118,10 +114,9 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             </div>
           )}
 
-          {/* Location information */}
           {item.approvalLocation && (
             <div className="print-location-section">
-              {/* Existing location display */}
+              {/* Location display would go here */}
             </div>
           )}
         </>
