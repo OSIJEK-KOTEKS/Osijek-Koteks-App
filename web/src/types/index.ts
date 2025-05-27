@@ -160,5 +160,6 @@ export interface ApiService {
     approvalStatus: Item['approvalStatus'],
     pdfDocument: File,
     inTransit: boolean,
+    neto?: number, // Add neto parameter
   ) => Promise<Item>;
 }

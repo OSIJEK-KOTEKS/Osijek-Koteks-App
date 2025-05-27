@@ -227,11 +227,13 @@ export const apiService = {
       throw error;
     }
   },
+  // Update the updateItemApprovalWithPdf method in api.ts (web version)
   updateItemApprovalWithPdf: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
     pdfDocument: File,
     inTransit: boolean = false,
+    neto?: number, // Add neto parameter
   ): Promise<Item> => {
     try {
       console.log('Sending PDF approval request:', {
@@ -240,12 +242,18 @@ export const apiService = {
         pdfName: pdfDocument.name,
         pdfSize: pdfDocument.size,
         inTransit,
+        neto,
       });
 
       const formData = new FormData();
       formData.append('pdfDocument', pdfDocument);
       formData.append('approvalStatus', approvalStatus);
       formData.append('inTransit', inTransit.toString());
+
+      // Add neto if provided
+      if (neto !== undefined) {
+        formData.append('neto', neto.toString());
+      }
 
       const response = await api.patch<Item>(
         `/api/items/${id}/approval`,
