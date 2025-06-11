@@ -98,6 +98,22 @@ export interface ItemFilters {
   sortOrder?: string;
   searchTitle?: string;
   inTransitOnly?: boolean;
+  // Add any additional filtering options as needed
+}
+// You can also add a utility type for date range operations
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
+export interface DateRangeValidation {
+  isValid: boolean;
+  message?: string;
+}
+export interface DateRangePreset {
+  label: string;
+  startDate: Date;
+  endDate: Date;
+  action: () => void;
 }
 
 export interface PaginationInfo {

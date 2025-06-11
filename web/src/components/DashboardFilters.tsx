@@ -9,8 +9,9 @@ import 'react-datepicker/dist/react-datepicker.css';
 registerLocale('hr', hr as unknown as Locale);
 
 interface DashboardFiltersProps {
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
+  startDate: Date;
+  endDate: Date;
+  onDateRangeChange: (startDate: Date, endDate: Date) => void;
   selectedCode: string;
   onCodeChange: (code: string) => void;
   availableCodes: string[];
@@ -27,8 +28,9 @@ interface DashboardFiltersProps {
 }
 
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
-  selectedDate,
-  onDateChange,
+  startDate,
+  endDate,
+  onDateRangeChange,
   selectedCode,
   onCodeChange,
   availableCodes,
@@ -45,11 +47,16 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Handle date change including null value
-  const handleDateChange = (date: Date | null) => {
+  // Handle date range change including null values
+  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
+    const [start, end] = dates;
     setShowDatePicker(false);
-    if (date) {
-      onDateChange(date);
+
+    if (start && end) {
+      onDateRangeChange(start, end);
+    } else if (start && !end) {
+      // If only start date is selected, set end date to the same date
+      onDateRangeChange(start, start);
     }
   };
 
@@ -71,6 +78,50 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
       label: code,
     })),
   ];
+
+  const formatDateRange = (start: Date, end: Date) => {
+    const isSameDay = start.toDateString() === end.toDateString();
+
+    if (isSameDay) {
+      return start.toLocaleDateString('hr-HR');
+    }
+
+    const startStr = start.toLocaleDateString('hr-HR');
+    const endStr = end.toLocaleDateString('hr-HR');
+    return `${startStr} - ${endStr}`;
+  };
+
+  // Quick date range presets
+  const getDateRangePresets = () => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 7);
+
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(today.getMonth() - 1);
+
+    return [
+      {
+        label: 'Danas',
+        action: () => onDateRangeChange(today, today),
+      },
+      {
+        label: 'Jučer',
+        action: () => onDateRangeChange(yesterday, yesterday),
+      },
+      {
+        label: 'Zadnjih 7 dana',
+        action: () => onDateRangeChange(weekAgo, today),
+      },
+      {
+        label: 'Zadnjih 30 dana',
+        action: () => onDateRangeChange(monthAgo, today),
+      },
+    ];
+  };
 
   return (
     <FiltersContainer>
@@ -96,21 +147,46 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
       <FiltersGrid>
         <FilterSection>
-          <FilterLabel htmlFor="date-picker" $disabled={searchMode}>
-            Datum
+          <FilterLabel htmlFor="date-range-picker" $disabled={searchMode}>
+            Datumski raspon
           </FilterLabel>
-          <StyledDatePickerWrapper $disabled={searchMode}>
-            <DatePicker
-              selected={selectedDate}
-              onChange={handleDateChange}
-              dateFormat="dd.MM.yyyy"
-              locale="hr"
-              maxDate={new Date()}
-              placeholderText="Odaberi datum"
-              className="date-picker"
-              disabled={searchMode}
-            />
-          </StyledDatePickerWrapper>
+
+          <DateRangeContainer>
+            <StyledDatePickerWrapper $disabled={searchMode}>
+              <DatePicker
+                selectsRange={true}
+                startDate={startDate}
+                endDate={endDate}
+                onChange={handleDateRangeChange}
+                dateFormat="dd.MM.yyyy"
+                locale="hr"
+                maxDate={new Date()}
+                placeholderText="Odaberi datumski raspon"
+                className="date-picker"
+                disabled={searchMode}
+                isClearable={false}
+              />
+            </StyledDatePickerWrapper>
+
+            {!searchMode && (
+              <DatePresets>
+                {getDateRangePresets().map((preset, index) => (
+                  <PresetButton
+                    key={index}
+                    onClick={preset.action}
+                    type="button">
+                    {preset.label}
+                  </PresetButton>
+                ))}
+              </DatePresets>
+            )}
+          </DateRangeContainer>
+
+          {!searchMode && (
+            <DateRangeDisplay>
+              Odabrani period: {formatDateRange(startDate, endDate)}
+            </DateRangeDisplay>
+          )}
         </FilterSection>
 
         <FilterSection>
@@ -246,7 +322,7 @@ const ClearButton = styled(BaseButton)`
 
 const FiltersGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 `;
 
@@ -286,7 +362,6 @@ const Select = styled.select<{$disabled?: boolean}>`
   }
 `;
 
-// Enhanced styling for the transit filter
 const CheckboxContainer = styled.div<{$disabled?: boolean}>`
   display: flex;
   align-items: center;
@@ -339,6 +414,12 @@ const TransitIcon = styled.span`
   font-size: 16px;
 `;
 
+const DateRangeContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
 const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
   .react-datepicker-wrapper {
     width: 100%;
@@ -366,6 +447,8 @@ const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
 
   .react-datepicker {
     font-family: inherit;
+    border: 1px solid ${({theme}) => theme.colors.gray};
+    border-radius: ${({theme}) => theme.borderRadius};
   }
 
   .react-datepicker__header {
@@ -378,13 +461,62 @@ const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
     color: white;
   }
 
-  .react-datepicker__day--selected {
+  .react-datepicker__day--selected,
+  .react-datepicker__day--in-selecting-range,
+  .react-datepicker__day--in-range {
     background-color: ${({theme}) => theme.colors.primary};
+    color: white;
 
     &:hover {
       background-color: ${({theme}) => theme.colors.primaryDark};
     }
   }
+
+  .react-datepicker__day--keyboard-selected {
+    background-color: ${({theme}) => theme.colors.primary};
+    opacity: 0.8;
+    &:hover {
+      background-color: ${({theme}) => theme.colors.primaryDark};
+    }
+  }
+
+  .react-datepicker__day--range-start,
+  .react-datepicker__day--range-end {
+    background-color: ${({theme}) => theme.colors.primaryDark} !important;
+  }
+`;
+
+const DatePresets = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+`;
+
+const PresetButton = styled.button`
+  padding: 0.5rem 0.75rem;
+  border: 1px solid ${({theme}) => theme.colors.primary};
+  background-color: white;
+  color: ${({theme}) => theme.colors.primary};
+  border-radius: ${({theme}) => theme.borderRadius};
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: ${({theme}) => theme.colors.primary};
+    color: white;
+  }
+`;
+
+const DateRangeDisplay = styled.div`
+  font-size: 0.875rem;
+  color: ${({theme}) => theme.colors.text};
+  font-weight: 500;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: ${({theme}) => theme.colors.background};
+  border-radius: ${({theme}) => theme.borderRadius};
+  text-align: center;
 `;
 
 export default DashboardFilters;

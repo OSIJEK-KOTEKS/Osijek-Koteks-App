@@ -15,7 +15,8 @@ import PrintAllButton from '../components/PrintAllButton';
 import PrintTableButton from 'src/components/PrintTableButton';
 import ApproveButton from '../components/ApproveButton';
 import PCUserApproveButton from '../components/PCUserApproveButton';
-// Styled Components
+
+// Styled Components (keeping the same as before)
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
@@ -68,7 +69,6 @@ const StatusBadge = styled.span<{status: Item['approvalStatus']}>`
   margin-top: 8px;
 `;
 
-// Add this right after the StatusBadge component:
 const TransitBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
@@ -161,7 +161,11 @@ const Dashboard: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Updated date state for date range
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
+
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
   const [selectedCode, setSelectedCode] = useState('all');
   const [sortOrder, setSortOrder] = useState('date-desc');
@@ -206,10 +210,11 @@ const Dashboard: React.FC = () => {
           };
           console.log('Using search filters:', filters);
         } else {
-          const startOfDay = new Date(selectedDate);
+          // Updated to use date range
+          const startOfDay = new Date(startDate);
           startOfDay.setHours(0, 0, 0, 0);
 
-          const endOfDay = new Date(selectedDate);
+          const endOfDay = new Date(endDate);
           endOfDay.setHours(23, 59, 59, 999);
 
           filters = {
@@ -217,9 +222,9 @@ const Dashboard: React.FC = () => {
             endDate: endOfDay.toISOString(),
             ...(selectedCode !== 'all' && {code: selectedCode}),
             sortOrder,
-            ...(inTransitOnly && {inTransitOnly: true}), // Add this line
+            ...(inTransitOnly && {inTransitOnly: true}),
           };
-          console.log('Using regular filters:', filters);
+          console.log('Using date range filters:', filters);
         }
 
         console.log('Making request with filters:', filters);
@@ -249,21 +254,21 @@ const Dashboard: React.FC = () => {
     },
     [
       page,
-      selectedDate,
+      startDate, // Updated dependency
+      endDate, // Updated dependency
       selectedCode,
       sortOrder,
       searchMode,
       searchValue,
       inTransitOnly,
-    ], // Add inTransitOnly to dependencies
+    ],
   );
 
   const handleApprovalSuccess = useCallback(() => {
-    // Simple refresh - reset pagination and fetch fresh data
     setPage(1);
     setItems([]);
     setHasMore(true);
-    fetchItems(false); // false means refresh, not load more
+    fetchItems(false);
   }, [fetchItems]);
 
   const fetchAllItemsForPrinting = async () => {
@@ -279,10 +284,11 @@ const Dashboard: React.FC = () => {
           searchTitle: searchValue,
         };
       } else {
-        const startOfDay = new Date(selectedDate);
+        // Updated to use date range
+        const startOfDay = new Date(startDate);
         startOfDay.setHours(0, 0, 0, 0);
 
-        const endOfDay = new Date(selectedDate);
+        const endOfDay = new Date(endDate);
         endOfDay.setHours(23, 59, 59, 999);
 
         filters = {
@@ -290,11 +296,10 @@ const Dashboard: React.FC = () => {
           endDate: endOfDay.toISOString(),
           ...(selectedCode !== 'all' && {code: selectedCode}),
           sortOrder,
-          ...(inTransitOnly && {inTransitOnly: true}), // Add this line
+          ...(inTransitOnly && {inTransitOnly: true}),
         };
       }
 
-      // Fetch all pages
       while (hasMoreItems) {
         const response = await apiService.getItems(currentPage, 100, filters);
         allItems = [...allItems, ...response.items];
@@ -314,19 +319,16 @@ const Dashboard: React.FC = () => {
   const handleSearch = useCallback(() => {
     if (searchValue.trim()) {
       console.log('Search triggered with:', searchValue);
-      // First set all the states
       setLoading(true);
       setSearchMode(true);
       setPage(1);
 
-      // Wait for state updates to complete before fetching
       Promise.resolve().then(() => {
         const searchFilters: ItemFilters = {
           searchTitle: searchValue,
         };
         console.log('Fetching with search filters:', searchFilters);
 
-        // Pass explicit search filters
         apiService
           .getItems(1, 10, searchFilters)
           .then(response => {
@@ -345,31 +347,32 @@ const Dashboard: React.FC = () => {
       });
     }
   }, [searchValue]);
+
   const clearSearch = useCallback(() => {
     console.log('Clearing search');
     setLoading(true);
 
-    // Reset all filters to initial values
     setSearchMode(false);
     setSearchValue('');
     setPage(1);
-    setSelectedDate(new Date()); // Reset date to today
-    setSelectedCode('all'); // Reset code filter to 'all'
-    setSortOrder('date-desc'); // Reset sort to default
-    setInTransitOnly(false); // Reset inTransitOnly filter
+    // Reset to today's date range
+    const today = new Date();
+    setStartDate(today);
+    setEndDate(today);
+    setSelectedCode('all');
+    setSortOrder('date-desc');
+    setInTransitOnly(false);
 
-    // Wait for state updates to complete
     Promise.resolve().then(() => {
-      // Fetch items with initial filters
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
 
       const initialFilters: ItemFilters = {
-        startDate: startOfDay.toISOString(),
-        endDate: endOfDay.toISOString(),
+        startDate: todayStart.toISOString(),
+        endDate: todayEnd.toISOString(),
         sortOrder: 'date-desc',
       };
 
@@ -390,100 +393,67 @@ const Dashboard: React.FC = () => {
         });
     });
   }, []);
-  const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
+
+  // Updated date range change handler
+  const handleDateRangeChange = (newStartDate: Date, newEndDate: Date) => {
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
     setPage(1);
     setItems([]);
     setHasMore(true);
   };
+
   useEffect(() => {
     if (!searchMode) {
-      setPage(1); // Reset page when filters change
-      setItems([]); // Clear existing items
-      setHasMore(true); // Reset hasMore flag
+      setPage(1);
+      setItems([]);
+      setHasMore(true);
       fetchItems(false);
     }
-  }, [selectedDate, selectedCode, sortOrder, inTransitOnly]); // Add inTransitOnly as dependency
+  }, [startDate, endDate, selectedCode, sortOrder, inTransitOnly]);
 
-  // First, ensure your useEffect looks like this
   useEffect(() => {
     const initializeDashboard = async () => {
       await fetchItems();
-      await fetchAvailableCodes(); // Now TypeScript should see it's being used
+      await fetchAvailableCodes();
     };
 
     initializeDashboard();
-  }, []); // Add both to dependency array
+  }, []);
 
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading) {
+      console.log('Skipping load more:', {
+        hasMore,
+        loadingMore,
+        loading,
+      });
       return;
     }
 
     if (items.length >= totalItems) {
+      console.log('All items loaded');
       setHasMore(false);
       return;
     }
 
-    try {
-      setLoadingMore(true);
-      const nextPage = page + 1;
-      setPage(nextPage);
+    console.log('Loading more items, increasing page');
+    setPage(prevPage => prevPage + 1);
+  }, [hasMore, loadingMore, loading, items.length, totalItems]);
 
-      let filters: ItemFilters;
-      if (searchMode && searchValue) {
-        filters = {
-          searchTitle: searchValue,
-        };
-      } else {
-        const startOfDay = new Date(selectedDate);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date(selectedDate);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        filters = {
-          startDate: startOfDay.toISOString(),
-          endDate: endOfDay.toISOString(),
-          ...(selectedCode !== 'all' && {code: selectedCode}),
-          sortOrder,
-          ...(inTransitOnly && {inTransitOnly: true}), // Add this line
-        };
-      }
-
-      const response = await apiService.getItems(nextPage, 10, filters);
-
-      setItems(prevItems => {
-        // Filter out duplicates
-        const newItems = response.items.filter(
-          newItem =>
-            !prevItems.some(existingItem => existingItem._id === newItem._id),
-        );
-        return [...prevItems, ...newItems];
-      });
-
-      setHasMore(response.pagination.hasMore);
-      setTotalItems(response.pagination.total);
-    } catch (error) {
-      console.error('Error loading more items:', error);
-      setError('Greška pri učitavanju dodatnih dokumenata');
-    } finally {
-      setLoadingMore(false);
+  useEffect(() => {
+    if (page > 1) {
+      console.log('Page changed to:', page);
+      fetchItems(true);
     }
-  }, [
-    hasMore,
-    loadingMore,
-    loading,
-    items.length,
-    totalItems,
-    page,
-    searchMode,
-    searchValue,
-    selectedDate,
-    selectedCode,
-    sortOrder,
-    inTransitOnly, // Add inTransitOnly to dependencies
-  ]);
+  }, [page, fetchItems]);
+
+  const handleRefresh = useCallback(async () => {
+    console.log('Manual refresh triggered');
+    setPage(1);
+    setItems([]);
+    await fetchItems(false);
+  }, [fetchItems]);
 
   const handleLogout = async () => {
     try {
@@ -518,7 +488,31 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  //Replace just the return section in DashboardPage.tsx
+  // Format date range for display
+  const formatDateRangeDisplay = () => {
+    const isSameDay = startDate.toDateString() === endDate.toDateString();
+
+    if (isSameDay) {
+      return startDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    }
+
+    const startStr = startDate.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    const endStr = endDate.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    return `${startStr} - ${endStr}`;
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -565,8 +559,9 @@ const Dashboard: React.FC = () => {
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
       <DashboardFilters
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
+        startDate={startDate}
+        endDate={endDate}
+        onDateRangeChange={handleDateRangeChange}
         selectedCode={selectedCode}
         onCodeChange={setSelectedCode}
         availableCodes={availableCodes}
@@ -578,7 +573,7 @@ const Dashboard: React.FC = () => {
         onSearchValueChange={setSearchValue}
         onSearch={handleSearch}
         onClearSearch={clearSearch}
-        inTransitOnly={inTransitOnly} // Add these two lines
+        inTransitOnly={inTransitOnly}
         onInTransitChange={setInTransitOnly}
       />
 
@@ -594,7 +589,6 @@ const Dashboard: React.FC = () => {
             <ItemDetails>
               <strong>RN:</strong> {item.code}
             </ItemDetails>
-            {/* Only show neto field when item is approved */}
             {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
               <ItemDetails>
                 <strong>Razlika u vaganju:</strong>{' '}
@@ -628,7 +622,6 @@ const Dashboard: React.FC = () => {
             </StatusBadge>
             {item.in_transit && <TransitBadge>U tranzitu</TransitBadge>}
 
-            {/* Rest of the component remains the same */}
             {item.approvedBy && (
               <ItemDetails>
                 <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
@@ -647,7 +640,6 @@ const Dashboard: React.FC = () => {
               <PrintButton item={item} />
               {item.approvalStatus === 'odobreno' && (
                 <>
-                  {/* Display Photos when available */}
                   {(item.approvalPhotoFront?.url ||
                     item.approvalPhotoBack?.url) && (
                     <PhotoButtonsGroup>
@@ -674,36 +666,30 @@ const Dashboard: React.FC = () => {
                     </PhotoButtonsGroup>
                   )}
 
-                  {/* Display PDF document when available */}
                   {item.approvalDocument?.url && (
                     <ActionButton
                       onClick={async () => {
                         try {
                           const pdfUrl = item.approvalDocument!.url!;
 
-                          // Get the filename from the URL
                           const urlParts = pdfUrl.split('/');
                           const filename = `${
                             urlParts[urlParts.length - 1]
                           }.pdf`;
 
-                          // Fetch the file as a blob
                           const response = await fetch(pdfUrl);
                           const blob = await response.blob();
 
-                          // Create a blob URL
                           const blobUrl = window.URL.createObjectURL(
                             new Blob([blob], {type: 'application/pdf'}),
                           );
 
-                          // Create a temporary link and trigger download
                           const a = document.createElement('a');
                           a.href = blobUrl;
                           a.download = filename;
                           document.body.appendChild(a);
                           a.click();
 
-                          // Clean up
                           document.body.removeChild(a);
                           window.URL.revokeObjectURL(blobUrl);
                         } catch (error) {
@@ -721,19 +707,18 @@ const Dashboard: React.FC = () => {
                   Lokacija
                 </ActionButton>
               )}
-              {/* Show appropriate approval button based on user role */}
               {item.approvalStatus === 'na čekanju' && (
                 <>
                   {user?.role === 'admin' && (
                     <ApproveButton
                       item={item}
-                      onSuccess={handleApprovalSuccess} // Use the refresh handler
+                      onSuccess={handleApprovalSuccess}
                     />
                   )}
                   {user?.role === 'pc-user' && (
                     <PCUserApproveButton
                       item={item}
-                      onSuccess={handleApprovalSuccess} // Use the refresh handler
+                      onSuccess={handleApprovalSuccess}
                     />
                   )}
                 </>
@@ -749,7 +734,10 @@ const Dashboard: React.FC = () => {
       </ItemsGrid>
 
       {items.length === 0 && !loading && (
-        <EmptyMessage>Nema dostupnih dokumenata</EmptyMessage>
+        <EmptyMessage>
+          Nema dostupnih dokumenata za period: {formatDateRangeDisplay()}
+          {selectedCode !== 'all' && ` (${selectedCode})`}
+        </EmptyMessage>
       )}
 
       {hasMore && items.length > 0 && items.length < totalItems && (
