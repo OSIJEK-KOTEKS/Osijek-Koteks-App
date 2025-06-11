@@ -251,6 +251,12 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               <PresetButton onClick={setLast30Days} type="button">
                 Zadnjih 30 dana
               </PresetButton>
+              <TransitPresetButton
+                onClick={() => onInTransitChange(!inTransitOnly)}
+                type="button"
+                $active={inTransitOnly}>
+                🚚 U tranzitu
+              </TransitPresetButton>
             </DatePresets>
           )}
 
@@ -258,6 +264,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
             <>
               <DateRangeDisplay>
                 Odabrani period: {formatDateRange(startDate, endDate)}
+                {inTransitOnly && ' (samo u tranzitu)'}
               </DateRangeDisplay>
               <RangeLimitInfo>Maksimalni raspon: 31 dan</RangeLimitInfo>
             </>
@@ -300,27 +307,6 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               <option value="date-asc">Najstariji prvo</option>
               <option value="approved-first">Odobreni prvo</option>
             </Select>
-          </FilterInputContainer>
-        </FilterSection>
-
-        <FilterSection>
-          <FilterLabel htmlFor="in-transit-filter" $disabled={searchMode}>
-            Status tranzita
-          </FilterLabel>
-          <FilterInputContainer>
-            <CheckboxContainer $disabled={searchMode}>
-              <Checkbox
-                id="in-transit-filter"
-                type="checkbox"
-                checked={inTransitOnly}
-                onChange={e => onInTransitChange(e.target.checked)}
-                disabled={searchMode}
-              />
-              <CheckboxLabel htmlFor="in-transit-filter" $disabled={searchMode}>
-                <TransitIcon>🚚</TransitIcon>
-                Samo oni u tranzitu
-              </CheckboxLabel>
-            </CheckboxContainer>
           </FilterInputContainer>
         </FilterSection>
       </FiltersGrid>
@@ -471,10 +457,10 @@ const CheckboxContainer = styled.div<{$disabled?: boolean}>`
 `;
 
 const Checkbox = styled.input`
-  margin-right: 10px;
+  margin-right: 8px;
   cursor: pointer;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   accent-color: ${({theme}) => theme.colors.primary};
 
   &:disabled {
@@ -632,6 +618,17 @@ const PresetButton = styled.button`
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: ${({theme}) => theme.colors.primary};
+    color: white;
+  }
+`;
+const TransitPresetButton = styled(PresetButton)<{$active?: boolean}>`
+  background-color: ${({theme, $active}) =>
+    $active ? theme.colors.primary : 'white'};
+  color: ${({theme, $active}) => ($active ? 'white' : theme.colors.primary)};
+  border: 1px solid ${({theme}) => theme.colors.primary};
 
   &:hover {
     background-color: ${({theme}) => theme.colors.primary};
