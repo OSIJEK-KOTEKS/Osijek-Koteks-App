@@ -200,10 +200,9 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
       <FiltersGrid>
         <FilterSection>
           <FilterLabel $disabled={searchMode}>Datumski raspon</FilterLabel>
-
-          <DateRangeContainer>
-            <DatePickerRow>
-              <DatePickerContainer>
+          <DateRangeInputsContainer>
+            <DatePickerContainer>
+              <DatePickerRow>
                 <DatePickerLabel>Od:</DatePickerLabel>
                 <DatePickerWrapper $disabled={searchMode}>
                   <DatePicker
@@ -216,9 +215,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     disabled={searchMode}
                   />
                 </DatePickerWrapper>
-              </DatePickerContainer>
+              </DatePickerRow>
+            </DatePickerContainer>
 
-              <DatePickerContainer>
+            <DatePickerContainer>
+              <DatePickerRow>
                 <DatePickerLabel>Do:</DatePickerLabel>
                 <DatePickerWrapper $disabled={searchMode}>
                   <DatePicker
@@ -232,26 +233,26 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     disabled={searchMode}
                   />
                 </DatePickerWrapper>
-              </DatePickerContainer>
-            </DatePickerRow>
+              </DatePickerRow>
+            </DatePickerContainer>
+          </DateRangeInputsContainer>
 
-            {!searchMode && (
-              <DatePresets>
-                <PresetButton onClick={setToday} type="button">
-                  Danas
-                </PresetButton>
-                <PresetButton onClick={setYesterday} type="button">
-                  Jučer
-                </PresetButton>
-                <PresetButton onClick={setLast7Days} type="button">
-                  Zadnjih 7 dana
-                </PresetButton>
-                <PresetButton onClick={setLast30Days} type="button">
-                  Zadnjih 30 dana
-                </PresetButton>
-              </DatePresets>
-            )}
-          </DateRangeContainer>
+          {!searchMode && (
+            <DatePresets>
+              <PresetButton onClick={setToday} type="button">
+                Danas
+              </PresetButton>
+              <PresetButton onClick={setYesterday} type="button">
+                Jučer
+              </PresetButton>
+              <PresetButton onClick={setLast7Days} type="button">
+                Zadnjih 7 dana
+              </PresetButton>
+              <PresetButton onClick={setLast30Days} type="button">
+                Zadnjih 30 dana
+              </PresetButton>
+            </DatePresets>
+          )}
 
           {!searchMode && (
             <>
@@ -267,54 +268,60 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           <FilterLabel htmlFor="code-select" $disabled={searchMode}>
             Radni nalog
           </FilterLabel>
-          <Select
-            id="code-select"
-            value={selectedCode}
-            onChange={e => onCodeChange(e.target.value)}
-            disabled={searchMode}
-            $disabled={searchMode}>
-            {allCodesOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
+          <FilterInputContainer>
+            <Select
+              id="code-select"
+              value={selectedCode}
+              onChange={e => onCodeChange(e.target.value)}
+              disabled={searchMode}
+              $disabled={searchMode}>
+              {allCodesOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </FilterInputContainer>
         </FilterSection>
 
         <FilterSection>
           <FilterLabel htmlFor="sort-select" $disabled={searchMode}>
             Sortiranje
           </FilterLabel>
-          <Select
-            id="sort-select"
-            value={sortOrder}
-            onChange={e => onSortOrderChange(e.target.value)}
-            disabled={searchMode}
-            $disabled={searchMode}>
-            <option value="pending-first">Na čekanju prvo</option>
-            <option value="date-desc">Najnoviji prvo</option>
-            <option value="date-asc">Najstariji prvo</option>
-            <option value="approved-first">Odobreni prvo</option>
-          </Select>
+          <FilterInputContainer>
+            <Select
+              id="sort-select"
+              value={sortOrder}
+              onChange={e => onSortOrderChange(e.target.value)}
+              disabled={searchMode}
+              $disabled={searchMode}>
+              <option value="pending-first">Na čekanju prvo</option>
+              <option value="date-desc">Najnoviji prvo</option>
+              <option value="date-asc">Najstariji prvo</option>
+              <option value="approved-first">Odobreni prvo</option>
+            </Select>
+          </FilterInputContainer>
         </FilterSection>
 
         <FilterSection>
           <FilterLabel htmlFor="in-transit-filter" $disabled={searchMode}>
             Status tranzita
           </FilterLabel>
-          <CheckboxContainer $disabled={searchMode}>
-            <Checkbox
-              id="in-transit-filter"
-              type="checkbox"
-              checked={inTransitOnly}
-              onChange={e => onInTransitChange(e.target.checked)}
-              disabled={searchMode}
-            />
-            <CheckboxLabel htmlFor="in-transit-filter" $disabled={searchMode}>
-              <TransitIcon>🚚</TransitIcon>
-              Samo oni u tranzitu
-            </CheckboxLabel>
-          </CheckboxContainer>
+          <FilterInputContainer>
+            <CheckboxContainer $disabled={searchMode}>
+              <Checkbox
+                id="in-transit-filter"
+                type="checkbox"
+                checked={inTransitOnly}
+                onChange={e => onInTransitChange(e.target.checked)}
+                disabled={searchMode}
+              />
+              <CheckboxLabel htmlFor="in-transit-filter" $disabled={searchMode}>
+                <TransitIcon>🚚</TransitIcon>
+                Samo oni u tranzitu
+              </CheckboxLabel>
+            </CheckboxContainer>
+          </FilterInputContainer>
         </FilterSection>
       </FiltersGrid>
     </FiltersContainer>
@@ -401,11 +408,9 @@ const FiltersGrid = styled.div`
 `;
 
 const FilterSection = styled.div`
-  margin-bottom: 1rem;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Ensure all sections have the same height */
 `;
 
 const FilterLabel = styled.label<{$disabled?: boolean}>`
@@ -414,6 +419,15 @@ const FilterLabel = styled.label<{$disabled?: boolean}>`
   font-weight: 500;
   color: ${({theme, $disabled}) =>
     $disabled ? theme.colors.disabled : theme.colors.text};
+  height: 1.5rem; /* Fixed height for all labels */
+  line-height: 1.5rem;
+`;
+
+// New container to ensure consistent height for all filter inputs
+const FilterInputContainer = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 `;
 
 const Select = styled.select<{$disabled?: boolean}>`
@@ -428,6 +442,7 @@ const Select = styled.select<{$disabled?: boolean}>`
   color: ${({theme, $disabled}) =>
     $disabled ? theme.colors.disabled : theme.colors.text};
   cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
+  height: 3rem; /* Fixed height to match date picker inputs */
 
   &:focus {
     outline: none;
@@ -447,6 +462,7 @@ const CheckboxContainer = styled.div<{$disabled?: boolean}>`
   border-radius: ${({theme}) => theme.borderRadius};
   cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
   transition: all 0.2s ease-in-out;
+  height: 3rem; /* Fixed height to match other inputs */
 
   &:hover:not([disabled]) {
     border-color: ${({theme}) => theme.colors.primary};
@@ -488,16 +504,11 @@ const TransitIcon = styled.span`
   font-size: 16px;
 `;
 
-const DateRangeContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-`;
-
-const DatePickerRow = styled.div`
+// Updated date range container structure
+const DateRangeInputsContainer = styled.div`
   display: flex;
   gap: 1rem;
-  align-items: end;
+  margin-bottom: 0.75rem;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -510,15 +521,24 @@ const DatePickerContainer = styled.div`
   min-width: 0;
 `;
 
+const DatePickerRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3rem; /* Match other input heights */
+`;
+
 const DatePickerLabel = styled.label`
-  display: block;
   font-size: 0.875rem;
   font-weight: 600;
   color: ${({theme}) => theme.colors.text};
-  margin-bottom: 0.25rem;
+  min-width: 2rem; /* Fixed width for labels */
+  white-space: nowrap;
 `;
 
 const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
+  flex: 1;
+
   .react-datepicker-wrapper {
     width: 100%;
   }
@@ -535,6 +555,8 @@ const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
       $disabled ? theme.colors.disabled : theme.colors.text};
     background-color: ${({$disabled}) => ($disabled ? '#f5f5f5' : 'white')};
     cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
+    height: 3rem; /* Fixed height to match other inputs */
+    box-sizing: border-box;
 
     &:focus {
       outline: none;
@@ -581,6 +603,7 @@ const DatePresets = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0.75rem;
 `;
 
 const PresetButton = styled.button`
@@ -603,18 +626,17 @@ const DateRangeDisplay = styled.div`
   font-size: 0.875rem;
   color: ${({theme}) => theme.colors.text};
   font-weight: 500;
-  margin-top: 0.5rem;
   padding: 0.5rem;
   background-color: ${({theme}) => theme.colors.background};
   border-radius: ${({theme}) => theme.borderRadius};
   text-align: center;
+  margin-bottom: 0.25rem;
 `;
 
 const RangeLimitInfo = styled.div`
   font-size: 0.75rem;
   color: ${({theme}) => theme.colors.primary};
   text-align: center;
-  margin-top: 0.25rem;
   font-style: italic;
 `;
 
