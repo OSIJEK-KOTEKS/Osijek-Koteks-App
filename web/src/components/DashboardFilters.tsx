@@ -45,21 +45,6 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   inTransitOnly,
   onInTransitChange,
 }) => {
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  // Handle date range change including null values
-  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
-    const [start, end] = dates;
-    setShowDatePicker(false);
-
-    if (start && end) {
-      onDateRangeChange(start, end);
-    } else if (start && !end) {
-      // If only start date is selected, set end date to the same date
-      onDateRangeChange(start, start);
-    }
-  };
-
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && searchValue.trim()) {
       onSearch();
@@ -91,36 +76,54 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     return `${startStr} - ${endStr}`;
   };
 
+  // Handle start date change
+  const handleStartDateChange = (date: Date | null) => {
+    if (date) {
+      if (date <= endDate) {
+        onDateRangeChange(date, endDate);
+      } else {
+        // If start date is after end date, set end date to start date
+        onDateRangeChange(date, date);
+      }
+    }
+  };
+
+  // Handle end date change
+  const handleEndDateChange = (date: Date | null) => {
+    if (date) {
+      if (date >= startDate) {
+        onDateRangeChange(startDate, date);
+      } else {
+        // If end date is before start date, set start date to end date
+        onDateRangeChange(date, date);
+      }
+    }
+  };
+
   // Quick date range presets
-  const getDateRangePresets = () => {
+  const setToday = () => {
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
+    onDateRangeChange(today, today);
+  };
 
-    const weekAgo = new Date(today);
+  const setYesterday = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    onDateRangeChange(yesterday, yesterday);
+  };
+
+  const setLast7Days = () => {
+    const today = new Date();
+    const weekAgo = new Date();
     weekAgo.setDate(today.getDate() - 7);
+    onDateRangeChange(weekAgo, today);
+  };
 
-    const monthAgo = new Date(today);
+  const setLast30Days = () => {
+    const today = new Date();
+    const monthAgo = new Date();
     monthAgo.setMonth(today.getMonth() - 1);
-
-    return [
-      {
-        label: 'Danas',
-        action: () => onDateRangeChange(today, today),
-      },
-      {
-        label: 'Jučer',
-        action: () => onDateRangeChange(yesterday, yesterday),
-      },
-      {
-        label: 'Zadnjih 7 dana',
-        action: () => onDateRangeChange(weekAgo, today),
-      },
-      {
-        label: 'Zadnjih 30 dana',
-        action: () => onDateRangeChange(monthAgo, today),
-      },
-    ];
+    onDateRangeChange(monthAgo, today);
   };
 
   return (
@@ -147,37 +150,56 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
       <FiltersGrid>
         <FilterSection>
-          <FilterLabel htmlFor="date-range-picker" $disabled={searchMode}>
-            Datumski raspon
-          </FilterLabel>
+          <FilterLabel $disabled={searchMode}>Datumski raspon</FilterLabel>
 
           <DateRangeContainer>
-            <StyledDatePickerWrapper $disabled={searchMode}>
-              <DatePicker
-                selectsRange={true}
-                startDate={startDate}
-                endDate={endDate}
-                onChange={handleDateRangeChange}
-                dateFormat="dd.MM.yyyy"
-                locale="hr"
-                maxDate={new Date()}
-                placeholderText="Odaberi datumski raspon"
-                className="date-picker"
-                disabled={searchMode}
-                isClearable={false}
-              />
-            </StyledDatePickerWrapper>
+            <DatePickerRow>
+              <DatePickerContainer>
+                <DatePickerLabel>Od:</DatePickerLabel>
+                <DatePickerWrapper $disabled={searchMode}>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={handleStartDateChange}
+                    dateFormat="dd.MM.yyyy"
+                    locale="hr"
+                    maxDate={new Date()}
+                    placeholderText="Početni datum"
+                    disabled={searchMode}
+                  />
+                </DatePickerWrapper>
+              </DatePickerContainer>
+
+              <DatePickerContainer>
+                <DatePickerLabel>Do:</DatePickerLabel>
+                <DatePickerWrapper $disabled={searchMode}>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={handleEndDateChange}
+                    dateFormat="dd.MM.yyyy"
+                    locale="hr"
+                    maxDate={new Date()}
+                    minDate={startDate}
+                    placeholderText="Krajnji datum"
+                    disabled={searchMode}
+                  />
+                </DatePickerWrapper>
+              </DatePickerContainer>
+            </DatePickerRow>
 
             {!searchMode && (
               <DatePresets>
-                {getDateRangePresets().map((preset, index) => (
-                  <PresetButton
-                    key={index}
-                    onClick={preset.action}
-                    type="button">
-                    {preset.label}
-                  </PresetButton>
-                ))}
+                <PresetButton onClick={setToday} type="button">
+                  Danas
+                </PresetButton>
+                <PresetButton onClick={setYesterday} type="button">
+                  Jučer
+                </PresetButton>
+                <PresetButton onClick={setLast7Days} type="button">
+                  Zadnjih 7 dana
+                </PresetButton>
+                <PresetButton onClick={setLast30Days} type="button">
+                  Zadnjih 30 dana
+                </PresetButton>
               </DatePresets>
             )}
           </DateRangeContainer>
@@ -420,7 +442,31 @@ const DateRangeContainer = styled.div`
   gap: 0.75rem;
 `;
 
-const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
+const DatePickerRow = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+`;
+
+const DatePickerContainer = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const DatePickerLabel = styled.label`
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${({theme}) => theme.colors.text};
+  margin-bottom: 0.25rem;
+`;
+
+const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
   .react-datepicker-wrapper {
     width: 100%;
   }
@@ -461,9 +507,7 @@ const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
     color: white;
   }
 
-  .react-datepicker__day--selected,
-  .react-datepicker__day--in-selecting-range,
-  .react-datepicker__day--in-range {
+  .react-datepicker__day--selected {
     background-color: ${({theme}) => theme.colors.primary};
     color: white;
 
@@ -478,11 +522,6 @@ const StyledDatePickerWrapper = styled.div<{$disabled?: boolean}>`
     &:hover {
       background-color: ${({theme}) => theme.colors.primaryDark};
     }
-  }
-
-  .react-datepicker__day--range-start,
-  .react-datepicker__day--range-end {
-    background-color: ${({theme}) => theme.colors.primaryDark} !important;
   }
 `;
 
