@@ -73,16 +73,59 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
     const startStr = start.toLocaleDateString('hr-HR');
     const endStr = end.toLocaleDateString('hr-HR');
-    return `${startStr} - ${endStr}`;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return `${startStr} - ${endStr} (${diffDays} ${
+      diffDays === 1 ? 'dan' : 'dana'
+    })`;
+  };
+
+  // Calculate max end date (31 days from start date, but not beyond today)
+  const getMaxEndDate = (fromDate: Date) => {
+    const maxDate = new Date(fromDate);
+    maxDate.setDate(fromDate.getDate() + 31);
+    const today = new Date();
+    return maxDate > today ? today : maxDate;
+  };
+
+  // Calculate min start date (31 days before end date)
+  const getMinStartDate = (toDate: Date) => {
+    const minDate = new Date(toDate);
+    minDate.setDate(toDate.getDate() - 31);
+    return minDate;
+  };
+
+  // Calculate max start date (should not be beyond today)
+  const getMaxStartDate = () => {
+    return new Date(); // Today
+  };
+
+  // Calculate min end date (should be at least the start date)
+  const getMinEndDate = (fromDate: Date) => {
+    return fromDate;
+  };
+
+  // Check if date range exceeds 31 days
+  const isRangeValid = (start: Date, end: Date) => {
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 31;
   };
 
   // Handle start date change
   const handleStartDateChange = (date: Date | null) => {
     if (date) {
-      if (date <= endDate) {
+      if (date <= endDate && isRangeValid(date, endDate)) {
+        // Range is valid, use as-is
         onDateRangeChange(date, endDate);
+      } else if (date <= endDate && !isRangeValid(date, endDate)) {
+        // Start date is before end date but range > 31 days
+        // Adjust end date to be 31 days from start date
+        const newEndDate = getMaxEndDate(date);
+        onDateRangeChange(date, newEndDate);
       } else {
-        // If start date is after end date, set end date to start date
+        // Start date is after end date, set end date to start date
         onDateRangeChange(date, date);
       }
     }
@@ -91,10 +134,16 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   // Handle end date change
   const handleEndDateChange = (date: Date | null) => {
     if (date) {
-      if (date >= startDate) {
+      if (date >= startDate && isRangeValid(startDate, date)) {
+        // Range is valid, use as-is
         onDateRangeChange(startDate, date);
+      } else if (date >= startDate && !isRangeValid(startDate, date)) {
+        // End date is after start date but range > 31 days
+        // Adjust start date to be 31 days before end date
+        const newStartDate = getMinStartDate(date);
+        onDateRangeChange(newStartDate, date);
       } else {
-        // If end date is before start date, set start date to end date
+        // End date is before start date, set start date to end date
         onDateRangeChange(date, date);
       }
     }
@@ -162,7 +211,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     onChange={handleStartDateChange}
                     dateFormat="dd.MM.yyyy"
                     locale="hr"
-                    maxDate={new Date()}
+                    maxDate={getMaxStartDate()}
                     placeholderText="Početni datum"
                     disabled={searchMode}
                   />
@@ -177,8 +226,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     onChange={handleEndDateChange}
                     dateFormat="dd.MM.yyyy"
                     locale="hr"
-                    maxDate={new Date()}
-                    minDate={startDate}
+                    maxDate={getMaxEndDate(startDate)}
+                    minDate={getMinEndDate(startDate)}
                     placeholderText="Krajnji datum"
                     disabled={searchMode}
                   />
@@ -205,9 +254,12 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           </DateRangeContainer>
 
           {!searchMode && (
-            <DateRangeDisplay>
-              Odabrani period: {formatDateRange(startDate, endDate)}
-            </DateRangeDisplay>
+            <>
+              <DateRangeDisplay>
+                Odabrani period: {formatDateRange(startDate, endDate)}
+              </DateRangeDisplay>
+              <RangeLimitInfo>Maksimalni raspon: 31 dan</RangeLimitInfo>
+            </>
           )}
         </FilterSection>
 
@@ -556,6 +608,14 @@ const DateRangeDisplay = styled.div`
   background-color: ${({theme}) => theme.colors.background};
   border-radius: ${({theme}) => theme.borderRadius};
   text-align: center;
+`;
+
+const RangeLimitInfo = styled.div`
+  font-size: 0.75rem;
+  color: ${({theme}) => theme.colors.primary};
+  text-align: center;
+  margin-top: 0.25rem;
+  font-style: italic;
 `;
 
 export default DashboardFilters;
