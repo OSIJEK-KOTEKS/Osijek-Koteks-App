@@ -519,21 +519,38 @@ const DateRangeInputsContainer = styled.div`
 const DatePickerContainer = styled.div`
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
 `;
 
 const DatePickerRow = styled.div`
   display: flex;
+  gap: 1rem;
   align-items: center;
-  gap: 0.5rem;
-  height: 3rem; /* Match other input heights */
-`;
 
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+`;
 const DatePickerLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 600;
   color: ${({theme}) => theme.colors.text};
-  min-width: 2rem; /* Fixed width for labels */
-  white-space: nowrap;
+  min-width: 30px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    min-width: auto;
+  }
 `;
 
 const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
