@@ -158,7 +158,8 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     title: '',
     code: '',
     registracija: '',
-    neto: undefined, // Initialize neto as undefined
+    neto: undefined,
+    tezina: undefined, // NEW: Initialize tezina as undefined
     pdfUrl: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -182,7 +183,22 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
       setError('Neto mora biti broj');
       return false;
     }
+    // Validate that tezina is a number if provided
+    if (formData.tezina !== undefined && isNaN(Number(formData.tezina))) {
+      setError('Težina mora biti broj');
+      return false;
+    }
     return true;
+  };
+
+  // NEW: Handler for neto changes that also updates tezina
+  const handleNetoChange = (value: string) => {
+    const netoValue = value === '' ? undefined : Number(value);
+    setFormData({
+      ...formData,
+      neto: netoValue,
+      tezina: netoValue, // Automatically set tezina to the same value
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -210,6 +226,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
         code: '',
         registracija: '',
         neto: undefined,
+        tezina: undefined,
         pdfUrl: '',
       });
       setError('');
@@ -271,24 +288,26 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
               />
             </FormGroup>
 
-            {/* Add the new neto field */}
+            {/* NEW: Updated neto field that also sets tezina */}
             <FormGroup>
-              <Label>Neto</Label>
+              <Label>Neto / Težina</Label>
               <Input
                 type="number"
                 value={formData.neto === undefined ? '' : formData.neto}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    neto:
-                      e.target.value === ''
-                        ? undefined
-                        : Number(e.target.value),
-                  })
-                }
-                placeholder="Unesite neto"
+                onChange={e => handleNetoChange(e.target.value)}
+                placeholder="Unesite neto (automatski postavlja i težinu)"
                 id="neto"
               />
+              {formData.neto !== undefined && (
+                <p
+                  style={{
+                    fontSize: '0.75rem',
+                    color: '#666',
+                    marginTop: '0.25rem',
+                  }}>
+                  Težina će biti automatski postavljena na: {formData.tezina}
+                </p>
+              )}
             </FormGroup>
 
             <FormGroup>

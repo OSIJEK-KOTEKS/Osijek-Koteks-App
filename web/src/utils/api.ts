@@ -337,7 +337,16 @@ export const apiService = {
   createItem: async (itemData: CreateItemInput): Promise<Item> => {
     try {
       console.log('Creating new item:', itemData);
-      const response = await api.post<Item>('/api/items', itemData);
+
+      // Ensure tezina is set to the same value as neto if neto is provided
+      const itemPayload = {
+        ...itemData,
+        tezina: itemData.neto, // Set tezina to the same value as neto
+      };
+
+      console.log('Item payload with tezina:', itemPayload);
+
+      const response = await api.post<Item>('/api/items', itemPayload);
       return response.data;
     } catch (error) {
       console.error('Error creating item:', error);

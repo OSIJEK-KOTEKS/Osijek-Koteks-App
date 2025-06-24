@@ -27,7 +27,8 @@ export interface Item {
   title: string;
   code: string;
   registracija?: string;
-  neto?: number; // Add the new field
+  neto?: number;
+  tezina?: number; // NEW: Add tezina field
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
@@ -85,7 +86,8 @@ export interface CreateItemInput {
   title: string;
   code: string;
   registracija?: string;
-  neto?: number; // Add the new field
+  neto?: number;
+  tezina?: number; // NEW: Add tezina field
   pdfUrl: string;
   creationDate?: string;
   creationTime?: string;
@@ -100,15 +102,18 @@ export interface ItemFilters {
   inTransitOnly?: boolean;
   // Add any additional filtering options as needed
 }
+
 // You can also add a utility type for date range operations
 export interface DateRange {
   startDate: Date;
   endDate: Date;
 }
+
 export interface DateRangeValidation {
   isValid: boolean;
   message?: string;
 }
+
 export interface DateRangePreset {
   label: string;
   startDate: Date;
@@ -127,6 +132,7 @@ export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationInfo;
 }
+
 export interface ApiServiceResponse<T = any> {
   status: number;
   data: T;
@@ -176,6 +182,6 @@ export interface ApiService {
     approvalStatus: Item['approvalStatus'],
     pdfDocument: File,
     inTransit: boolean,
-    neto?: number, // Add neto parameter
+    neto?: number,
   ) => Promise<Item>;
 }

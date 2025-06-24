@@ -42,6 +42,13 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               </span>
             </div>
           )}
+          {/* NEW: Add tezina field to printout */}
+          {item.tezina !== undefined && (
+            <div className="print-info-item">
+              <span className="print-label">Težina:</span>
+              <span className="print-value">{item.tezina}</span>
+            </div>
+          )}
           <div className="print-info-item">
             <span className="print-label">Datum kreiranja:</span>
             <span className="print-value">
