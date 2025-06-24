@@ -589,6 +589,12 @@ const Dashboard: React.FC = () => {
             <ItemDetails>
               <strong>RN:</strong> {item.code}
             </ItemDetails>
+            {/* NEW: Add tezina display */}
+            {item.tezina !== undefined && (
+              <ItemDetails>
+                <strong>Težina:</strong> {item.tezina}
+              </ItemDetails>
+            )}
             {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
               <ItemDetails>
                 <strong>Razlika u vaganju:</strong>{' '}
