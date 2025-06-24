@@ -74,7 +74,8 @@ export interface Item {
   title: string;
   code: string;
   registracija?: string;
-  neto?: number; // Add the new field
+  neto?: number;
+  tezina?: number; // NEW: Add tezina field
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
@@ -118,15 +119,18 @@ export interface CreateItemFormData {
   title: string;
   code: string;
   registracija?: string;
-  neto?: number; // Add the new field
+  neto?: number;
+  tezina?: number; // NEW: Add tezina field
   pdfUrl: string;
   creationDate?: string;
 }
+
 export interface CreateItemInput {
   title: string;
   code: string;
   registracija?: string;
-  neto?: number; // Add the new field
+  neto?: number;
+  tezina?: number; // NEW: Add tezina field
   pdfUrl: string;
   creationDate?: string;
   creationTime?: string;
