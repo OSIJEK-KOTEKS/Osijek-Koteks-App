@@ -62,7 +62,11 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               <td>{item.title}</td>
               <td>{item.code}</td>
               <td>{item.registracija || '-'}</td>
-              <td>{item.tezina !== undefined ? item.tezina : '-'}</td>
+              <td>
+                {item.tezina !== undefined
+                  ? `${(item.tezina / 1000).toFixed(3)} T`
+                  : '-'}
+              </td>
               <td>
                 {item.approvalStatus === 'odobreno' &&
                 item.neto !== undefined ? (
@@ -176,7 +180,6 @@ const PrintableTable = ({items}: {items: Item[]}) => {
     </div>
   );
 };
-
 // Updated interface to handle both a single item or an array of items
 interface PrintTableButtonProps {
   items?: Item[];

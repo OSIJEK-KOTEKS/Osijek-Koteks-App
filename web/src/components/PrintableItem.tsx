@@ -42,11 +42,13 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               </span>
             </div>
           )}
-          {/* NEW: Add tezina field to printout */}
+          {/* NEW: Add tezina field to printout in tons */}
           {item.tezina !== undefined && (
             <div className="print-info-item">
               <span className="print-label">Težina:</span>
-              <span className="print-value">{item.tezina}</span>
+              <span className="print-value">
+                {(item.tezina / 1000).toFixed(3)} T
+              </span>
             </div>
           )}
           <div className="print-info-item">
