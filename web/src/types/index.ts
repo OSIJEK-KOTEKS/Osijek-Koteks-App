@@ -131,6 +131,7 @@ export interface PaginationInfo {
 export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationInfo;
+  totalWeight?: number; // NEW: Add total weight to the response type
 }
 
 export interface ApiServiceResponse<T = any> {

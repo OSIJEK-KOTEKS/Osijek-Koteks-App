@@ -154,6 +154,31 @@ const LoadMoreButton = styled(S.Button)`
   display: block;
 `;
 
+// NEW: Styled component for total weight display
+const TotalWeightContainer = styled.div`
+  background: ${({theme}) => theme.colors.white};
+  padding: ${({theme}) => theme.spacing.medium};
+  border-radius: ${({theme}) => theme.borderRadius};
+  box-shadow: ${({theme}) => theme.shadows.main};
+  margin-bottom: ${({theme}) => theme.spacing.medium};
+  text-align: center;
+  border-left: 4px solid ${({theme}) => theme.colors.primary};
+`;
+
+const TotalWeightValue = styled.div`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: ${({theme}) => theme.colors.primary};
+  margin-bottom: 0.25rem;
+`;
+
+const TotalWeightLabel = styled.div`
+  font-size: 0.9rem;
+  color: ${({theme}) => theme.colors.text};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
 const Dashboard: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [inTransitOnly, setInTransitOnly] = useState(false);
@@ -177,10 +202,18 @@ const Dashboard: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [isCreateModalVisible, setCreateModalVisible] =
     useState<boolean>(false);
+  // NEW: Add state for total weight from backend
+  const [totalWeight, setTotalWeight] = useState(0);
 
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
+
+  // NEW: Format weight display in tons
+  const formatWeight = (weightInKg: number) => {
+    const weightInTons = weightInKg / 1000;
+    return weightInTons.toFixed(3);
+  };
 
   const fetchAvailableCodes = useCallback(async () => {
     try {
@@ -240,6 +273,8 @@ const Dashboard: React.FC = () => {
 
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
+        // NEW: Set total weight from backend response
+        setTotalWeight(response.totalWeight || 0);
         setError('');
       } catch (err) {
         console.error('Error fetching items:', err);
@@ -335,6 +370,8 @@ const Dashboard: React.FC = () => {
             setItems(response.items);
             setHasMore(response.pagination.hasMore);
             setTotalItems(response.pagination.total);
+            // NEW: Set total weight from backend response
+            setTotalWeight(response.totalWeight || 0);
             setError('');
           })
           .catch(err => {
@@ -382,6 +419,8 @@ const Dashboard: React.FC = () => {
           setItems(response.items);
           setHasMore(response.pagination.hasMore);
           setTotalItems(response.pagination.total);
+          // NEW: Set total weight from backend response
+          setTotalWeight(response.totalWeight || 0);
           setError('');
         })
         .catch(err => {
@@ -513,6 +552,9 @@ const Dashboard: React.FC = () => {
     return `${startStr} - ${endStr}`;
   };
 
+  // NEW: Calculate total weight for display from backend data
+  // const totalWeight = calculateTotalWeight(); // Remove this line since we now get it from backend
+
   return (
     <S.PageContainer>
       <Header>
@@ -577,6 +619,22 @@ const Dashboard: React.FC = () => {
         onInTransitChange={setInTransitOnly}
       />
 
+      {/* NEW: Total Weight Display - now shows total for ALL filtered items */}
+      {totalItems > 0 && totalWeight > 0 && (
+        <TotalWeightContainer>
+          <TotalWeightValue>{formatWeight(totalWeight)} T</TotalWeightValue>
+          <TotalWeightLabel>
+            Ukupna težina materijala ({totalItems}{' '}
+            {totalItems === 1
+              ? 'kamiona'
+              : totalItems < 5
+              ? 'kamiona'
+              : 'kamiona'}
+            )
+          </TotalWeightLabel>
+        </TotalWeightContainer>
+      )}
+
       <ItemsGrid>
         {items.map(item => (
           <ItemCard key={item._id}>
@@ -589,7 +647,7 @@ const Dashboard: React.FC = () => {
             <ItemDetails>
               <strong>RN:</strong> {item.code}
             </ItemDetails>
-            {/* NEW: Add tezina display in tons */}
+            {/* Display tezina in tons */}
             {item.tezina !== undefined && (
               <ItemDetails>
                 <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} T
