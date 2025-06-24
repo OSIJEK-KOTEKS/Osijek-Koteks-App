@@ -57,6 +57,8 @@ router.get('/codes', auth, async (req, res) => {
   }
 });
 
+// Add this to your items.js route file - update the GET '/' route
+
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder, searchTitle, inTransitOnly} =
@@ -117,17 +119,47 @@ router.get('/', auth, async (req, res) => {
       };
     }
 
+    // Get paginated items
     const items = await Item.find(query)
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate('approvedBy', 'firstName lastName');
 
+    // Get total count
     const total = await Item.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
 
+    // NEW: Calculate total weight for ALL filtered items (not just paginated)
+    const totalWeightResult = await Item.aggregate([
+      {$match: query},
+      {
+        $group: {
+          _id: null,
+          totalWeight: {
+            $sum: {
+              $cond: {
+                if: {
+                  $and: [
+                    {$ne: ['$tezina', null]},
+                    {$ne: ['$tezina', undefined]},
+                  ],
+                },
+                then: '$tezina',
+                else: 0,
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    const totalWeight =
+      totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
+
     console.log('Found items:', items.length); // Add this for debugging
+    console.log('Total weight of all filtered items:', totalWeight); // Add this for debugging
 
     res.json({
       items,
@@ -137,6 +169,7 @@ router.get('/', auth, async (req, res) => {
         pages: totalPages,
         hasMore,
       },
+      totalWeight, // NEW: Add total weight to response
     });
   } catch (err) {
     console.error('Error in items route:', err);
