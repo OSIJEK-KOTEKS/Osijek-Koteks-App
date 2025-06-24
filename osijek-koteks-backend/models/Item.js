@@ -1,4 +1,4 @@
-// Item.js (MongoDB Schema)
+// Item.js (MongoDB Schema) - Updated with tezina field
 const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
@@ -38,6 +38,11 @@ const ItemSchema = new mongoose.Schema(
       },
     },
     neto: {
+      type: Number,
+      required: false,
+    },
+    // NEW: Add tezina field
+    tezina: {
       type: Number,
       required: false,
     },
