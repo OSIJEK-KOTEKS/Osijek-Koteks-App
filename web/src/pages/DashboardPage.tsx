@@ -627,11 +627,7 @@ const Dashboard: React.FC = () => {
           <TotalWeightValue>{formatWeight(totalWeight)} T</TotalWeightValue>
           <TotalWeightLabel>
             Ukupna težina ({totalItems}{' '}
-            {totalItems === 1
-              ? 'dokument'
-              : totalItems < 5
-              ? 'dokumenta'
-              : 'dokumenata'}
+            {totalItems === 1 ? 'kamion' : totalItems < 5 ? 'kamion' : 'kamion'}
             )
           </TotalWeightLabel>
         </TotalWeightContainer>

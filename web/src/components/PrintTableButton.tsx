@@ -27,19 +27,7 @@ const PrintButton = styled.button`
   }
 `;
 
-const PrintableTable = ({
-  items,
-  totalWeight,
-}: {
-  items: Item[];
-  totalWeight?: number;
-}) => {
-  // NEW: Format weight function
-  const formatWeight = (weightInKg: number) => {
-    const weightInTons = weightInKg / 1000;
-    return weightInTons.toFixed(3);
-  };
-
+const PrintableTable = ({items}: {items: Item[]}) => {
   return (
     <div className="print-container">
       <div className="print-header">
@@ -118,28 +106,6 @@ const PrintableTable = ({
             </tr>
           ))}
         </tbody>
-        {/* NEW: Add total weight row at the bottom of the table */}
-        {totalWeight !== undefined && totalWeight > 0 && (
-          <tfoot>
-            <tr className="total-weight-row">
-              <td colSpan={3} className="total-weight-label">
-                <strong>UKUPNA TEŽINA:</strong>
-              </td>
-              <td className="total-weight-value">
-                <strong>{formatWeight(totalWeight)} T</strong>
-              </td>
-              <td colSpan={5} className="total-weight-details">
-                ({items.length}{' '}
-                {items.length === 1
-                  ? 'dokument'
-                  : items.length < 5
-                  ? 'dokumenta'
-                  : 'dokumenata'}
-                )
-              </td>
-            </tr>
-          </tfoot>
-        )}
       </table>
 
       <div className="print-footer">
@@ -195,38 +161,6 @@ const PrintableTable = ({
 
             .print-table tr:nth-child(even) {
               background-color: #f9f9f9;
-            }
-
-            /* NEW: Styles for total weight row */
-            .total-weight-row {
-              background-color: #e3f2fd !important;
-              border-top: 3px solid #2196F3 !important;
-            }
-
-            .total-weight-row td {
-              border-top: 3px solid #2196F3 !important;
-              padding: 12px 8px !important;
-              font-size: 13px !important;
-            }
-
-            .total-weight-label {
-              background-color: #2196F3 !important;
-              color: white !important;
-              text-align: right !important;
-            }
-
-            .total-weight-value {
-              background-color: #1976D2 !important;
-              color: white !important;
-              text-align: center !important;
-              font-size: 14px !important;
-            }
-
-            .total-weight-details {
-              background-color: #e3f2fd !important;
-              color: #1976D2 !important;
-              text-align: left !important;
-              font-style: italic;
             }
 
             .print-footer {
@@ -292,19 +226,100 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
       const printWindow = window.open('', '_blank');
       if (!printWindow) return;
 
-      // NEW: Pass totalWeight to PrintableTable
+      // Format weight function
+      const formatWeight = (weightInKg: number) => {
+        const weightInTons = weightInKg / 1000;
+        return weightInTons.toFixed(3);
+      };
+
+      // Generate the main table
       const printableTableHtml = ReactDOMServer.renderToStaticMarkup(
-        <PrintableTable items={allItems} totalWeight={totalWeight} />,
+        <PrintableTable items={allItems} />,
       );
+
+      // NEW: Generate total weight summary separately (only once, at the end)
+      const totalWeightSummaryHtml =
+        totalWeight !== undefined && totalWeight > 0
+          ? `
+        <div style="
+          margin-top: 40px;
+          padding: 20px;
+          background-color: #f8f9fa;
+          border: 2px solid #2196F3;
+          border-radius: 8px;
+          text-align: center;
+          page-break-inside: avoid;
+        ">
+          <div style="
+            font-size: 18px;
+            font-weight: bold;
+            color: #2196F3;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          ">
+            Ukupna težina 
+          </div>
+          <div style="
+            height: 2px;
+            background-color: #2196F3;
+            margin: 20px 0;
+          "></div>
+          <div style="
+            font-size: 32px;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 15px 0;
+          ">
+            ${formatWeight(totalWeight)} T
+          </div>
+          <div style="
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+          ">
+            Ukupno ${allItems.length} ${
+              allItems.length === 1
+                ? 'kamion'
+                : allItems.length < 5
+                ? 'kamion'
+                : 'kamion'
+            }
+          </div>
+          <div style="
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+          ">
+            Datum ispisa: ${new Date().toLocaleDateString('hr-HR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </div>
+        </div>
+      `
+          : '';
 
       const printContent = `
         <!DOCTYPE html>
         <html>
           <head>
             <title>Pregled dokumenata - Ispis</title>
+            <style>
+              @media print {
+                * { 
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+              }
+            </style>
           </head>
           <body>
             ${printableTableHtml}
+            ${totalWeightSummaryHtml}
           </body>
         </html>
       `;
@@ -364,7 +379,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
       </PrintButton>
 
       <div style={{display: 'none'}} ref={printContainerRef}>
-        <PrintableTable items={itemsToDisplay} totalWeight={totalWeight} />
+        <PrintableTable items={itemsToDisplay} />
       </div>
     </>
   );
