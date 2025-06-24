@@ -572,12 +572,14 @@ const Dashboard: React.FC = () => {
           <PrintTableButton
             items={items}
             totalItems={totalItems}
+            totalWeight={totalWeight}
             isLoading={loading}
             onPrintAll={fetchAllItemsForPrinting}
           />
           <PrintAllButton
             items={items}
             totalItems={totalItems}
+            totalWeight={totalWeight}
             isLoading={loading}
             onPrintAll={fetchAllItemsForPrinting}
           />
@@ -624,12 +626,12 @@ const Dashboard: React.FC = () => {
         <TotalWeightContainer>
           <TotalWeightValue>{formatWeight(totalWeight)} T</TotalWeightValue>
           <TotalWeightLabel>
-            Ukupna težina materijala ({totalItems}{' '}
+            Ukupna težina ({totalItems}{' '}
             {totalItems === 1
-              ? 'kamiona'
+              ? 'dokument'
               : totalItems < 5
-              ? 'kamiona'
-              : 'kamiona'}
+              ? 'dokumenta'
+              : 'dokumenata'}
             )
           </TotalWeightLabel>
         </TotalWeightContainer>

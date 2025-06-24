@@ -27,7 +27,19 @@ const PrintButton = styled.button`
   }
 `;
 
-const PrintableTable = ({items}: {items: Item[]}) => {
+const PrintableTable = ({
+  items,
+  totalWeight,
+}: {
+  items: Item[];
+  totalWeight?: number;
+}) => {
+  // NEW: Format weight function
+  const formatWeight = (weightInKg: number) => {
+    const weightInTons = weightInKg / 1000;
+    return weightInTons.toFixed(3);
+  };
+
   return (
     <div className="print-container">
       <div className="print-header">
@@ -106,6 +118,28 @@ const PrintableTable = ({items}: {items: Item[]}) => {
             </tr>
           ))}
         </tbody>
+        {/* NEW: Add total weight row at the bottom of the table */}
+        {totalWeight !== undefined && totalWeight > 0 && (
+          <tfoot>
+            <tr className="total-weight-row">
+              <td colSpan={3} className="total-weight-label">
+                <strong>UKUPNA TEŽINA:</strong>
+              </td>
+              <td className="total-weight-value">
+                <strong>{formatWeight(totalWeight)} T</strong>
+              </td>
+              <td colSpan={5} className="total-weight-details">
+                ({items.length}{' '}
+                {items.length === 1
+                  ? 'dokument'
+                  : items.length < 5
+                  ? 'dokumenta'
+                  : 'dokumenata'}
+                )
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </table>
 
       <div className="print-footer">
@@ -163,6 +197,38 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               background-color: #f9f9f9;
             }
 
+            /* NEW: Styles for total weight row */
+            .total-weight-row {
+              background-color: #e3f2fd !important;
+              border-top: 3px solid #2196F3 !important;
+            }
+
+            .total-weight-row td {
+              border-top: 3px solid #2196F3 !important;
+              padding: 12px 8px !important;
+              font-size: 13px !important;
+            }
+
+            .total-weight-label {
+              background-color: #2196F3 !important;
+              color: white !important;
+              text-align: right !important;
+            }
+
+            .total-weight-value {
+              background-color: #1976D2 !important;
+              color: white !important;
+              text-align: center !important;
+              font-size: 14px !important;
+            }
+
+            .total-weight-details {
+              background-color: #e3f2fd !important;
+              color: #1976D2 !important;
+              text-align: left !important;
+              font-style: italic;
+            }
+
             .print-footer {
               margin-top: 30px;
               text-align: center;
@@ -180,11 +246,13 @@ const PrintableTable = ({items}: {items: Item[]}) => {
     </div>
   );
 };
+
 // Updated interface to handle both a single item or an array of items
 interface PrintTableButtonProps {
   items?: Item[];
   item?: Item;
   totalItems?: number;
+  totalWeight?: number; // NEW: Add total weight prop
   isLoading?: boolean;
   onPrintAll?: () => Promise<Item[]>;
 }
@@ -193,6 +261,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
   items,
   item,
   totalItems = 0,
+  totalWeight, // NEW: Destructure total weight
   isLoading = false,
   onPrintAll,
 }) => {
@@ -223,8 +292,9 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
       const printWindow = window.open('', '_blank');
       if (!printWindow) return;
 
+      // NEW: Pass totalWeight to PrintableTable
       const printableTableHtml = ReactDOMServer.renderToStaticMarkup(
-        <PrintableTable items={allItems} />,
+        <PrintableTable items={allItems} totalWeight={totalWeight} />,
       );
 
       const printContent = `
@@ -283,7 +353,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
     } finally {
       setIsPrinting(false);
     }
-  }, [item, items, itemsToDisplay, onPrintAll]);
+  }, [item, items, itemsToDisplay, onPrintAll, totalWeight]);
 
   return (
     <>
@@ -294,7 +364,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
       </PrintButton>
 
       <div style={{display: 'none'}} ref={printContainerRef}>
-        <PrintableTable items={itemsToDisplay} />
+        <PrintableTable items={itemsToDisplay} totalWeight={totalWeight} />
       </div>
     </>
   );

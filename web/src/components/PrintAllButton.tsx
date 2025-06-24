@@ -31,16 +31,24 @@ const PrintButton = styled.button`
 interface PrintAllButtonProps {
   items: Item[];
   totalItems: number;
+  totalWeight: number; // NEW: Add total weight prop
   isLoading: boolean;
   onPrintAll: () => Promise<Item[]>;
 }
 
 const PrintAllButton: React.FC<PrintAllButtonProps> = ({
   totalItems,
+  totalWeight, // NEW: Destructure total weight
   isLoading,
   onPrintAll,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
+
+  // NEW: Format weight function
+  const formatWeight = (weightInKg: number) => {
+    const weightInTons = weightInKg / 1000;
+    return weightInTons.toFixed(3);
+  };
 
   const handlePrintAll = useCallback(async () => {
     try {
@@ -146,6 +154,45 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
           color: #666;
         }
 
+        /* NEW: Styles for total weight summary */
+        .total-weight-summary {
+          margin-top: 40px;
+          padding: 20px;
+          background-color: #f8f9fa;
+          border: 2px solid #2196F3;
+          border-radius: 8px;
+          text-align: center;
+          page-break-inside: avoid;
+        }
+
+        .total-weight-title {
+          font-size: 18px;
+          font-weight: bold;
+          color: #2196F3;
+          margin-bottom: 10px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
+        .total-weight-value {
+          font-size: 32px;
+          font-weight: bold;
+          color: #2196F3;
+          margin: 15px 0;
+        }
+
+        .total-weight-details {
+          font-size: 14px;
+          color: #666;
+          margin-top: 10px;
+        }
+
+        .summary-divider {
+          height: 2px;
+          background-color: #2196F3;
+          margin: 20px 0;
+        }
+
         @media print {
           body { 
             margin: 0;
@@ -157,6 +204,10 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
           }
           .page-break { 
             page-break-before: always;
+          }
+          .total-weight-summary {
+            background-color: #f8f9fa !important;
+            border: 2px solid #2196F3 !important;
           }
         }
       `;
@@ -176,6 +227,34 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
         })
         .join('');
 
+      // NEW: Generate total weight summary HTML
+      const totalWeightSummaryHtml = `
+        <div class="page-break"></div>
+        <div class="total-weight-summary">
+          <div class="total-weight-title">Sažetak ukupne težine</div>
+          <div class="summary-divider"></div>
+          <div class="total-weight-value">${formatWeight(totalWeight)} T</div>
+          <div class="total-weight-details">
+            Ukupna težina ${totalItems} ${
+        totalItems === 1
+          ? 'dokumenta'
+          : totalItems < 5
+          ? 'dokumenta'
+          : 'dokumenata'
+      }
+          </div>
+          <div class="total-weight-details">
+            Datum ispisa: ${new Date().toLocaleDateString('hr-HR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </div>
+        </div>
+      `;
+
       // Prepare the content
       const printContent = `
         <!DOCTYPE html>
@@ -187,6 +266,7 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
           <body>
             <div class="print-container">
               ${itemsHtml}
+              ${totalWeight > 0 ? totalWeightSummaryHtml : ''}
             </div>
           </body>
         </html>
@@ -236,7 +316,7 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
     } finally {
       setIsPrinting(false);
     }
-  }, [onPrintAll]);
+  }, [onPrintAll, totalWeight, totalItems, formatWeight]);
 
   return (
     <PrintButton
