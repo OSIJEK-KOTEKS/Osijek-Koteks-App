@@ -429,8 +429,73 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+const mobileSafetyMiddleware = (req, res, next) => {
+  const userAgent = req.headers['user-agent'] || '';
+  const isMobileApp =
+    userAgent.includes('okhttp') || userAgent.includes('ReactNative');
 
-// Item approval endpoint - CRITICAL for mobile app compatibility
+  if (isMobileApp && req.path.includes('/approval')) {
+    console.log('=== MOBILE SAFETY MIDDLEWARE ===');
+    console.log('Cleaning request for mobile app compatibility...');
+    console.log('Original body:', JSON.stringify(req.body, null, 2));
+
+    // Clean up the request body to remove any undefined or problematic fields
+    const cleanBody = {};
+
+    // Only include fields that mobile app should send
+    const allowedFields = [
+      'approvalStatus',
+      'locationData',
+      'inTransit',
+      'neto',
+    ];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined && req.body[field] !== null) {
+        cleanBody[field] = req.body[field];
+      }
+    }
+
+    // Specifically exclude tezina field for mobile app
+    // The mobile app might be trying to send this field as undefined
+    if (req.body.hasOwnProperty('tezina')) {
+      console.log('Removing tezina field from mobile request');
+      delete req.body.tezina;
+    }
+
+    // Ensure approvalStatus is a string
+    if (
+      cleanBody.approvalStatus &&
+      typeof cleanBody.approvalStatus !== 'string'
+    ) {
+      cleanBody.approvalStatus = String(cleanBody.approvalStatus);
+    }
+
+    // Ensure inTransit is properly typed
+    if (cleanBody.inTransit !== undefined) {
+      if (typeof cleanBody.inTransit === 'string') {
+        cleanBody.inTransit = cleanBody.inTransit.toLowerCase() === 'true';
+      } else {
+        cleanBody.inTransit = Boolean(cleanBody.inTransit);
+      }
+    }
+
+    // Replace the body with cleaned version
+    req.body = cleanBody;
+
+    console.log('Cleaned body:', JSON.stringify(req.body, null, 2));
+    console.log('================================');
+  }
+
+  next();
+};
+
+// Add this line right before your approval route:
+// router.patch('/:id/approval', mobileSafetyMiddleware, auth, upload.fields([...]), async (req, res) => {
+
+module.exports = {mobileSafetyMiddleware};
+// Replace the approval endpoint in your items.js with this mobile-safe version
+
 router.patch(
   '/:id/approval',
   auth,
@@ -441,26 +506,45 @@ router.patch(
   ]),
   async (req, res) => {
     try {
-      console.log('Approval request received:', {
-        itemId: req.params.id,
-        files: req.files ? Object.keys(req.files) : 'no files',
-        body: req.body,
-        userRole: req.user.role,
-        userAgent: req.headers['user-agent']?.substring(0, 100),
-      });
+      // Enhanced logging to debug mobile app issues
+      const userAgent = req.headers['user-agent'] || '';
+      const isMobileApp =
+        userAgent.includes('okhttp') || userAgent.includes('ReactNative');
+
+      console.log('=== APPROVAL REQUEST DEBUG ===');
+      console.log('Is Mobile App:', isMobileApp);
+      console.log('User Agent:', userAgent.substring(0, 100));
+      console.log('Item ID:', req.params.id);
+      console.log('Request Body:', JSON.stringify(req.body, null, 2));
+      console.log('Files:', req.files ? Object.keys(req.files) : 'no files');
+      console.log('User Role:', req.user.role);
+      console.log('User ID:', req.user._id);
+      console.log('===============================');
 
       const item = await Item.findById(req.params.id);
       if (!item) {
+        console.error('Item not found:', req.params.id);
         return res.status(404).json({message: 'Item not found'});
       }
 
+      console.log('Found item:', {
+        id: item._id,
+        title: item.title.substring(0, 50),
+        currentStatus: item.approvalStatus,
+        currentTezina: item.tezina,
+        currentNeto: item.neto,
+      });
+
+      // Extract and validate approval status
       const {approvalStatus, locationData, inTransit, neto} = req.body;
 
-      // Validate approval status
-      if (
-        !approvalStatus ||
-        !['odobreno', 'odbijen'].includes(approvalStatus)
-      ) {
+      if (!approvalStatus) {
+        console.error('Missing approval status');
+        return res.status(400).json({message: 'Approval status is required'});
+      }
+
+      if (!['odobreno', 'odbijen'].includes(approvalStatus)) {
+        console.error('Invalid approval status:', approvalStatus);
         return res.status(400).json({message: 'Invalid approval status'});
       }
 
@@ -473,67 +557,108 @@ router.patch(
       });
       item.approvedBy = req.user._id;
 
-      // Handle in_transit field (convert string to boolean for backward compatibility)
-      if (inTransit !== undefined) {
+      console.log('Updated basic approval fields:', {
+        approvalStatus: item.approvalStatus,
+        approvalDate: item.approvalDate,
+        approvedBy: item.approvedBy,
+      });
+
+      // Handle in_transit field with careful type checking
+      if (inTransit !== undefined && inTransit !== null) {
         if (typeof inTransit === 'string') {
-          item.in_transit = inTransit === 'true';
+          item.in_transit = inTransit.toLowerCase() === 'true';
         } else if (typeof inTransit === 'boolean') {
           item.in_transit = inTransit;
+        } else {
+          item.in_transit = false; // Safe default
         }
+        console.log(
+          'Set in_transit to:',
+          item.in_transit,
+          'from:',
+          inTransit,
+          typeof inTransit,
+        );
       }
 
-      // Handle neto field (for PC users or updated mobile apps)
+      // Handle neto field ONLY if it's provided and valid
+      // DO NOT touch tezina field for mobile app compatibility
       if (neto !== undefined && neto !== null && neto !== '') {
         const netoValue = parseFloat(neto);
-        if (!isNaN(netoValue)) {
+        if (!isNaN(netoValue) && isFinite(netoValue)) {
           item.neto = netoValue;
-          // BACKWARD COMPATIBILITY: Only set tezina if item doesn't already have it
-          // This prevents overwriting the original tezina from item creation
+          console.log('Updated neto to:', item.neto);
+
+          // ONLY set tezina if the item doesn't already have it (preserve original from creation)
           if (item.tezina === undefined || item.tezina === null) {
             item.tezina = netoValue;
+            console.log('Set tezina to match neto:', item.tezina);
+          } else {
+            console.log('Preserved existing tezina:', item.tezina);
           }
+        } else {
+          console.warn('Invalid neto value provided:', neto);
         }
       }
 
-      // Handle location data
+      // Handle location data with robust error handling
       if (locationData) {
         try {
-          const location =
-            typeof locationData === 'string'
-              ? JSON.parse(locationData)
-              : locationData;
+          let location;
+          if (typeof locationData === 'string') {
+            location = JSON.parse(locationData);
+          } else if (typeof locationData === 'object') {
+            location = locationData;
+          }
 
           if (
             location &&
             location.coordinates &&
             typeof location.coordinates.latitude === 'number' &&
-            typeof location.coordinates.longitude === 'number'
+            typeof location.coordinates.longitude === 'number' &&
+            !isNaN(location.coordinates.latitude) &&
+            !isNaN(location.coordinates.longitude)
           ) {
             item.approvalLocation = {
               coordinates: {
                 latitude: location.coordinates.latitude,
                 longitude: location.coordinates.longitude,
               },
-              accuracy: location.accuracy || 0,
+              accuracy:
+                typeof location.accuracy === 'number' ? location.accuracy : 0,
               timestamp: location.timestamp
                 ? new Date(location.timestamp)
                 : new Date(),
             };
+            console.log('Set approval location:', item.approvalLocation);
+          } else {
+            console.warn('Invalid location data structure:', location);
           }
         } catch (error) {
           console.error('Error parsing location data:', error);
-          // Don't fail the entire request if location parsing fails
+          // Continue without location - don't fail the approval
         }
       }
 
-      // Handle photo uploads (mobile app sends photoFront and photoBack)
-      if (req.files) {
+      // Handle file uploads with comprehensive error handling
+      if (req.files && Object.keys(req.files).length > 0) {
+        console.log('Processing file uploads...');
+
         try {
           // Handle front photo
           if (req.files.photoFront && req.files.photoFront[0]) {
-            console.log('Uploading front photo to Cloudinary...');
-            const frontResponse = await uploadToCloudinary(
-              req.files.photoFront[0],
+            console.log('Uploading front photo...');
+            const frontFile = req.files.photoFront[0];
+            console.log('Front photo details:', {
+              mimetype: frontFile.mimetype,
+              size: frontFile.size,
+              originalname: frontFile.originalname,
+            });
+
+            const frontResponse = await uploadToCloudinary(frontFile);
+            console.log(
+              'Front photo uploaded successfully:',
+              frontResponse.publicId,
             );
 
             // Delete old front photo if exists
@@ -542,24 +667,35 @@ router.patch(
                 await cloudinary.uploader.destroy(
                   item.approvalPhotoFront.publicId,
                 );
-              } catch (error) {
-                console.error('Error deleting old front photo:', error);
+                console.log('Deleted old front photo');
+              } catch (deleteError) {
+                console.error('Error deleting old front photo:', deleteError);
+                // Continue anyway
               }
             }
 
             item.approvalPhotoFront = {
               url: frontResponse.url,
               uploadDate: new Date(),
-              mimeType: req.files.photoFront[0].mimetype,
+              mimeType: frontFile.mimetype,
               publicId: frontResponse.publicId,
             };
           }
 
           // Handle back photo
           if (req.files.photoBack && req.files.photoBack[0]) {
-            console.log('Uploading back photo to Cloudinary...');
-            const backResponse = await uploadToCloudinary(
-              req.files.photoBack[0],
+            console.log('Uploading back photo...');
+            const backFile = req.files.photoBack[0];
+            console.log('Back photo details:', {
+              mimetype: backFile.mimetype,
+              size: backFile.size,
+              originalname: backFile.originalname,
+            });
+
+            const backResponse = await uploadToCloudinary(backFile);
+            console.log(
+              'Back photo uploaded successfully:',
+              backResponse.publicId,
             );
 
             // Delete old back photo if exists
@@ -568,25 +704,33 @@ router.patch(
                 await cloudinary.uploader.destroy(
                   item.approvalPhotoBack.publicId,
                 );
-              } catch (error) {
-                console.error('Error deleting old back photo:', error);
+                console.log('Deleted old back photo');
+              } catch (deleteError) {
+                console.error('Error deleting old back photo:', deleteError);
+                // Continue anyway
               }
             }
 
             item.approvalPhotoBack = {
               url: backResponse.url,
               uploadDate: new Date(),
-              mimeType: req.files.photoBack[0].mimetype,
+              mimeType: backFile.mimetype,
               publicId: backResponse.publicId,
             };
           }
 
           // Handle PDF document (for PC users)
           if (req.files.pdfDocument && req.files.pdfDocument[0]) {
-            console.log('Uploading PDF document to Cloudinary...');
-            const pdfResponse = await uploadToCloudinary(
-              req.files.pdfDocument[0],
-            );
+            console.log('Uploading PDF document...');
+            const pdfFile = req.files.pdfDocument[0];
+            console.log('PDF details:', {
+              mimetype: pdfFile.mimetype,
+              size: pdfFile.size,
+              originalname: pdfFile.originalname,
+            });
+
+            const pdfResponse = await uploadToCloudinary(pdfFile);
+            console.log('PDF uploaded successfully:', pdfResponse.publicId);
 
             // Delete old document if exists
             if (item.approvalDocument && item.approvalDocument.publicId) {
@@ -594,50 +738,78 @@ router.patch(
                 await cloudinary.uploader.destroy(
                   item.approvalDocument.publicId,
                 );
-              } catch (error) {
-                console.error('Error deleting old document:', error);
+                console.log('Deleted old PDF document');
+              } catch (deleteError) {
+                console.error('Error deleting old PDF:', deleteError);
+                // Continue anyway
               }
             }
 
             item.approvalDocument = {
               url: pdfResponse.url,
               uploadDate: new Date(),
-              mimeType: req.files.pdfDocument[0].mimetype,
+              mimeType: pdfFile.mimetype,
               publicId: pdfResponse.publicId,
             };
           }
         } catch (uploadError) {
-          console.error('Error uploading files:', uploadError);
+          console.error('Critical error during file upload:', uploadError);
           return res.status(500).json({
             message: 'Error uploading files',
             error: uploadError.message,
+            errorType: 'upload_error',
           });
         }
+      } else {
+        console.log('No files to upload');
       }
 
-      // Save the updated item
-      const updatedItem = await item.save();
-      await updatedItem.populate('approvedBy', 'firstName lastName');
+      // Save the updated item with validation
+      try {
+        console.log('Saving item with final data:', {
+          id: item._id,
+          approvalStatus: item.approvalStatus,
+          inTransit: item.in_transit,
+          neto: item.neto,
+          tezina: item.tezina,
+          hasLocation: !!item.approvalLocation,
+          hasFrontPhoto: !!item.approvalPhotoFront,
+          hasBackPhoto: !!item.approvalPhotoBack,
+          hasDocument: !!item.approvalDocument,
+        });
 
-      console.log('Item approval successful:', {
-        itemId: updatedItem._id,
-        approvalStatus: updatedItem.approvalStatus,
-        inTransit: updatedItem.in_transit,
-        hasPhotos: !!(
-          updatedItem.approvalPhotoFront && updatedItem.approvalPhotoBack
-        ),
-        hasDocument: !!updatedItem.approvalDocument,
-        hasLocation: !!updatedItem.approvalLocation,
-        neto: updatedItem.neto,
-        tezina: updatedItem.tezina,
-      });
+        const updatedItem = await item.save();
+        await updatedItem.populate('approvedBy', 'firstName lastName');
 
-      res.json(updatedItem);
+        console.log('=== APPROVAL SUCCESS ===');
+        console.log('Item saved successfully:', updatedItem._id);
+        console.log('Final status:', updatedItem.approvalStatus);
+        console.log('========================');
+
+        // Return the updated item
+        res.json(updatedItem);
+      } catch (saveError) {
+        console.error('Error saving item:', saveError);
+        return res.status(500).json({
+          message: 'Error saving approval data',
+          error: saveError.message,
+          errorType: 'save_error',
+        });
+      }
     } catch (error) {
-      console.error('Error in approval endpoint:', error);
+      console.error('=== APPROVAL ENDPOINT ERROR ===');
+      console.error('Error type:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      console.error('Request body:', req.body);
+      console.error('Files:', req.files ? Object.keys(req.files) : 'none');
+      console.error('===============================');
+
       res.status(500).json({
         message: 'Server error during approval',
         error: error.message,
+        errorType: 'server_error',
+        errorId: Math.random().toString(36).substring(7),
       });
     }
   },
