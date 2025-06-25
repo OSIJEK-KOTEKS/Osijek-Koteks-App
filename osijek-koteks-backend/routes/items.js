@@ -41,6 +41,7 @@ const upload = multer({
   },
 });
 
+// Get unique codes
 router.get('/codes', auth, async (req, res) => {
   try {
     // If user is not admin and doesn't have full access, filter by their codes
@@ -57,8 +58,7 @@ router.get('/codes', auth, async (req, res) => {
   }
 });
 
-// Add this to your items.js route file - update the GET '/' route
-
+// Get all items with pagination and filtering
 router.get('/', auth, async (req, res) => {
   try {
     const {startDate, endDate, code, sortOrder, searchTitle, inTransitOnly} =
@@ -102,7 +102,7 @@ router.get('/', auth, async (req, res) => {
       }
     }
 
-    console.log('Query:', query); // Add this for debugging
+    console.log('Query:', query);
 
     let sortOptions = {creationDate: -1}; // Default sort
     if (sortOrder === 'date-asc') {
@@ -131,7 +131,7 @@ router.get('/', auth, async (req, res) => {
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
 
-    // NEW: Calculate total weight for ALL filtered items (not just paginated)
+    // Calculate total weight for ALL filtered items (not just paginated)
     const totalWeightResult = await Item.aggregate([
       {$match: query},
       {
@@ -158,8 +158,8 @@ router.get('/', auth, async (req, res) => {
     const totalWeight =
       totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
 
-    console.log('Found items:', items.length); // Add this for debugging
-    console.log('Total weight of all filtered items:', totalWeight); // Add this for debugging
+    console.log('Found items:', items.length);
+    console.log('Total weight of all filtered items:', totalWeight);
 
     res.json({
       items,
@@ -169,7 +169,7 @@ router.get('/', auth, async (req, res) => {
         pages: totalPages,
         hasMore,
       },
-      totalWeight, // NEW: Add total weight to response
+      totalWeight,
     });
   } catch (err) {
     console.error('Error in items route:', err);
@@ -180,9 +180,35 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Create a new item
-// Update the POST route in items.js for creating new items
+// Get a specific item
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).populate(
+      'approvedBy',
+      'firstName lastName',
+    );
 
+    if (!item) {
+      return res.status(404).json({message: 'Item not found'});
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({message: 'User not found'});
+    }
+
+    if (user.role !== 'admin' && !user.codes.includes(item.code)) {
+      return res.status(403).json({message: 'Access denied'});
+    }
+
+    res.json(item);
+  } catch (err) {
+    console.error('Error fetching item:', err);
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
+// Create a new item
 router.post('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
@@ -202,6 +228,13 @@ router.post('/', auth, async (req, res) => {
       tezina,
       hasTitle: !!title,
     });
+
+    // Validate required fields
+    if (!title || !code || !pdfUrl) {
+      return res.status(400).json({
+        message: 'Title, code, and pdfUrl are required',
+      });
+    }
 
     // Check if an item with the same title already exists
     const existingItem = await Item.findOne({title: title.trim()});
@@ -257,10 +290,10 @@ router.post('/', auth, async (req, res) => {
 
     // Create the new item object
     const item = new Item({
-      title: title.trim(), // Trim whitespace for consistency
-      code,
-      registracija,
-      pdfUrl,
+      title: title.trim(),
+      code: code.trim(),
+      registracija: registracija ? registracija.trim() : undefined,
+      pdfUrl: pdfUrl.trim(),
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,
       approvalStatus: 'na čekanju',
@@ -268,22 +301,33 @@ router.post('/', auth, async (req, res) => {
 
     // BACKWARD COMPATIBILITY: Handle both neto and tezina fields
     // Priority: explicit tezina > explicit neto > undefined
-    if (tezina !== undefined && tezina !== null) {
+    if (tezina !== undefined && tezina !== null && tezina !== '') {
       // New web app sends both neto and tezina
-      item.neto = neto !== undefined ? neto : tezina;
-      item.tezina = tezina;
-      console.log('Using explicit tezina value:', {
-        neto: item.neto,
-        tezina: item.tezina,
-      });
-    } else if (neto !== undefined && neto !== null) {
+      const tezinaValue = parseFloat(tezina);
+      const netoValue =
+        neto !== undefined && neto !== null && neto !== ''
+          ? parseFloat(neto)
+          : tezinaValue;
+
+      if (!isNaN(tezinaValue)) {
+        item.tezina = tezinaValue;
+        item.neto = !isNaN(netoValue) ? netoValue : tezinaValue;
+        console.log('Using explicit tezina value:', {
+          neto: item.neto,
+          tezina: item.tezina,
+        });
+      }
+    } else if (neto !== undefined && neto !== null && neto !== '') {
       // Older versions or when only neto is provided
-      item.neto = neto;
-      item.tezina = neto; // Set tezina to the same value as neto for consistency
-      console.log('Using neto as tezina value:', {
-        neto: item.neto,
-        tezina: item.tezina,
-      });
+      const netoValue = parseFloat(neto);
+      if (!isNaN(netoValue)) {
+        item.neto = netoValue;
+        item.tezina = netoValue; // Set tezina to the same value as neto for consistency
+        console.log('Using neto as tezina value:', {
+          neto: item.neto,
+          tezina: item.tezina,
+        });
+      }
     }
     // If neither is provided, both remain undefined (which is fine)
 
@@ -305,7 +349,88 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Add this route handler for item approval (PATCH /:id/approval)
+// Update an item (admin only)
+router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({message: 'Access denied. Admin only.'});
+    }
+
+    const {title, code, neto, tezina, pdfUrl, creationDate} = req.body;
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({message: 'Item not found'});
+    }
+
+    // Update basic fields
+    if (title) item.title = title.trim();
+    if (code) item.code = code.trim();
+    if (pdfUrl) item.pdfUrl = pdfUrl.trim();
+    if (creationDate) item.creationDate = new Date(creationDate);
+
+    // Update neto and tezina fields - backward compatible
+    if (tezina !== undefined && tezina !== null && tezina !== '') {
+      const tezinaValue = parseFloat(tezina);
+      if (!isNaN(tezinaValue)) {
+        item.tezina = tezinaValue;
+        // Also update neto if provided, otherwise keep existing
+        if (neto !== undefined && neto !== null && neto !== '') {
+          const netoValue = parseFloat(neto);
+          if (!isNaN(netoValue)) {
+            item.neto = netoValue;
+          }
+        }
+      }
+    } else if (neto !== undefined && neto !== null && neto !== '') {
+      const netoValue = parseFloat(neto);
+      if (!isNaN(netoValue)) {
+        item.neto = netoValue;
+        item.tezina = netoValue; // Keep tezina in sync with neto
+      }
+    }
+
+    // Handle photo upload if present
+    if (req.file) {
+      try {
+        console.log('Uploading new photo to Cloudinary...');
+        const cloudinaryResponse = await uploadToCloudinary(req.file);
+        console.log('Cloudinary response:', cloudinaryResponse);
+
+        // Delete old photo from Cloudinary if exists
+        if (item.approvalPhoto && item.approvalPhoto.publicId) {
+          await cloudinary.uploader.destroy(item.approvalPhoto.publicId);
+        }
+
+        item.approvalPhoto = {
+          url: cloudinaryResponse.url,
+          uploadDate: new Date(),
+          mimeType: req.file.mimetype,
+          publicId: cloudinaryResponse.publicId,
+        };
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        return res.status(500).json({
+          message: 'Error uploading image',
+          error: error.message,
+        });
+      }
+    }
+
+    const updatedItem = await item.save();
+    await updatedItem.populate('approvedBy', 'firstName lastName');
+
+    res.json(updatedItem);
+  } catch (err) {
+    console.error('Error updating item:', err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({message: err.message});
+    }
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
+// Item approval endpoint - CRITICAL for mobile app compatibility
 router.patch(
   '/:id/approval',
   auth,
@@ -321,6 +446,7 @@ router.patch(
         files: req.files ? Object.keys(req.files) : 'no files',
         body: req.body,
         userRole: req.user.role,
+        userAgent: req.headers['user-agent']?.substring(0, 100),
       });
 
       const item = await Item.findById(req.params.id);
@@ -331,7 +457,10 @@ router.patch(
       const {approvalStatus, locationData, inTransit, neto} = req.body;
 
       // Validate approval status
-      if (!['odobreno', 'odbijen'].includes(approvalStatus)) {
+      if (
+        !approvalStatus ||
+        !['odobreno', 'odbijen'].includes(approvalStatus)
+      ) {
         return res.status(400).json({message: 'Invalid approval status'});
       }
 
@@ -346,7 +475,11 @@ router.patch(
 
       // Handle in_transit field (convert string to boolean for backward compatibility)
       if (inTransit !== undefined) {
-        item.in_transit = inTransit === 'true' || inTransit === true;
+        if (typeof inTransit === 'string') {
+          item.in_transit = inTransit === 'true';
+        } else if (typeof inTransit === 'boolean') {
+          item.in_transit = inTransit;
+        }
       }
 
       // Handle neto field (for PC users or updated mobile apps)
@@ -370,16 +503,23 @@ router.patch(
               ? JSON.parse(locationData)
               : locationData;
 
-          item.approvalLocation = {
-            coordinates: {
-              latitude: location.coordinates.latitude,
-              longitude: location.coordinates.longitude,
-            },
-            accuracy: location.accuracy,
-            timestamp: location.timestamp
-              ? new Date(location.timestamp)
-              : new Date(),
-          };
+          if (
+            location &&
+            location.coordinates &&
+            typeof location.coordinates.latitude === 'number' &&
+            typeof location.coordinates.longitude === 'number'
+          ) {
+            item.approvalLocation = {
+              coordinates: {
+                latitude: location.coordinates.latitude,
+                longitude: location.coordinates.longitude,
+              },
+              accuracy: location.accuracy || 0,
+              timestamp: location.timestamp
+                ? new Date(location.timestamp)
+                : new Date(),
+            };
+          }
         } catch (error) {
           console.error('Error parsing location data:', error);
           // Don't fail the entire request if location parsing fails
@@ -502,222 +642,11 @@ router.patch(
     }
   },
 );
-// Update an item (admin only) - Updated to handle tezina field
-router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
-    }
 
-    const {title, code, neto, pdfUrl, creationDate} = req.body;
-    const item = await Item.findById(req.params.id);
-
-    if (!item) {
-      return res.status(404).json({message: 'Item not found'});
-    }
-
-    if (code && typeof validateCode === 'function' && !validateCode(code)) {
-      return res.status(400).json({message: 'Code is not in valid form'});
-    }
-
-    // Update basic fields
-    if (title) item.title = title;
-    if (code) item.code = code;
-    if (pdfUrl) item.pdfUrl = pdfUrl;
-    if (creationDate) item.creationDate = new Date(creationDate);
-
-    // Update neto and tezina fields - note we check if it's in the request body because 0 is a valid value
-    if (neto !== undefined) {
-      item.neto = neto;
-      item.tezina = neto; // NEW: Set tezina to the same value as neto
-      console.log('Updating neto and tezina values:', {neto, tezina: neto});
-    }
-
-    // Handle photo upload if present (existing code)
-    if (req.file) {
-      try {
-        console.log('Uploading new photo to Cloudinary...');
-        const cloudinaryResponse = await uploadToCloudinary(req.file);
-        console.log('Cloudinary response:', cloudinaryResponse);
-
-        // Delete old photo from Cloudinary if exists
-        if (item.approvalPhoto && item.approvalPhoto.publicId) {
-          await cloudinary.uploader.destroy(item.approvalPhoto.publicId);
-        }
-
-        item.approvalPhoto = {
-          url: cloudinaryResponse.url,
-          uploadDate: new Date(),
-          mimeType: req.file.mimetype,
-          publicId: cloudinaryResponse.publicId,
-        };
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        return res.status(500).json({
-          message: 'Error uploading image',
-          error: error.message,
-        });
-      }
-    }
-
-    const updatedItem = await item.save();
-    await updatedItem.populate('approvedBy', 'firstName lastName');
-
-    res.json(updatedItem);
-  } catch (err) {
-    console.error('Error updating item:', err);
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({message: err.message});
-    }
-    res.status(500).json({message: 'Server error'});
-  }
-});
-// Get a specific item
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const item = await Item.findById(req.params.id).populate(
-      'approvedBy',
-      'firstName lastName',
-    );
-
-    if (!item) {
-      return res.status(404).json({message: 'Item not found'});
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({message: 'User not found'});
-    }
-
-    if (user.role !== 'admin' && !user.codes.includes(item.code)) {
-      return res.status(403).json({message: 'Access denied'});
-    }
-
-    res.json(item);
-  } catch (err) {
-    console.error('Error fetching item:', err);
-    res.status(500).json({message: 'Server error'});
-  }
-});
-
-// Update an item (admin only)
-router.post('/', auth, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin' && req.user.role !== 'bot') {
-      return res
-        .status(403)
-        .json({message: 'Access denied. Admin or Bot users only.'});
-    }
-
-    const {title, code, registracija, neto, pdfUrl, creationDate} = req.body;
-
-    const now = new Date();
-    const creationTime = now.toLocaleTimeString('hr-HR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Zagreb',
-    });
-
-    // Create the item object with optional neto field
-    const item = new Item({
-      title,
-      code,
-      registracija,
-      pdfUrl,
-      creationDate: creationDate ? new Date(creationDate) : now,
-      creationTime,
-      approvalStatus: 'na čekanju',
-    });
-
-    // Add neto field if it exists
-    if (neto !== undefined) {
-      item.neto = neto;
-    }
-
-    const newItem = await item.save();
-    res.status(201).json(newItem);
-  } catch (err) {
-    console.error('Error creating item:', err);
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({message: err.message});
-    }
-    res.status(500).json({message: 'Server error'});
-  }
-});
-
-// Update an item (admin only)
-router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
-    }
-
-    const {title, code, neto, pdfUrl, creationDate} = req.body;
-    const item = await Item.findById(req.params.id);
-
-    if (!item) {
-      return res.status(404).json({message: 'Item not found'});
-    }
-
-    if (code && typeof validateCode === 'function' && !validateCode(code)) {
-      return res.status(400).json({message: 'Code is not in valid form'});
-    }
-
-    // Update basic fields
-    if (title) item.title = title;
-    if (code) item.code = code;
-    if (pdfUrl) item.pdfUrl = pdfUrl;
-    if (creationDate) item.creationDate = new Date(creationDate);
-
-    // Update neto field - note we check if it's in the request body because 0 is a valid value
-    if (neto !== undefined) {
-      item.neto = neto;
-    }
-
-    // Handle photo upload if present (existing code)
-    if (req.file) {
-      try {
-        console.log('Uploading new photo to Cloudinary...');
-        const cloudinaryResponse = await uploadToCloudinary(req.file);
-        console.log('Cloudinary response:', cloudinaryResponse);
-
-        // Delete old photo from Cloudinary if exists
-        if (item.approvalPhoto && item.approvalPhoto.publicId) {
-          await cloudinary.uploader.destroy(item.approvalPhoto.publicId);
-        }
-
-        item.approvalPhoto = {
-          url: cloudinaryResponse.url,
-          uploadDate: new Date(),
-          mimeType: req.file.mimetype,
-          publicId: cloudinaryResponse.publicId,
-        };
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        return res.status(500).json({
-          message: 'Error uploading image',
-          error: error.message,
-        });
-      }
-    }
-
-    const updatedItem = await item.save();
-    await updatedItem.populate('approvedBy', 'firstName lastName');
-
-    res.json(updatedItem);
-  } catch (err) {
-    console.error('Error updating item:', err);
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({message: err.message});
-    }
-    res.status(500).json({message: 'Server error'});
-  }
-});
 // Delete an item (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {
     console.log('Delete request received for item:', req.params.id);
-    console.log('Request user:', req.user);
 
     if (req.user.role !== 'admin') {
       console.log('Access denied - non-admin user attempted deletion');
@@ -728,6 +657,28 @@ router.delete('/:id', auth, async (req, res) => {
     if (!item) {
       console.log('Item not found:', req.params.id);
       return res.status(404).json({message: 'Item not found'});
+    }
+
+    // Clean up associated files before deleting
+    const filesToDelete = [];
+    if (item.approvalPhotoFront?.publicId) {
+      filesToDelete.push(item.approvalPhotoFront.publicId);
+    }
+    if (item.approvalPhotoBack?.publicId) {
+      filesToDelete.push(item.approvalPhotoBack.publicId);
+    }
+    if (item.approvalDocument?.publicId) {
+      filesToDelete.push(item.approvalDocument.publicId);
+    }
+
+    // Delete files from Cloudinary
+    for (const publicId of filesToDelete) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+        console.log('Deleted file from Cloudinary:', publicId);
+      } catch (error) {
+        console.error('Error deleting file from Cloudinary:', publicId, error);
+      }
     }
 
     await item.deleteOne();
