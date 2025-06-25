@@ -181,6 +181,8 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create a new item
+// Update the POST route in items.js for creating new items
+
 router.post('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
@@ -189,7 +191,17 @@ router.post('/', auth, async (req, res) => {
         .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
-    const {title, code, registracija, neto, pdfUrl, creationDate} = req.body;
+    const {title, code, registracija, neto, tezina, pdfUrl, creationDate} =
+      req.body;
+
+    console.log('Creating item with data:', {
+      title: title?.substring(0, 50) + '...',
+      code,
+      registracija,
+      neto,
+      tezina,
+      hasTitle: !!title,
+    });
 
     // Check if an item with the same title already exists
     const existingItem = await Item.findOne({title: title.trim()});
@@ -254,15 +266,34 @@ router.post('/', auth, async (req, res) => {
       approvalStatus: 'na čekanju',
     });
 
-    // Add neto field if it exists and set tezina to the same value
-    if (neto !== undefined) {
+    // BACKWARD COMPATIBILITY: Handle both neto and tezina fields
+    // Priority: explicit tezina > explicit neto > undefined
+    if (tezina !== undefined && tezina !== null) {
+      // New web app sends both neto and tezina
+      item.neto = neto !== undefined ? neto : tezina;
+      item.tezina = tezina;
+      console.log('Using explicit tezina value:', {
+        neto: item.neto,
+        tezina: item.tezina,
+      });
+    } else if (neto !== undefined && neto !== null) {
+      // Older versions or when only neto is provided
       item.neto = neto;
-      item.tezina = neto; // NEW: Set tezina to the same value as neto
-      console.log('Setting neto and tezina values:', {neto, tezina: neto});
+      item.tezina = neto; // Set tezina to the same value as neto for consistency
+      console.log('Using neto as tezina value:', {
+        neto: item.neto,
+        tezina: item.tezina,
+      });
     }
+    // If neither is provided, both remain undefined (which is fine)
 
     const newItem = await item.save();
-    console.log('Created new item:', newItem._id);
+    console.log('Created new item:', {
+      id: newItem._id,
+      title: newItem.title.substring(0, 50) + '...',
+      neto: newItem.neto,
+      tezina: newItem.tezina,
+    });
 
     res.status(201).json(newItem);
   } catch (err) {
@@ -273,6 +304,204 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+
+// Add this route handler for item approval (PATCH /:id/approval)
+router.patch(
+  '/:id/approval',
+  auth,
+  upload.fields([
+    {name: 'photoFront', maxCount: 1},
+    {name: 'photoBack', maxCount: 1},
+    {name: 'pdfDocument', maxCount: 1},
+  ]),
+  async (req, res) => {
+    try {
+      console.log('Approval request received:', {
+        itemId: req.params.id,
+        files: req.files ? Object.keys(req.files) : 'no files',
+        body: req.body,
+        userRole: req.user.role,
+      });
+
+      const item = await Item.findById(req.params.id);
+      if (!item) {
+        return res.status(404).json({message: 'Item not found'});
+      }
+
+      const {approvalStatus, locationData, inTransit, neto} = req.body;
+
+      // Validate approval status
+      if (!['odobreno', 'odbijen'].includes(approvalStatus)) {
+        return res.status(400).json({message: 'Invalid approval status'});
+      }
+
+      // Update basic approval fields
+      item.approvalStatus = approvalStatus;
+      item.approvalDate = new Date().toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      item.approvedBy = req.user._id;
+
+      // Handle in_transit field (convert string to boolean for backward compatibility)
+      if (inTransit !== undefined) {
+        item.in_transit = inTransit === 'true' || inTransit === true;
+      }
+
+      // Handle neto field (for PC users or updated mobile apps)
+      if (neto !== undefined && neto !== null && neto !== '') {
+        const netoValue = parseFloat(neto);
+        if (!isNaN(netoValue)) {
+          item.neto = netoValue;
+          // BACKWARD COMPATIBILITY: Only set tezina if item doesn't already have it
+          // This prevents overwriting the original tezina from item creation
+          if (item.tezina === undefined || item.tezina === null) {
+            item.tezina = netoValue;
+          }
+        }
+      }
+
+      // Handle location data
+      if (locationData) {
+        try {
+          const location =
+            typeof locationData === 'string'
+              ? JSON.parse(locationData)
+              : locationData;
+
+          item.approvalLocation = {
+            coordinates: {
+              latitude: location.coordinates.latitude,
+              longitude: location.coordinates.longitude,
+            },
+            accuracy: location.accuracy,
+            timestamp: location.timestamp
+              ? new Date(location.timestamp)
+              : new Date(),
+          };
+        } catch (error) {
+          console.error('Error parsing location data:', error);
+          // Don't fail the entire request if location parsing fails
+        }
+      }
+
+      // Handle photo uploads (mobile app sends photoFront and photoBack)
+      if (req.files) {
+        try {
+          // Handle front photo
+          if (req.files.photoFront && req.files.photoFront[0]) {
+            console.log('Uploading front photo to Cloudinary...');
+            const frontResponse = await uploadToCloudinary(
+              req.files.photoFront[0],
+            );
+
+            // Delete old front photo if exists
+            if (item.approvalPhotoFront && item.approvalPhotoFront.publicId) {
+              try {
+                await cloudinary.uploader.destroy(
+                  item.approvalPhotoFront.publicId,
+                );
+              } catch (error) {
+                console.error('Error deleting old front photo:', error);
+              }
+            }
+
+            item.approvalPhotoFront = {
+              url: frontResponse.url,
+              uploadDate: new Date(),
+              mimeType: req.files.photoFront[0].mimetype,
+              publicId: frontResponse.publicId,
+            };
+          }
+
+          // Handle back photo
+          if (req.files.photoBack && req.files.photoBack[0]) {
+            console.log('Uploading back photo to Cloudinary...');
+            const backResponse = await uploadToCloudinary(
+              req.files.photoBack[0],
+            );
+
+            // Delete old back photo if exists
+            if (item.approvalPhotoBack && item.approvalPhotoBack.publicId) {
+              try {
+                await cloudinary.uploader.destroy(
+                  item.approvalPhotoBack.publicId,
+                );
+              } catch (error) {
+                console.error('Error deleting old back photo:', error);
+              }
+            }
+
+            item.approvalPhotoBack = {
+              url: backResponse.url,
+              uploadDate: new Date(),
+              mimeType: req.files.photoBack[0].mimetype,
+              publicId: backResponse.publicId,
+            };
+          }
+
+          // Handle PDF document (for PC users)
+          if (req.files.pdfDocument && req.files.pdfDocument[0]) {
+            console.log('Uploading PDF document to Cloudinary...');
+            const pdfResponse = await uploadToCloudinary(
+              req.files.pdfDocument[0],
+            );
+
+            // Delete old document if exists
+            if (item.approvalDocument && item.approvalDocument.publicId) {
+              try {
+                await cloudinary.uploader.destroy(
+                  item.approvalDocument.publicId,
+                );
+              } catch (error) {
+                console.error('Error deleting old document:', error);
+              }
+            }
+
+            item.approvalDocument = {
+              url: pdfResponse.url,
+              uploadDate: new Date(),
+              mimeType: req.files.pdfDocument[0].mimetype,
+              publicId: pdfResponse.publicId,
+            };
+          }
+        } catch (uploadError) {
+          console.error('Error uploading files:', uploadError);
+          return res.status(500).json({
+            message: 'Error uploading files',
+            error: uploadError.message,
+          });
+        }
+      }
+
+      // Save the updated item
+      const updatedItem = await item.save();
+      await updatedItem.populate('approvedBy', 'firstName lastName');
+
+      console.log('Item approval successful:', {
+        itemId: updatedItem._id,
+        approvalStatus: updatedItem.approvalStatus,
+        inTransit: updatedItem.in_transit,
+        hasPhotos: !!(
+          updatedItem.approvalPhotoFront && updatedItem.approvalPhotoBack
+        ),
+        hasDocument: !!updatedItem.approvalDocument,
+        hasLocation: !!updatedItem.approvalLocation,
+        neto: updatedItem.neto,
+        tezina: updatedItem.tezina,
+      });
+
+      res.json(updatedItem);
+    } catch (error) {
+      console.error('Error in approval endpoint:', error);
+      res.status(500).json({
+        message: 'Server error during approval',
+        error: error.message,
+      });
+    }
+  },
+);
 // Update an item (admin only) - Updated to handle tezina field
 router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
