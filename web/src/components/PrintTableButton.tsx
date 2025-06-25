@@ -281,9 +281,9 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
             Ukupno ${allItems.length} ${
               allItems.length === 1
                 ? 'kamion'
-                : allItems.length < 5
-                ? 'kamion'
-                : 'kamion'
+                : allItems.length < 2
+                ? 'kamiona'
+                : 'kamiona'
             }
           </div>
           <div style="

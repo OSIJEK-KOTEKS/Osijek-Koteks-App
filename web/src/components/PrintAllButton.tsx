@@ -236,7 +236,7 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
           <div class="total-weight-value">${formatWeight(totalWeight)} T</div>
           <div class="total-weight-details">
             Ukupna težina ${totalItems} ${
-        totalItems === 1 ? 'kamion' : totalItems < 5 ? 'kamion' : 'kamion'
+        totalItems === 1 ? 'kamion' : totalItems < 1 ? 'kamiona' : 'kamiona'
       }
           </div>
           <div class="total-weight-details">
