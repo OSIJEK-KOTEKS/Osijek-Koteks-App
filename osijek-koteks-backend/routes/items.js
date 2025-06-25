@@ -1,3 +1,4 @@
+// items.js - Fixed approval endpoint
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -429,73 +430,8 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-const mobileSafetyMiddleware = (req, res, next) => {
-  const userAgent = req.headers['user-agent'] || '';
-  const isMobileApp =
-    userAgent.includes('okhttp') || userAgent.includes('ReactNative');
 
-  if (isMobileApp && req.path.includes('/approval')) {
-    console.log('=== MOBILE SAFETY MIDDLEWARE ===');
-    console.log('Cleaning request for mobile app compatibility...');
-    console.log('Original body:', JSON.stringify(req.body, null, 2));
-
-    // Clean up the request body to remove any undefined or problematic fields
-    const cleanBody = {};
-
-    // Only include fields that mobile app should send
-    const allowedFields = [
-      'approvalStatus',
-      'locationData',
-      'inTransit',
-      'neto',
-    ];
-
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined && req.body[field] !== null) {
-        cleanBody[field] = req.body[field];
-      }
-    }
-
-    // Specifically exclude tezina field for mobile app
-    // The mobile app might be trying to send this field as undefined
-    if (req.body.hasOwnProperty('tezina')) {
-      console.log('Removing tezina field from mobile request');
-      delete req.body.tezina;
-    }
-
-    // Ensure approvalStatus is a string
-    if (
-      cleanBody.approvalStatus &&
-      typeof cleanBody.approvalStatus !== 'string'
-    ) {
-      cleanBody.approvalStatus = String(cleanBody.approvalStatus);
-    }
-
-    // Ensure inTransit is properly typed
-    if (cleanBody.inTransit !== undefined) {
-      if (typeof cleanBody.inTransit === 'string') {
-        cleanBody.inTransit = cleanBody.inTransit.toLowerCase() === 'true';
-      } else {
-        cleanBody.inTransit = Boolean(cleanBody.inTransit);
-      }
-    }
-
-    // Replace the body with cleaned version
-    req.body = cleanBody;
-
-    console.log('Cleaned body:', JSON.stringify(req.body, null, 2));
-    console.log('================================');
-  }
-
-  next();
-};
-
-// Add this line right before your approval route:
-// router.patch('/:id/approval', mobileSafetyMiddleware, auth, upload.fields([...]), async (req, res) => {
-
-module.exports = {mobileSafetyMiddleware};
-// Replace the approval endpoint in your items.js with this mobile-safe version
-
+// FIXED APPROVAL ENDPOINT - Store approvalDate as Date object, not string
 router.patch(
   '/:id/approval',
   auth,
@@ -550,16 +486,15 @@ router.patch(
 
       // Update basic approval fields
       item.approvalStatus = approvalStatus;
-      item.approvalDate = new Date().toLocaleDateString('hr-HR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
+
+      // FIX: Store approvalDate as Date object, not Croatian string
+      item.approvalDate = new Date(); // This will be converted to Croatian string in toJSON method
+
       item.approvedBy = req.user._id;
 
       console.log('Updated basic approval fields:', {
         approvalStatus: item.approvalStatus,
-        approvalDate: item.approvalDate,
+        approvalDate: item.approvalDate, // This is now a Date object
         approvedBy: item.approvedBy,
       });
 
@@ -772,6 +707,7 @@ router.patch(
           inTransit: item.in_transit,
           neto: item.neto,
           tezina: item.tezina,
+          approvalDate: item.approvalDate, // Now a Date object
           hasLocation: !!item.approvalLocation,
           hasFrontPhoto: !!item.approvalPhotoFront,
           hasBackPhoto: !!item.approvalPhotoBack,
