@@ -57,9 +57,15 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     onSearchModeChange(false);
   };
 
+  // Filter out unused codes
+  const unusedCodes = ['1111', '1996'];
+  const filteredCodes = availableCodes.filter(
+    code => !unusedCodes.includes(code),
+  );
+
   const allCodesOptions = [
     {value: 'all', label: 'Svi Radni Nalozi'},
-    ...availableCodes.map(code => ({
+    ...filteredCodes.map(code => ({
       value: code,
       label: getFormattedCode(code),
     })),
