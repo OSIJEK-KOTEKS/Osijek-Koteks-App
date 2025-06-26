@@ -28,7 +28,13 @@ const PrintButton = styled.button`
   }
 `;
 
-const PrintableTable = ({items}: {items: Item[]}) => {
+const PrintableTable = ({
+  items,
+  dateRange,
+}: {
+  items: Item[];
+  dateRange?: string;
+}) => {
   return (
     <div className="print-container">
       <div className="print-header">
@@ -38,6 +44,7 @@ const PrintableTable = ({items}: {items: Item[]}) => {
           className="print-logo"
         />
         <h1 className="print-title">Pregled dokumenata</h1>
+        {dateRange && <p className="print-date-range">Period: {dateRange}</p>}
         <p className="print-date">
           Datum ispisa: {new Date().toLocaleDateString('hr-HR')}
         </p>
@@ -136,6 +143,13 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               margin: 10px 0;
             }
 
+            .print-date-range {
+              color: #333;
+              font-size: 16px;
+              font-weight: 600;
+              margin: 5px 0;
+            }
+
             .print-date {
               color: #666;
               font-size: 14px;
@@ -187,9 +201,10 @@ interface PrintTableButtonProps {
   items?: Item[];
   item?: Item;
   totalItems?: number;
-  totalWeight?: number; // NEW: Add total weight prop
+  totalWeight?: number;
   isLoading?: boolean;
   onPrintAll?: () => Promise<Item[]>;
+  dateRange?: string; // NEW: Add date range prop
 }
 
 const PrintTableButton: React.FC<PrintTableButtonProps> = ({
@@ -199,6 +214,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
   totalWeight, // NEW: Destructure total weight
   isLoading = false,
   onPrintAll,
+  dateRange, // NEW: Destructure date range
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
   const printContainerRef = useRef<HTMLDivElement>(null);
@@ -235,7 +251,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
 
       // Generate the main table
       const printableTableHtml = ReactDOMServer.renderToStaticMarkup(
-        <PrintableTable items={allItems} />,
+        <PrintableTable items={allItems} dateRange={dateRange} />,
       );
 
       // NEW: Generate total weight summary separately (only once, at the end)
@@ -380,7 +396,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
       </PrintButton>
 
       <div style={{display: 'none'}} ref={printContainerRef}>
-        <PrintableTable items={itemsToDisplay} />
+        <PrintableTable items={itemsToDisplay} dateRange={dateRange} />
       </div>
     </>
   );

@@ -306,6 +306,50 @@ const Dashboard: React.FC = () => {
     setHasMore(true);
     fetchItems(false);
   }, [fetchItems]);
+  const formatDateRangeForPrint = (
+    startDate: Date,
+    endDate: Date,
+    selectedCode: string,
+    inTransitOnly: boolean,
+  ) => {
+    const isSameDay = startDate.toDateString() === endDate.toDateString();
+
+    let dateRangeText = '';
+    if (isSameDay) {
+      dateRangeText = startDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } else {
+      const startStr = startDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const endStr = endDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      dateRangeText = `${startStr} - ${endStr}`;
+    }
+
+    // Add additional filters if applied
+    const filters = [];
+    if (selectedCode !== 'all') {
+      filters.push(`RN: ${selectedCode}`);
+    }
+    if (inTransitOnly) {
+      filters.push('U tranzitu');
+    }
+
+    if (filters.length > 0) {
+      dateRangeText += ` (${filters.join(', ')})`;
+    }
+
+    return dateRangeText;
+  };
 
   const fetchAllItemsForPrinting = async () => {
     try {
@@ -576,6 +620,12 @@ const Dashboard: React.FC = () => {
             totalWeight={totalWeight}
             isLoading={loading}
             onPrintAll={fetchAllItemsForPrinting}
+            dateRange={formatDateRangeForPrint(
+              startDate,
+              endDate,
+              selectedCode,
+              inTransitOnly,
+            )}
           />
           <PrintAllButton
             items={items}
