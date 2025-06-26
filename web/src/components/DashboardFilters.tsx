@@ -4,6 +4,7 @@ import DatePicker, {registerLocale} from 'react-datepicker';
 import {hr} from 'date-fns/locale/hr';
 import type {Locale} from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
+import {getFormattedCode} from '../utils/codeMapping';
 
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
@@ -60,7 +61,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     {value: 'all', label: 'Svi Radni Nalozi'},
     ...availableCodes.map(code => ({
       value: code,
-      label: code,
+      label: getFormattedCode(code),
     })),
   ];
 
