@@ -346,7 +346,7 @@ const UserManagementPage: React.FC = () => {
       };
 
       const filename = `gdpr-data-export_${user.firstName}-${user.lastName}_${
-        new Date().toISOString().split('T')[0]
+        new Date().toISOString().split('t')[0]
       }.json`;
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {

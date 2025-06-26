@@ -64,7 +64,7 @@ const PrintableTable = ({items}: {items: Item[]}) => {
               <td>{item.registracija || '-'}</td>
               <td>
                 {item.tezina !== undefined
-                  ? `${(item.tezina / 1000).toFixed(3)} T`
+                  ? `${(item.tezina / 1000).toFixed(3)} t`
                   : '-'}
               </td>
               <td>
@@ -271,7 +271,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
             color: #2196F3;
             margin: 15px 0;
           ">
-            ${formatWeight(totalWeight)} T
+            ${formatWeight(totalWeight)} t
           </div>
           <div style="
             font-size: 14px;

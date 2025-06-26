@@ -47,7 +47,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
             <div className="print-info-item">
               <span className="print-label">Težina:</span>
               <span className="print-value">
-                {(item.tezina / 1000).toFixed(3)} T
+                {(item.tezina / 1000).toFixed(3)} t
               </span>
             </div>
           )}

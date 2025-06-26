@@ -624,7 +624,7 @@ const Dashboard: React.FC = () => {
       {/* NEW: Total Weight Display - now shows total for ALL filtered items */}
       {totalItems > 0 && totalWeight > 0 && (
         <TotalWeightContainer>
-          <TotalWeightValue>{formatWeight(totalWeight)} T</TotalWeightValue>
+          <TotalWeightValue>{formatWeight(totalWeight)} t</TotalWeightValue>
           <TotalWeightLabel>
             Ukupna težina ({totalItems}{' '}
             {totalItems === 1
@@ -652,7 +652,7 @@ const Dashboard: React.FC = () => {
             {/* Display tezina in tons */}
             {item.tezina !== undefined && (
               <ItemDetails>
-                <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} T
+                <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
               </ItemDetails>
             )}
             {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
