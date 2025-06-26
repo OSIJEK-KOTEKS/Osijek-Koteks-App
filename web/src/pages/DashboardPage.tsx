@@ -15,7 +15,8 @@ import PrintAllButton from '../components/PrintAllButton';
 import PrintTableButton from 'src/components/PrintTableButton';
 import ApproveButton from '../components/ApproveButton';
 import PCUserApproveButton from '../components/PCUserApproveButton';
-
+// Add this import
+import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
 // Styled Components (keeping the same as before)
 const Header = styled.div`
   display: flex;
@@ -647,7 +648,7 @@ const Dashboard: React.FC = () => {
               </ItemDetails>
             )}
             <ItemDetails>
-              <strong>RN:</strong> {item.code}
+              <strong>RN:</strong> {getFormattedCode(item.code)}
             </ItemDetails>
             {/* Display tezina in tons */}
             {item.tezina !== undefined && (

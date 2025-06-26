@@ -3,6 +3,7 @@ import React, {useCallback, useRef, useState} from 'react';
 import ReactDOMServer from 'react-dom/server';
 import styled from 'styled-components';
 import {Item} from '../types';
+import {getFormattedCode} from '../utils/codeMapping';
 
 const PrintButton = styled.button`
   width: 100%;
@@ -60,7 +61,7 @@ const PrintableTable = ({items}: {items: Item[]}) => {
           {items.map(item => (
             <tr key={item._id}>
               <td>{item.title}</td>
-              <td>{item.code}</td>
+              <td>{getFormattedCode(item.code)}</td>
               <td>{item.registracija || '-'}</td>
               <td>
                 {item.tezina !== undefined

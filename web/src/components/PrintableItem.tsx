@@ -1,6 +1,8 @@
+// Updated PrintableItem.tsx
 import React from 'react';
 import {Item} from '../types';
 import {getImageUrl} from '../utils/api';
+import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
 
 interface PrintableItemProps {
   item: Item;
@@ -26,7 +28,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           </div>
           <div className="print-info-item">
             <span className="print-label">RN:</span>
-            <span className="print-value">{item.code}</span>
+            <span className="print-value">{getFormattedCode(item.code)}</span>
           </div>
           {item.registracija && (
             <div className="print-info-item">
@@ -42,7 +44,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               </span>
             </div>
           )}
-          {/* NEW: Add tezina field to printout in tons */}
+          {/* Add tezina field to printout in tons */}
           {item.tezina !== undefined && (
             <div className="print-info-item">
               <span className="print-label">Težina:</span>
