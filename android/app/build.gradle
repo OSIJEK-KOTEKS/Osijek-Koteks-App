@@ -88,8 +88,8 @@ android {
         applicationId "com.osijek"  
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 33
-        versionName "1.1.33"
+        versionCode 34
+        versionName "1.1.34"
     }
     signingConfigs {
         debug {
@@ -122,9 +122,11 @@ dependencies {
     implementation("com.facebook.react:react-android")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     
-    // Add these AndroidX dependencies
-    implementation "androidx.core:core:1.9.0"
+    // Updated AndroidX dependencies for Android 15 compatibility
+    implementation "androidx.core:core:1.12.0"           // Updated from 1.9.0
     implementation "androidx.appcompat:appcompat:1.6.1"
+    implementation "androidx.activity:activity:1.8.2"    // Add this for Android 15
+    implementation "androidx.fragment:fragment:1.6.2"    // Add this for Android 15
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
