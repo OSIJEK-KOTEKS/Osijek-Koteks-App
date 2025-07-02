@@ -1,156 +1,27 @@
 import React, {useState} from 'react';
-import styled from 'styled-components';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
+import {Text, Input} from 'react-native-elements';
+import Modal from 'react-native-modal';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {apiService} from '../utils/api';
 import {CreateItemInput} from '../types';
 
-// Styled Components
-const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  overflow-y: auto;
-`;
-
-const ModalWrapper = styled.div`
-  display: flex;
-  position: fixed;
-  inset: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1rem;
-`;
-
-const Backdrop = styled.div`
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  transition: opacity 0.3s;
-`;
-
-const ModalContent = styled.div`
-  position: relative;
-  width: 100%;
-  max-width: 32rem;
-  max-height: 60vh;
-  background: white;
-  padding: 1.5rem;
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
-  overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
-`;
-
-const Title = styled.h2`
-  margin-bottom: 1.5rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: ${({theme}) => theme.colors.text};
-`;
-
-const ErrorMessage = styled.div`
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  border-radius: ${({theme}) => theme.borderRadius};
-  background-color: #fee2e2;
-  color: #dc2626;
-  font-size: 0.875rem;
-`;
-
-const FormGroup = styled.div`
-  margin-bottom: 0.75rem;
-`;
-
-const Label = styled.label`
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: ${({theme}) => theme.colors.text};
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
-  font-size: 1rem;
-  transition: all 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: ${({theme}) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({theme}) => theme.colors.primary}20;
-  }
-
-  &::placeholder {
-    color: #9ca3af;
-  }
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-`;
-
-const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
-  padding: 0.5rem 1rem;
-  border-radius: ${({theme}) => theme.borderRadius};
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  ${({variant, theme}) =>
-    variant === 'primary'
-      ? `
-    background-color: ${theme.colors.primary};
-    color: white;
-    
-    &:hover:not(:disabled) {
-      background-color: ${theme.colors.primaryDark};
-    }
-
-    &:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-  `
-      : `
-    background-color: #f3f4f6;
-    color: ${theme.colors.text};
-    
-    &:hover:not(:disabled) {
-      background-color: #e5e7eb;
-    }
-  `}
-`;
-
 interface CreateItemModalProps {
-  isOpen: boolean;
+  isVisible: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const CreateItemModal: React.FC<CreateItemModalProps> = ({
-  isOpen,
+export const CreateItemModal: React.FC<CreateItemModalProps> = ({
+  isVisible,
   onClose,
   onSuccess,
 }) => {
@@ -201,8 +72,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
@@ -230,120 +100,246 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
         pdfUrl: '',
       });
       setError('');
+      Alert.alert('Uspjeh', 'Dokument je uspješno kreiran');
     } catch (err) {
       console.error('Error creating item:', err);
       setError('Greška pri kreiranju dokumenta');
+      Alert.alert('Greška', 'Greška pri kreiranju dokumenta');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      code: '',
+      registracija: '',
+      neto: undefined,
+      tezina: undefined,
+      pdfUrl: '',
+    });
+    setError('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   return (
-    <ModalOverlay>
-      <ModalWrapper>
-        <Backdrop onClick={onClose} />
-        <ModalContent>
-          <Title>Kreiraj novi dokument</Title>
+    <Modal
+      isVisible={isVisible}
+      onBackdropPress={handleClose}
+      onBackButtonPress={handleClose}
+      style={styles.modal}
+      avoidKeyboard={true}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Kreiraj novi dokument</Text>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <MaterialIcons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
 
-          <form onSubmit={handleSubmit}>
-            {error && <ErrorMessage>{error}</ErrorMessage>}
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <FormGroup>
-              <Label>Naziv</Label>
+            <Input
+              label="Naziv"
+              placeholder="Unesite naziv dokumenta"
+              value={formData.title}
+              onChangeText={text => setFormData({...formData, title: text})}
+              containerStyle={styles.inputContainer}
+              disabled={loading}
+              leftIcon={
+                <MaterialIcons name="description" size={20} color="#666" />
+              }
+            />
+
+            <Input
+              label="RN"
+              placeholder="Unesite RN"
+              value={formData.code}
+              onChangeText={text => setFormData({...formData, code: text})}
+              containerStyle={styles.inputContainer}
+              disabled={loading}
+              leftIcon={
+                <MaterialIcons name="assignment" size={20} color="#666" />
+              }
+            />
+
+            <Input
+              label="Registracija"
+              placeholder="Unesite registraciju"
+              value={formData.registracija}
+              onChangeText={text =>
+                setFormData({...formData, registracija: text})
+              }
+              containerStyle={styles.inputContainer}
+              disabled={loading}
+              leftIcon={
+                <MaterialIcons name="directions-car" size={20} color="#666" />
+              }
+            />
+
+            <View style={styles.netoContainer}>
               <Input
-                data-testid="title-input"
-                type="text"
-                value={formData.title}
-                onChange={e =>
-                  setFormData({...formData, title: e.target.value})
-                }
-                placeholder="Unesite naziv dokumenta"
-                id="item_name"
-              />
-            </FormGroup>
-
-            <FormGroup>
-              <Label>RN</Label>
-              <Input
-                type="text"
-                value={formData.code}
-                onChange={e => setFormData({...formData, code: e.target.value})}
-                placeholder="Unesite RN"
-                id="radni_nalog"
-              />
-            </FormGroup>
-
-            <FormGroup>
-              <Label>Registracija</Label>
-              <Input
-                type="text"
-                value={formData.registracija}
-                onChange={e =>
-                  setFormData({...formData, registracija: e.target.value})
-                }
-                placeholder="Unesite registraciju"
-                id="registracija"
-              />
-            </FormGroup>
-
-            {/* NEW: Updated neto field that also sets tezina */}
-            <FormGroup>
-              <Label>Neto / Težina</Label>
-              <Input
-                type="number"
-                value={formData.neto === undefined ? '' : formData.neto}
-                onChange={e => handleNetoChange(e.target.value)}
+                label="Neto / Težina"
                 placeholder="Unesite neto (automatski postavlja i težinu)"
-                id="neto"
+                value={formData.neto === undefined ? '' : String(formData.neto)}
+                onChangeText={handleNetoChange}
+                containerStyle={styles.inputContainer}
+                disabled={loading}
+                keyboardType="numeric"
+                leftIcon={<MaterialIcons name="scale" size={20} color="#666" />}
               />
               {formData.neto !== undefined && (
-                <p
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#666',
-                    marginTop: '0.25rem',
-                  }}>
+                <Text style={styles.helperText}>
                   Težina će biti automatski postavljena na: {formData.tezina}
-                </p>
+                </Text>
               )}
-            </FormGroup>
+            </View>
 
-            <FormGroup>
-              <Label>PDF Link</Label>
-              <Input
-                type="text"
-                value={formData.pdfUrl}
-                onChange={e =>
-                  setFormData({...formData, pdfUrl: e.target.value})
-                }
-                placeholder="Unesite PDF link"
-                id="pdf_link"
-              />
-            </FormGroup>
+            <Input
+              label="PDF Link"
+              placeholder="Unesite PDF link"
+              value={formData.pdfUrl}
+              onChangeText={text => setFormData({...formData, pdfUrl: text})}
+              containerStyle={styles.inputContainer}
+              disabled={loading}
+              autoCapitalize="none"
+              leftIcon={
+                <MaterialIcons name="picture-as-pdf" size={20} color="#666" />
+              }
+            />
+          </ScrollView>
 
-            <ButtonContainer>
-              <Button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                variant="secondary">
-                Odustani
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                variant="primary"
-                id="finish_item">
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={handleClose}
+              disabled={loading}>
+              <Text style={styles.buttonText}>Odustani</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.submitButton]}
+              onPress={handleSubmit}
+              disabled={loading}>
+              <Text style={styles.buttonText}>
                 {loading ? 'Kreiranje...' : 'Kreiraj'}
-              </Button>
-            </ButtonContainer>
-          </form>
-        </ModalContent>
-      </ModalWrapper>
-    </ModalOverlay>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 };
+
+const styles = StyleSheet.create({
+  modal: {
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  keyboardAvoid: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    backgroundColor: 'white',
+    width: '95%',
+    maxHeight: '85%',
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 5,
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  inputContainer: {
+    marginBottom: 10,
+  },
+  netoContainer: {
+    marginBottom: 10,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: -15,
+    marginBottom: 10,
+    marginLeft: 10,
+    fontStyle: 'italic',
+  },
+  errorText: {
+    color: '#f44336',
+    fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 10,
+    backgroundColor: '#ffebee',
+    padding: 10,
+    borderRadius: 5,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    padding: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#666',
+  },
+  submitButton: {
+    backgroundColor: '#2196F3',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});
 
 export default CreateItemModal;
