@@ -38,6 +38,8 @@ export const codeToTextMapping: Record<string, string> = {
   '25025': 'Autopraonica Belišće',
   '25030': 'Rekon. ceste Ul.M.Gubca - Belišće',
   '25032': 'Pripremni radovi - NCI prostora Čepin',
+  '25033': 'PS Beli Manastir',
+  '25034': 'PS Đakovo',
   '5014': 'Betonara',
 };
 
