@@ -17,7 +17,7 @@ import ApproveButton from '../components/ApproveButton';
 import PCUserApproveButton from '../components/PCUserApproveButton';
 // Add this import
 import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
-// Styled Components (keeping the same as before)
+// Styled Components (keeping the same as before
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
