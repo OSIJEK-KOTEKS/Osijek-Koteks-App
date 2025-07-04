@@ -49,6 +49,21 @@ const ItemCard = styled.div`
     transform: translateY(-2px);
   }
 `;
+const RestrictedAccessMessage = styled.div`
+  background: ${({theme}) => theme.colors.primary}15;
+  border: 1px solid ${({theme}) => theme.colors.primary}40;
+  color: ${({theme}) => theme.colors.primary};
+  padding: ${({theme}) => theme.spacing.medium};
+  border-radius: ${({theme}) => theme.borderRadius};
+  margin-bottom: ${({theme}) => theme.spacing.medium};
+  display: flex;
+  align-items: center;
+  gap: ${({theme}) => theme.spacing.small};
+`;
+
+const RestrictedAccessIcon = styled.span`
+  font-size: 1.2rem;
+`;
 
 const StatusBadge = styled.span<{status: Item['approvalStatus']}>`
   display: inline-block;
@@ -215,6 +230,8 @@ const Dashboard: React.FC = () => {
     const weightInTons = weightInKg / 1000;
     return weightInTons.toFixed(3);
   };
+  const showRestrictedMessage =
+    user?.role === 'admin' && user?.codes && user.codes.length > 0;
 
   const fetchAvailableCodes = useCallback(async () => {
     try {
@@ -650,7 +667,17 @@ const Dashboard: React.FC = () => {
           </S.Button>
         </HeaderActions>
       </Header>
-
+      {/* Add this new section for restricted access message */}
+      {showRestrictedMessage && (
+        <RestrictedAccessMessage>
+          <RestrictedAccessIcon>🔒</RestrictedAccessIcon>
+          <div>
+            <strong>Ograničeni pristup:</strong> Kao administrator s
+            dodijeljenim kodovima, vidite samo stavke za kodove:{' '}
+            <strong>{user.codes.join(', ')}</strong>
+          </div>
+        </RestrictedAccessMessage>
+      )}
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
       <DashboardFilters

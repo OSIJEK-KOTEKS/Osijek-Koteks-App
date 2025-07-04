@@ -45,13 +45,27 @@ const upload = multer({
 // Get unique codes
 router.get('/codes', auth, async (req, res) => {
   try {
-    // If user is not admin and doesn't have full access, filter by their codes
+    // Apply the same filtering logic as the main items route
     let query = {};
+
     if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      // Non-admin users: filter by their codes
+      query.code = {$in: req.user.codes};
+    } else if (
+      req.user.role === 'admin' &&
+      req.user.codes &&
+      req.user.codes.length > 0
+    ) {
+      // Admin with codes assigned: filter by those codes
       query.code = {$in: req.user.codes};
     }
+    // If admin with no codes assigned (empty array or null), show all codes (no filtering)
 
     const uniqueCodes = await Item.distinct('code', query);
+
+    console.log('Codes query:', query);
+    console.log('Found unique codes:', uniqueCodes.length);
+
     res.json(uniqueCodes.sort());
   } catch (err) {
     console.error('Error fetching unique codes:', err);
@@ -76,11 +90,23 @@ router.get('/', auth, async (req, res) => {
       // Use case-insensitive regex search for title
       query.title = {$regex: searchTitle, $options: 'i'};
     } else {
-      // Apply regular filters only if not in search mode
-      // If user is not admin and doesn't have full access, filter by their codes
+      // Apply code filtering logic:
+      // 1. If user is not admin OR doesn't have full access, filter by their codes
+      // 2. If user is admin but has codes assigned, filter by those codes
+      // 3. If user is admin with no codes (empty array), show all items
+
       if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+        // Non-admin users: filter by their codes
+        query.code = {$in: req.user.codes};
+      } else if (
+        req.user.role === 'admin' &&
+        req.user.codes &&
+        req.user.codes.length > 0
+      ) {
+        // Admin with codes assigned: filter by those codes
         query.code = {$in: req.user.codes};
       }
+      // If admin with no codes assigned (empty array or null), show all items (no filtering)
 
       // Add date filter if dates are provided
       if (startDate && endDate) {
@@ -104,6 +130,9 @@ router.get('/', auth, async (req, res) => {
     }
 
     console.log('Query:', query);
+    console.log('User role:', req.user.role);
+    console.log('User codes:', req.user.codes);
+    console.log('User hasFullAccess:', req.user.hasFullAccess);
 
     let sortOptions = {creationDate: -1}; // Default sort
     if (sortOrder === 'date-asc') {
@@ -198,7 +227,23 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({message: 'User not found'});
     }
 
-    if (user.role !== 'admin' && !user.codes.includes(item.code)) {
+    // Apply the same access control logic
+    // Allow access if:
+    // 1. User is admin with no codes assigned (full access)
+    // 2. User is admin or non-admin and has the item's code in their codes array
+    // 3. User has full access flag set
+
+    const hasAccess =
+      (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
+      user.codes.includes(item.code) || // User has the specific code
+      user.hasFullAccess; // User has full access flag
+
+    if (!hasAccess) {
+      console.log('Access denied for user:', user._id, 'to item:', item._id);
+      console.log('User role:', user.role);
+      console.log('User codes:', user.codes);
+      console.log('Item code:', item.code);
+      console.log('User hasFullAccess:', user.hasFullAccess);
       return res.status(403).json({message: 'Access denied'});
     }
 
@@ -208,7 +253,6 @@ router.get('/:id', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
