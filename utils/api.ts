@@ -104,7 +104,21 @@ export const apiService = {
       throw error;
     }
   },
+  updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
+    try {
+      console.log('Updating item code:', {itemId, newCode});
 
+      const response = await api.patch(`/api/items/${itemId}/code`, {
+        code: newCode,
+      });
+
+      console.log('Code update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item code:', error);
+      throw error;
+    }
+  },
   register: async (userData: RegistrationData): Promise<User> => {
     try {
       console.log('Registering user:', {
