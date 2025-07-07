@@ -369,6 +369,24 @@ export const apiService = {
     }
   },
 
+  // Add this method to your apiService object
+  // Add this method to your apiService object in api.ts
+  updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
+    try {
+      console.log('Updating item code:', {itemId, newCode});
+
+      const response = await api.patch(`/api/items/${itemId}/code`, {
+        code: newCode,
+      });
+
+      console.log('Code update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item code:', error);
+      throw error;
+    }
+  },
+
   // Update the updateItemApproval method in api.ts (web version)
   updateItemApproval: async (
     id: string,

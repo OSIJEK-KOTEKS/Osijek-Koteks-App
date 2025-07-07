@@ -17,6 +17,7 @@ import ApproveButton from '../components/ApproveButton';
 import PCUserApproveButton from '../components/PCUserApproveButton';
 import ExportExcelButton from '../components/ExportExcelButton';
 import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
+import AdminCodeEditor from '../components/AdminCodeEditor';
 // Styled Components (keeping the same as before
 const Header = styled.div`
   display: flex;
@@ -565,6 +566,28 @@ const Dashboard: React.FC = () => {
       setError('Greška pri odjavi');
     }
   };
+  const handleCodeUpdate = async (
+    itemId: string,
+    newCode: string,
+  ): Promise<boolean> => {
+    try {
+      const response = await apiService.updateItemCode(itemId, newCode);
+
+      if (response) {
+        // Update the item in your local state
+        setItems(prevItems =>
+          prevItems.map(item =>
+            item._id === itemId ? {...item, code: newCode} : item,
+          ),
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error updating code:', error);
+      return false;
+    }
+  };
 
   const handleDelete = async (itemId: string) => {
     if (window.confirm('Jeste li sigurni da želite izbrisati ovaj dokument?')) {
@@ -739,9 +762,18 @@ const Dashboard: React.FC = () => {
                 <strong>Registracija:</strong> {item.registracija}
               </ItemDetails>
             )}
-            <ItemDetails>
-              <strong>RN:</strong> {getFormattedCode(item.code)}
-            </ItemDetails>
+            {/* Replace the existing AdminCodeEditor line with this updated version */}
+            {user?.role === 'admin' ? (
+              <AdminCodeEditor
+                item={item}
+                availableCodes={availableCodes}
+                onCodeUpdate={handleCodeUpdate}
+              />
+            ) : (
+              <ItemDetails>
+                <strong>RN:</strong> {getFormattedCode(item.code)}
+              </ItemDetails>
+            )}
             {/* Display tezina in tons */}
             {item.tezina !== undefined && (
               <ItemDetails>
