@@ -393,26 +393,33 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-// Add this route to your items.js file in the routes folder
-
-// Update item code (admin only)
+// Update item code (admin only) - Enhanced with debugging
 router.patch('/:id/code', auth, async (req, res) => {
   try {
-    console.log('Code update request received for item:', req.params.id);
+    console.log('=== CODE UPDATE DEBUG START ===');
+    console.log('Item ID:', req.params.id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID:', req.user._id);
+    console.log('User role:', req.user.role);
+    console.log('===============================');
 
     // Only admins can edit codes
     if (req.user.role !== 'admin') {
-      console.log('Access denied - non-admin user attempted code edit');
+      console.log('❌ Access denied - non-admin user attempted code edit');
       return res.status(403).json({
         message: 'Access denied. Admin only.',
         messageHr: 'Pristup odbijen. Samo administratori.',
       });
     }
 
+    console.log('✅ Admin check passed');
+
     const {code} = req.body;
+    console.log('Extracted code from request:', code);
 
     // Validate the new code
     if (!code || typeof code !== 'string' || code.trim().length === 0) {
+      console.log('❌ Code validation failed:', {code, type: typeof code});
       return res.status(400).json({
         message: 'Code is required and cannot be empty',
         messageHr: 'Kod je obavezan i ne može biti prazan',
@@ -420,14 +427,17 @@ router.patch('/:id/code', auth, async (req, res) => {
     }
 
     const trimmedCode = code.trim();
+    console.log('✅ Code validation passed. Trimmed code:', trimmedCode);
 
     // Check if the new code already exists for a different item
+    console.log('🔍 Checking for existing code...');
     const existingItem = await Item.findOne({
       code: trimmedCode,
       _id: {$ne: req.params.id},
     });
 
     if (existingItem) {
+      console.log('❌ Code already exists:', existingItem._id);
       return res.status(409).json({
         message: 'Code already exists for another item',
         messageHr: 'Kod već postoji za drugu stavku',
@@ -436,24 +446,43 @@ router.patch('/:id/code', auth, async (req, res) => {
       });
     }
 
+    console.log('✅ No duplicate code found');
+
     // Find and update the item
+    console.log('🔍 Finding item by ID...');
     const item = await Item.findById(req.params.id);
 
     if (!item) {
+      console.log('❌ Item not found:', req.params.id);
       return res.status(404).json({
         message: 'Item not found',
         messageHr: 'Stavka nije pronađena',
       });
     }
 
-    // Check if admin has access to this item (same logic as in other routes)
+    console.log('✅ Item found:', {
+      id: item._id,
+      currentCode: item.code,
+      title: item.title.substring(0, 50),
+    });
+
+    // Check if admin has access to this item
+    console.log('🔍 Checking user access...');
     const user = await User.findById(req.user._id);
     if (!user) {
+      console.log('❌ User not found:', req.user._id);
       return res.status(404).json({
         message: 'User not found',
         messageHr: 'Korisnik nije pronađen',
       });
     }
+
+    console.log('✅ User found:', {
+      id: user._id,
+      role: user.role,
+      codes: user.codes,
+      hasFullAccess: user.hasFullAccess,
+    });
 
     // Apply access control logic
     const hasAccess =
@@ -461,19 +490,32 @@ router.patch('/:id/code', auth, async (req, res) => {
       user.codes.includes(item.code) || // User has the specific code
       user.hasFullAccess; // User has full access flag
 
+    console.log('🔐 Access control check:', {
+      isAdminWithNoCodes:
+        user.role === 'admin' && (!user.codes || user.codes.length === 0),
+      hasSpecificCode: user.codes.includes(item.code),
+      hasFullAccess: user.hasFullAccess,
+      finalAccess: hasAccess,
+    });
+
     if (!hasAccess) {
-      console.log('Access denied for user:', user._id, 'to item:', item._id);
+      console.log('❌ Access denied for user:', user._id, 'to item:', item._id);
       return res.status(403).json({
         message: 'Access denied to this item',
         messageHr: 'Pristup ovoj stavci je odbijen',
       });
     }
 
+    console.log('✅ Access control passed');
+
     // Store the old code for logging
     const oldCode = item.code;
 
     // Update the code
+    console.log('💾 Updating code from', oldCode, 'to', trimmedCode);
     item.code = trimmedCode;
+
+    console.log('💾 Saving item...');
     await item.save();
 
     console.log('=== CODE UPDATE SUCCESS ===');
@@ -486,7 +528,7 @@ router.patch('/:id/code', auth, async (req, res) => {
     // Populate the response with admin info
     await item.populate('approvedBy', 'firstName lastName');
 
-    res.json({
+    const response = {
       success: true,
       message: 'Code updated successfully',
       messageHr: 'Kod je uspješno ažuriran',
@@ -501,11 +543,15 @@ router.patch('/:id/code', auth, async (req, res) => {
         },
         updatedAt: new Date(),
       },
-    });
+    };
+
+    console.log('📤 Sending response:', JSON.stringify(response, null, 2));
+    res.json(response);
   } catch (error) {
     console.error('=== CODE UPDATE ERROR ===');
     console.error('Error type:', error.name);
     console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     console.error('Item ID:', req.params.id);
     console.error('Request body:', req.body);
     console.error('User:', req.user._id);
@@ -536,7 +582,6 @@ router.patch('/:id/code', auth, async (req, res) => {
     });
   }
 });
-
 // Optional: Add an endpoint to get code update history/audit log
 router.get('/:id/code-history', auth, async (req, res) => {
   try {
