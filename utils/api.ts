@@ -104,6 +104,7 @@ export const apiService = {
       throw error;
     }
   },
+
   updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
     try {
       console.log('Updating item code:', {itemId, newCode});
