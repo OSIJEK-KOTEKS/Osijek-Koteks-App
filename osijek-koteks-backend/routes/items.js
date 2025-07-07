@@ -393,7 +393,249 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+// Add this route to your items.js file in the routes folder
 
+// Update item code (admin only)
+router.patch('/:id/code', auth, async (req, res) => {
+  try {
+    console.log('Code update request received for item:', req.params.id);
+
+    // Only admins can edit codes
+    if (req.user.role !== 'admin') {
+      console.log('Access denied - non-admin user attempted code edit');
+      return res.status(403).json({
+        message: 'Access denied. Admin only.',
+        messageHr: 'Pristup odbijen. Samo administratori.',
+      });
+    }
+
+    const {code} = req.body;
+
+    // Validate the new code
+    if (!code || typeof code !== 'string' || code.trim().length === 0) {
+      return res.status(400).json({
+        message: 'Code is required and cannot be empty',
+        messageHr: 'Kod je obavezan i ne može biti prazan',
+      });
+    }
+
+    const trimmedCode = code.trim();
+
+    // Check if the new code already exists for a different item
+    const existingItem = await Item.findOne({
+      code: trimmedCode,
+      _id: {$ne: req.params.id},
+    });
+
+    if (existingItem) {
+      return res.status(409).json({
+        message: 'Code already exists for another item',
+        messageHr: 'Kod već postoji za drugu stavku',
+        conflictingItemId: existingItem._id,
+        conflictingItemTitle: existingItem.title,
+      });
+    }
+
+    // Find and update the item
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({
+        message: 'Item not found',
+        messageHr: 'Stavka nije pronađena',
+      });
+    }
+
+    // Check if admin has access to this item (same logic as in other routes)
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+        messageHr: 'Korisnik nije pronađen',
+      });
+    }
+
+    // Apply access control logic
+    const hasAccess =
+      (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
+      user.codes.includes(item.code) || // User has the specific code
+      user.hasFullAccess; // User has full access flag
+
+    if (!hasAccess) {
+      console.log('Access denied for user:', user._id, 'to item:', item._id);
+      return res.status(403).json({
+        message: 'Access denied to this item',
+        messageHr: 'Pristup ovoj stavci je odbijen',
+      });
+    }
+
+    // Store the old code for logging
+    const oldCode = item.code;
+
+    // Update the code
+    item.code = trimmedCode;
+    await item.save();
+
+    console.log('=== CODE UPDATE SUCCESS ===');
+    console.log('Item ID:', item._id);
+    console.log('Old code:', oldCode);
+    console.log('New code:', trimmedCode);
+    console.log('Updated by admin:', user.email);
+    console.log('==========================');
+
+    // Populate the response with admin info
+    await item.populate('approvedBy', 'firstName lastName');
+
+    res.json({
+      success: true,
+      message: 'Code updated successfully',
+      messageHr: 'Kod je uspješno ažuriran',
+      item: item,
+      changes: {
+        oldCode,
+        newCode: trimmedCode,
+        updatedBy: {
+          id: user._id,
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+        },
+        updatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error('=== CODE UPDATE ERROR ===');
+    console.error('Error type:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Item ID:', req.params.id);
+    console.error('Request body:', req.body);
+    console.error('User:', req.user._id);
+    console.error('========================');
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Validation error',
+        messageHr: 'Greška u validaciji',
+        details: error.message,
+      });
+    }
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'Code already exists',
+        messageHr: 'Kod već postoji',
+      });
+    }
+
+    res.status(500).json({
+      message: 'Server error during code update',
+      messageHr: 'Greška servera tijekom ažuriranja koda',
+      error: error.message,
+      errorId: Math.random().toString(36).substring(7),
+    });
+  }
+});
+
+// Optional: Add an endpoint to get code update history/audit log
+router.get('/:id/code-history', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied. Admin only.',
+        messageHr: 'Pristup odbijen. Samo administratori.',
+      });
+    }
+
+    // This would require a separate CodeHistory model/collection
+    // For now, just return a placeholder response
+    res.json({
+      message: 'Code history feature not yet implemented',
+      messageHr: 'Funkcija povijesti kodova još nije implementirana',
+      itemId: req.params.id,
+    });
+  } catch (error) {
+    console.error('Error fetching code history:', error);
+    res.status(500).json({
+      message: 'Server error',
+      messageHr: 'Greška servera',
+    });
+  }
+});
+
+// Utility function to validate code format (you can customize this)
+const validateCodeFormat = code => {
+  // Example: Code should be alphanumeric and 3-20 characters
+  const codeRegex = /^[A-Za-z0-9_-]{3,20}$/;
+  return codeRegex.test(code);
+};
+
+// Enhanced validation endpoint
+router.post('/validate-code', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied. Admin only.',
+      });
+    }
+
+    const {code, itemId} = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        valid: false,
+        message: 'Code is required',
+        messageHr: 'Kod je obavezan',
+      });
+    }
+
+    const trimmedCode = code.trim();
+
+    // Check format
+    if (!validateCodeFormat(trimmedCode)) {
+      return res.status(400).json({
+        valid: false,
+        message:
+          'Invalid code format. Use 3-20 alphanumeric characters, hyphens, or underscores.',
+        messageHr:
+          'Neispravan format koda. Koristite 3-20 alfanumeričkih znakova, crtice ili podvlake.',
+      });
+    }
+
+    // Check for duplicates
+    const query = {code: trimmedCode};
+    if (itemId) {
+      query._id = {$ne: itemId};
+    }
+
+    const existingItem = await Item.findOne(query);
+
+    if (existingItem) {
+      return res.json({
+        valid: false,
+        message: 'Code already exists',
+        messageHr: 'Kod već postoji',
+        conflictingItem: {
+          id: existingItem._id,
+          title: existingItem.title,
+        },
+      });
+    }
+
+    res.json({
+      valid: true,
+      message: 'Code is available',
+      messageHr: 'Kod je dostupan',
+    });
+  } catch (error) {
+    console.error('Error validating code:', error);
+    res.status(500).json({
+      valid: false,
+      message: 'Server error during validation',
+      messageHr: 'Greška servera tijekom validacije',
+    });
+  }
+});
 // Update an item (admin only)
 router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
