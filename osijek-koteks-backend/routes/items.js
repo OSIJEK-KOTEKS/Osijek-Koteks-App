@@ -393,7 +393,7 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-// Update item code (admin only) - Enhanced with debugging
+// Update item code (admin only) - Allow duplicate codes
 router.patch('/:id/code', auth, async (req, res) => {
   try {
     console.log('=== CODE UPDATE DEBUG START ===');
@@ -429,24 +429,8 @@ router.patch('/:id/code', auth, async (req, res) => {
     const trimmedCode = code.trim();
     console.log('✅ Code validation passed. Trimmed code:', trimmedCode);
 
-    // Check if the new code already exists for a different item
-    console.log('🔍 Checking for existing code...');
-    const existingItem = await Item.findOne({
-      code: trimmedCode,
-      _id: {$ne: req.params.id},
-    });
-
-    if (existingItem) {
-      console.log('❌ Code already exists:', existingItem._id);
-      return res.status(409).json({
-        message: 'Code already exists for another item',
-        messageHr: 'Kod već postoji za drugu stavku',
-        conflictingItemId: existingItem._id,
-        conflictingItemTitle: existingItem.title,
-      });
-    }
-
-    console.log('✅ No duplicate code found');
+    // REMOVED: Duplicate code check - allow multiple items to have the same code
+    console.log('ℹ️  Allowing duplicate codes as per admin requirements');
 
     // Find and update the item
     console.log('🔍 Finding item by ID...');
@@ -511,7 +495,7 @@ router.patch('/:id/code', auth, async (req, res) => {
     // Store the old code for logging
     const oldCode = item.code;
 
-    // Update the code
+    // Update the code (duplicates are now allowed)
     console.log('💾 Updating code from', oldCode, 'to', trimmedCode);
     item.code = trimmedCode;
 
@@ -563,14 +547,6 @@ router.patch('/:id/code', auth, async (req, res) => {
         message: 'Validation error',
         messageHr: 'Greška u validaciji',
         details: error.message,
-      });
-    }
-
-    // Handle duplicate key errors
-    if (error.code === 11000) {
-      return res.status(409).json({
-        message: 'Code already exists',
-        messageHr: 'Kod već postoji',
       });
     }
 
