@@ -762,7 +762,7 @@ const Dashboard: React.FC = () => {
                 <strong>Registracija:</strong> {item.registracija}
               </ItemDetails>
             )}
-            {/* Replace the existing AdminCodeEditor line with this updated version */}
+
             {user?.role === 'admin' ? (
               <AdminCodeEditor
                 item={item}
