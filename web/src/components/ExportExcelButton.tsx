@@ -28,8 +28,8 @@ const ExportButton = styled.button`
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
   }
 `;
 
@@ -97,44 +97,94 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
   };
 
   const prepareExcelData = (itemsToExport: Item[]) => {
-    // Main data sheet
-    const mainData = itemsToExport.map((item, index) => ({
-      'Redni broj': index + 1,
-      Naziv: item.title,
-      RN: getFormattedCode(item.code),
-      Registracija: item.registracija || '-',
-      'Težina (t)': item.tezina !== undefined ? item.tezina / 1000 : null, // Keep as number for Excel
-      'Razlika u vaganju (%)':
-        item.approvalStatus === 'odobreno' && item.neto !== undefined
-          ? item.neto > 1000
-            ? '/'
-            : item.neto // Keep as number for percentages
-          : null,
-      'Datum kreiranja': item.creationTime
-        ? `${item.creationDate} ${item.creationTime}`
-        : item.creationDate,
-      Status: item.approvalStatus,
-      'U tranzitu': item.in_transit ? 'Da' : 'Ne',
-      Odobrio: item.approvedBy
-        ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}`
-        : '-',
-      'Datum odobrenja': item.approvalDate || '-',
-      'Lokacija - Širina': item.approvalLocation?.coordinates?.latitude || null,
-      'Lokacija - Dužina':
-        item.approvalLocation?.coordinates?.longitude || null,
-      'Lokacija - Točnost (m)': item.approvalLocation?.accuracy
-        ? Math.round(item.approvalLocation.accuracy)
-        : null,
-    }));
+    // Group items by code
+    const itemsByCode = itemsToExport.reduce((acc, item) => {
+      const code = item.code;
+      if (!acc[code]) {
+        acc[code] = [];
+      }
+      acc[code].push(item);
+      return acc;
+    }, {} as Record<string, Item[]>);
 
-    // Summary data
+    // Sort codes for consistent ordering
+    const sortedCodes = Object.keys(itemsByCode).sort((a, b) =>
+      a.localeCompare(b, undefined, {numeric: true}),
+    );
+
+    // Prepare data for each code sheet
+    const codeSheets = sortedCodes.map(code => {
+      const codeItems = itemsByCode[code];
+      const codeData = codeItems.map((item, index) => ({
+        'Redni broj': index + 1,
+        Naziv: item.title,
+        RN: getFormattedCode(item.code),
+        Registracija: item.registracija || '-',
+        'Težina (t)': item.tezina !== undefined ? item.tezina / 1000 : null,
+        'Razlika u vaganju (%)':
+          item.approvalStatus === 'odobreno' && item.neto !== undefined
+            ? item.neto > 1000
+              ? '/'
+              : item.neto
+            : null,
+        'Datum kreiranja': item.creationTime
+          ? `${item.creationDate} ${item.creationTime}`
+          : item.creationDate,
+        Status: item.approvalStatus,
+        'U tranzitu': item.in_transit ? 'Da' : 'Ne',
+        Odobrio: item.approvedBy
+          ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}`
+          : '-',
+        'Datum odobrenja': item.approvalDate || '-',
+        'Lokacija - Širina':
+          item.approvalLocation?.coordinates?.latitude || null,
+        'Lokacija - Dužina':
+          item.approvalLocation?.coordinates?.longitude || null,
+        'Lokacija - Točnost (m)': item.approvalLocation?.accuracy
+          ? Math.round(item.approvalLocation.accuracy)
+          : null,
+      }));
+
+      // Calculate totals for this code
+      const codeWeight = codeItems.reduce(
+        (sum, item) => sum + (item.tezina || 0),
+        0,
+      );
+      const codeCount = codeItems.length;
+      const codePending = codeItems.filter(
+        item => item.approvalStatus === 'na čekanju',
+      ).length;
+      const codeApproved = codeItems.filter(
+        item => item.approvalStatus === 'odobreno',
+      ).length;
+      const codeRejected = codeItems.filter(
+        item => item.approvalStatus === 'odbijen',
+      ).length;
+      const codeInTransit = codeItems.filter(item => item.in_transit).length;
+
+      return {
+        code,
+        data: codeData,
+        totals: {
+          count: codeCount,
+          weight: codeWeight / 1000, // Convert to tons
+          pending: codePending,
+          approved: codeApproved,
+          rejected: codeRejected,
+          inTransit: codeInTransit,
+        },
+      };
+    });
+
+    // Overall summary data
     const summaryData = [
-      ['SAŽETAK DOKUMENTA', ''],
+      ['SAŽETAK SVIH DOKUMENATA', ''],
       ['', ''],
       ['Ukupan broj dokumenta:', itemsToExport.length],
-      ['Ukupna težina (t):', totalWeight ? totalWeight / 1000 : 0], // Keep as number
+      ['Ukupna težina (t):', totalWeight ? totalWeight / 1000 : 0],
+      ['Broj različitih RN:', sortedCodes.length],
       ['', ''],
-      ['STATISTIKE PO STATUSU', ''],
+      ['UKUPNE STATISTIKE PO STATUSU', ''],
       [
         'Na čekanju:',
         itemsToExport.filter(item => item.approvalStatus === 'na čekanju')
@@ -148,9 +198,27 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         'Odbijeno:',
         itemsToExport.filter(item => item.approvalStatus === 'odbijen').length,
       ],
-      ['', ''],
-      ['DODATNE INFORMACIJE', ''],
       ['U tranzitu:', itemsToExport.filter(item => item.in_transit).length],
+      ['', ''],
+      ['SAŽETAK PO RADNIM NALOZIMA', ''],
+      [
+        'RN',
+        'Broj dokumenata',
+        'Težina (t)',
+        'Na čekanju',
+        'Odobreno',
+        'Odbijeno',
+        'U tranzitu',
+      ],
+      ...codeSheets.map(sheet => [
+        getFormattedCode(sheet.code),
+        sheet.totals.count,
+        sheet.totals.weight,
+        sheet.totals.pending,
+        sheet.totals.approved,
+        sheet.totals.rejected,
+        sheet.totals.inTransit,
+      ]),
       ['', ''],
       [
         'Datum izvoza:',
@@ -172,7 +240,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       ['Filter - U tranzitu:', inTransitOnly ? 'Da' : 'Ne'],
     ];
 
-    return {mainData, summaryData};
+    return {codeSheets, summaryData};
   };
 
   const handleExport = useCallback(async () => {
@@ -198,68 +266,57 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         return;
       }
 
-      const {mainData, summaryData} = prepareExcelData(itemsToExport);
+      const {codeSheets, summaryData} = prepareExcelData(itemsToExport);
 
       // Create workbook
       const workbook = XLSX.utils.book_new();
 
-      // Create main data worksheet
-      const mainWorksheet = XLSX.utils.json_to_sheet(mainData);
+      // Helper function to format numeric columns in a worksheet
+      const formatNumericColumns = (worksheet: any) => {
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
 
-      // Set number formatting for numeric columns
-      const range = XLSX.utils.decode_range(mainWorksheet['!ref'] || 'A1');
+        for (let row = 1; row <= range.e.r; row++) {
+          // Start from row 1 (skip header)
+          // Format Težina (t) column (column E, index 4)
+          const weightCell = XLSX.utils.encode_cell({r: row, c: 4});
+          if (
+            worksheet[weightCell] &&
+            typeof worksheet[weightCell].v === 'number'
+          ) {
+            worksheet[weightCell].z = '#,##0.000';
+          }
 
-      // Format numeric columns with Croatian decimal separator
-      for (let row = 1; row <= range.e.r; row++) {
-        // Start from row 1 (skip header)
-        // Format Težina (t) column (column E, index 4)
-        const weightCell = XLSX.utils.encode_cell({r: row, c: 4});
-        if (
-          mainWorksheet[weightCell] &&
-          typeof mainWorksheet[weightCell].v === 'number'
-        ) {
-          mainWorksheet[weightCell].z = '#,##0.000'; // Excel number format
+          // Format Razlika u vaganju column (column F, index 5)
+          const percentCell = XLSX.utils.encode_cell({r: row, c: 5});
+          if (
+            worksheet[percentCell] &&
+            typeof worksheet[percentCell].v === 'number'
+          ) {
+            worksheet[percentCell].z = '#,##0.00';
+          }
+
+          // Format Lokacija - Širina column (column L, index 11)
+          const latCell = XLSX.utils.encode_cell({r: row, c: 11});
+          if (worksheet[latCell] && typeof worksheet[latCell].v === 'number') {
+            worksheet[latCell].z = '#,##0.000000';
+          }
+
+          // Format Lokacija - Dužina column (column M, index 12)
+          const lngCell = XLSX.utils.encode_cell({r: row, c: 12});
+          if (worksheet[lngCell] && typeof worksheet[lngCell].v === 'number') {
+            worksheet[lngCell].z = '#,##0.000000';
+          }
+
+          // Format Lokacija - Točnost column (column N, index 13)
+          const accCell = XLSX.utils.encode_cell({r: row, c: 13});
+          if (worksheet[accCell] && typeof worksheet[accCell].v === 'number') {
+            worksheet[accCell].z = '#,##0';
+          }
         }
+      };
 
-        // Format Razlika u vaganju column (column F, index 5)
-        const percentCell = XLSX.utils.encode_cell({r: row, c: 5});
-        if (
-          mainWorksheet[percentCell] &&
-          typeof mainWorksheet[percentCell].v === 'number'
-        ) {
-          mainWorksheet[percentCell].z = '#,##0.00'; // Excel number format
-        }
-
-        // Format Lokacija - Širina column (column L, index 11)
-        const latCell = XLSX.utils.encode_cell({r: row, c: 11});
-        if (
-          mainWorksheet[latCell] &&
-          typeof mainWorksheet[latCell].v === 'number'
-        ) {
-          mainWorksheet[latCell].z = '#,##0.000000'; // Excel number format with 6 decimals
-        }
-
-        // Format Lokacija - Dužina column (column M, index 12)
-        const lngCell = XLSX.utils.encode_cell({r: row, c: 12});
-        if (
-          mainWorksheet[lngCell] &&
-          typeof mainWorksheet[lngCell].v === 'number'
-        ) {
-          mainWorksheet[lngCell].z = '#,##0.000000'; // Excel number format with 6 decimals
-        }
-
-        // Format Lokacija - Točnost column (column N, index 13)
-        const accCell = XLSX.utils.encode_cell({r: row, c: 13});
-        if (
-          mainWorksheet[accCell] &&
-          typeof mainWorksheet[accCell].v === 'number'
-        ) {
-          mainWorksheet[accCell].z = '#,##0'; // Excel number format, no decimals
-        }
-      }
-
-      // Set column widths for main sheet
-      const mainColWidths = [
+      // Set standard column widths for data sheets
+      const standardColWidths = [
         {wch: 8}, // Redni broj
         {wch: 40}, // Naziv
         {wch: 25}, // RN
@@ -275,17 +332,42 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         {wch: 15}, // Lokacija - Dužina
         {wch: 15}, // Lokacija - Točnost
       ];
-      mainWorksheet['!cols'] = mainColWidths;
 
-      // Create summary worksheet
+      // Create summary worksheet first
       const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
-
-      // Set column widths for summary sheet
-      summaryWorksheet['!cols'] = [{wch: 25}, {wch: 20}];
-
-      // Add worksheets to workbook
-      XLSX.utils.book_append_sheet(workbook, mainWorksheet, 'Dokumenti');
+      summaryWorksheet['!cols'] = [
+        {wch: 25},
+        {wch: 20},
+        {wch: 15},
+        {wch: 12},
+        {wch: 12},
+        {wch: 12},
+        {wch: 12},
+      ];
       XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Sažetak');
+
+      // Create individual sheets for each code
+      codeSheets.forEach(codeSheet => {
+        const worksheet = XLSX.utils.json_to_sheet(codeSheet.data);
+
+        // Format numeric columns
+        formatNumericColumns(worksheet);
+
+        // Set column widths
+        worksheet['!cols'] = standardColWidths;
+
+        // Create a valid sheet name (Excel has restrictions on sheet names)
+        let sheetName = codeSheet.code;
+
+        // Excel sheet name restrictions: max 31 chars, no special chars
+        sheetName = sheetName.replace(/[\\\/\?\*\[\]:]/g, '_');
+        if (sheetName.length > 31) {
+          sheetName = sheetName.substring(0, 31);
+        }
+
+        // Add sheet to workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      });
 
       // Generate filename and download
       const fileName = generateFileName();
