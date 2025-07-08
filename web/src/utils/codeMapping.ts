@@ -12,6 +12,7 @@ export const codeToTextMapping: Record<string, string> = {
   '23022': 'Gundulićeva Ulica',
   '23023': 'Sljemenska, Kolodvorska i Kapelska Ulica',
   '23032': 'Reg. d.o.r. Dunav - Urbanističko uređenje grada VU',
+  '23049': 'Reg. d.o.r. Dunav - Urbanističko uređenje grada VU',
   '23050': 'Koridor Vc',
   '23053': 'Rekon. raskrižja u k.t - Oprisavci',
   '23054': 'Građenje dionice LC42042 prema Surevici',
