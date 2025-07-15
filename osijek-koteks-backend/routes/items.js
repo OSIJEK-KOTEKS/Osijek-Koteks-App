@@ -73,187 +73,7 @@ router.get('/codes', auth, async (req, res) => {
   }
 });
 
-// Get all items with pagination and filtering
-router.get('/', auth, async (req, res) => {
-  try {
-    const {startDate, endDate, code, sortOrder, searchTitle, inTransitOnly} =
-      req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    // Build the base query
-    let query = {};
-
-    // If search mode is active (searchTitle is provided)
-    if (searchTitle) {
-      // Use case-insensitive regex search for title
-      query.title = {$regex: searchTitle, $options: 'i'};
-    } else {
-      // Apply code filtering logic:
-      // 1. If user is not admin OR doesn't have full access, filter by their codes
-      // 2. If user is admin but has codes assigned, filter by those codes
-      // 3. If user is admin with no codes (empty array), show all items
-
-      if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
-        // Non-admin users: filter by their codes
-        query.code = {$in: req.user.codes};
-      } else if (
-        req.user.role === 'admin' &&
-        req.user.codes &&
-        req.user.codes.length > 0
-      ) {
-        // Admin with codes assigned: filter by those codes
-        query.code = {$in: req.user.codes};
-      }
-      // If admin with no codes assigned (empty array or null), show all items (no filtering)
-
-      // Add date filter if dates are provided
-      if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        query.creationDate = {
-          $gte: start,
-          $lte: end,
-        };
-      }
-
-      // Add code filter if specific code is requested
-      if (code && code !== 'all') {
-        query.code = code;
-      }
-
-      // Add in_transit filter if requested
-      if (inTransitOnly === 'true') {
-        query.in_transit = true;
-      }
-    }
-
-    console.log('Query:', query);
-    console.log('User role:', req.user.role);
-    console.log('User codes:', req.user.codes);
-    console.log('User hasFullAccess:', req.user.hasFullAccess);
-
-    let sortOptions = {creationDate: -1}; // Default sort
-    if (sortOrder === 'date-asc') {
-      sortOptions = {creationDate: 1};
-    } else if (sortOrder === 'approved-first') {
-      sortOptions = {
-        approvalStatus: -1,
-        creationDate: -1,
-      };
-    } else if (sortOrder === 'pending-first') {
-      sortOptions = {
-        approvalStatus: 1,
-        creationDate: -1,
-      };
-    }
-
-    // Get paginated items
-    const items = await Item.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .populate('approvedBy', 'firstName lastName');
-
-    // Get total count
-    const total = await Item.countDocuments(query);
-    const totalPages = Math.ceil(total / limit);
-    const hasMore = page < totalPages;
-
-    // Calculate total weight for ALL filtered items (not just paginated)
-    const totalWeightResult = await Item.aggregate([
-      {$match: query},
-      {
-        $group: {
-          _id: null,
-          totalWeight: {
-            $sum: {
-              $cond: {
-                if: {
-                  $and: [
-                    {$ne: ['$tezina', null]},
-                    {$ne: ['$tezina', undefined]},
-                  ],
-                },
-                then: '$tezina',
-                else: 0,
-              },
-            },
-          },
-        },
-      },
-    ]);
-
-    const totalWeight =
-      totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
-
-    console.log('Found items:', items.length);
-    console.log('Total weight of all filtered items:', totalWeight);
-
-    res.json({
-      items,
-      pagination: {
-        total,
-        page,
-        pages: totalPages,
-        hasMore,
-      },
-      totalWeight,
-    });
-  } catch (err) {
-    console.error('Error in items route:', err);
-    res.status(500).json({
-      message: 'Server error',
-      error: err.message,
-    });
-  }
-});
-
-// Get a specific item
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const item = await Item.findById(req.params.id).populate(
-      'approvedBy',
-      'firstName lastName',
-    );
-
-    if (!item) {
-      return res.status(404).json({message: 'Item not found'});
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({message: 'User not found'});
-    }
-
-    // Apply the same access control logic
-    // Allow access if:
-    // 1. User is admin with no codes assigned (full access)
-    // 2. User is admin or non-admin and has the item's code in their codes array
-    // 3. User has full access flag set
-
-    const hasAccess =
-      (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
-      user.codes.includes(item.code) || // User has the specific code
-      user.hasFullAccess; // User has full access flag
-
-    if (!hasAccess) {
-      console.log('Access denied for user:', user._id, 'to item:', item._id);
-      console.log('User role:', user.role);
-      console.log('User codes:', user.codes);
-      console.log('Item code:', item.code);
-      console.log('User hasFullAccess:', user.hasFullAccess);
-      return res.status(403).json({message: 'Access denied'});
-    }
-
-    res.json(item);
-  } catch (err) {
-    console.error('Error fetching item:', err);
-    res.status(500).json({message: 'Server error'});
-  }
-});
-// NEW: Get unique carriers (prijevoznik values)
+// Get unique carriers (prijevoznik values) - BEFORE /:id route
 router.get('/carriers', auth, async (req, res) => {
   try {
     // Apply the same filtering logic as the main items route
@@ -287,13 +107,14 @@ router.get('/carriers', auth, async (req, res) => {
   }
 });
 
+// Get all items with pagination and filtering - SINGLE ROUTE WITH ALL FEATURES
 router.get('/', auth, async (req, res) => {
   try {
     const {
       startDate,
       endDate,
       code,
-      prijevoznik, // NEW: Add prijevoznik parameter
+      prijevoznik, // Include prijevoznik parameter
       sortOrder,
       searchTitle,
       inTransitOnly,
@@ -338,7 +159,7 @@ router.get('/', auth, async (req, res) => {
         query.code = code;
       }
 
-      // NEW: Apply prijevoznik filter
+      // Apply prijevoznik filter
       if (prijevoznik && prijevoznik !== 'all') {
         query.prijevoznik = prijevoznik;
       }
@@ -426,6 +247,51 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
+
+// Get a specific item - AFTER all specific routes
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).populate(
+      'approvedBy',
+      'firstName lastName',
+    );
+
+    if (!item) {
+      return res.status(404).json({message: 'Item not found'});
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({message: 'User not found'});
+    }
+
+    // Apply the same access control logic
+    // Allow access if:
+    // 1. User is admin with no codes assigned (full access)
+    // 2. User is admin or non-admin and has the item's code in their codes array
+    // 3. User has full access flag set
+
+    const hasAccess =
+      (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
+      user.codes.includes(item.code) || // User has the specific code
+      user.hasFullAccess; // User has full access flag
+
+    if (!hasAccess) {
+      console.log('Access denied for user:', user._id, 'to item:', item._id);
+      console.log('User role:', user.role);
+      console.log('User codes:', user.codes);
+      console.log('Item code:', item.code);
+      console.log('User hasFullAccess:', user.hasFullAccess);
+      return res.status(403).json({message: 'Access denied'});
+    }
+
+    res.json(item);
+  } catch (err) {
+    console.error('Error fetching item:', err);
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
@@ -435,7 +301,7 @@ router.post('/', auth, async (req, res) => {
         .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
-    // FIX: Add prijevoznik to the destructuring
+    // Add prijevoznik to the destructuring
     const {
       title,
       code,
@@ -453,7 +319,7 @@ router.post('/', auth, async (req, res) => {
       registracija,
       neto,
       tezina,
-      prijevoznik, // Add this to the log
+      prijevoznik,
       hasTitle: !!title,
     });
 
@@ -516,12 +382,11 @@ router.post('/', auth, async (req, res) => {
       timeZone: 'Europe/Zagreb',
     });
 
-    // Create the new item object - FIX: Add prijevoznik handling
+    // Create the new item object with prijevoznik handling
     const item = new Item({
       title: title.trim(),
       code: code.trim(),
       registracija: registracija ? registracija.trim() : undefined,
-      // FIX: Add prijevoznik field handling
       prijevoznik:
         prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
       pdfUrl: pdfUrl.trim(),
@@ -568,7 +433,7 @@ router.post('/', auth, async (req, res) => {
       title: newItem.title.substring(0, 50) + '...',
       neto: newItem.neto,
       tezina: newItem.tezina,
-      prijevoznik: newItem.prijevoznik, // Add this to the log
+      prijevoznik: newItem.prijevoznik,
     });
 
     res.status(201).json(newItem);
@@ -580,6 +445,7 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+
 // Update item code (admin only) - Allow duplicate codes
 router.patch('/:id/code', auth, async (req, res) => {
   try {
@@ -745,6 +611,7 @@ router.patch('/:id/code', auth, async (req, res) => {
     });
   }
 });
+
 // Optional: Add an endpoint to get code update history/audit log
 router.get('/:id/code-history', auth, async (req, res) => {
   try {
@@ -844,6 +711,7 @@ router.post('/validate-code', auth, async (req, res) => {
     });
   }
 });
+
 // Update an item (admin only)
 router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
