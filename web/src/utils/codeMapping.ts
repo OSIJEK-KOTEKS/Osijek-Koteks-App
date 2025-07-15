@@ -41,6 +41,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25032': 'Pripremni radovi - NCI prostora Čepin',
   '25033': 'PS Beli Manastir',
   '25034': 'PS Đakovo',
+  '25051': 'Osatina Viškovci',
   '25062': 'Pevex Đakovo',
   '5014': 'Betonara',
 };
