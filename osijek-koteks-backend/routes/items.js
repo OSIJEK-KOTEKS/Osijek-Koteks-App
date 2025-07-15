@@ -262,8 +262,17 @@ router.post('/', auth, async (req, res) => {
         .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
-    const {title, code, registracija, neto, tezina, pdfUrl, creationDate} =
-      req.body;
+    // FIX: Add prijevoznik to the destructuring
+    const {
+      title,
+      code,
+      registracija,
+      neto,
+      tezina,
+      prijevoznik,
+      pdfUrl,
+      creationDate,
+    } = req.body;
 
     console.log('Creating item with data:', {
       title: title?.substring(0, 50) + '...',
@@ -271,6 +280,7 @@ router.post('/', auth, async (req, res) => {
       registracija,
       neto,
       tezina,
+      prijevoznik, // Add this to the log
       hasTitle: !!title,
     });
 
@@ -333,11 +343,14 @@ router.post('/', auth, async (req, res) => {
       timeZone: 'Europe/Zagreb',
     });
 
-    // Create the new item object
+    // Create the new item object - FIX: Add prijevoznik handling
     const item = new Item({
       title: title.trim(),
       code: code.trim(),
       registracija: registracija ? registracija.trim() : undefined,
+      // FIX: Add prijevoznik field handling
+      prijevoznik:
+        prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
       pdfUrl: pdfUrl.trim(),
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,
@@ -382,6 +395,7 @@ router.post('/', auth, async (req, res) => {
       title: newItem.title.substring(0, 50) + '...',
       neto: newItem.neto,
       tezina: newItem.tezina,
+      prijevoznik: newItem.prijevoznik, // Add this to the log
     });
 
     res.status(201).json(newItem);
