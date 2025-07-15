@@ -3,6 +3,7 @@ export const codeToTextMapping: Record<string, string> = {
   '1994': 'AB Našice',
   '21102': 'Šire NA područje',
   '21075': 'AB Našice skladište rasutog mat.',
+  '21098': 'Retencija Glogovica',
   '22039': 'Rekon. nasipa Batina',
   '22065': '1. Gimnazija OS',
   '23006': 'Most preko rijeke Vučice',
