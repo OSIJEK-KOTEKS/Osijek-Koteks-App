@@ -29,6 +29,7 @@ export interface Item {
   registracija?: string;
   neto?: number;
   tezina?: number; // NEW: Add tezina field
+  prijevoznik?: string;
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
@@ -88,6 +89,8 @@ export interface CreateItemInput {
   registracija?: string;
   neto?: number;
   tezina?: number; // NEW: Add tezina field
+  prijevoznik?: string;
+
   pdfUrl: string;
   creationDate?: string;
   creationTime?: string;
@@ -98,6 +101,7 @@ export interface ItemFilters {
   endDate?: string;
   code?: string;
   sortOrder?: string;
+  prijevoznik?: string;
   searchTitle?: string;
   inTransitOnly?: boolean;
   // Add any additional filtering options as needed

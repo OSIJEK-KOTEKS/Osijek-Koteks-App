@@ -143,6 +143,13 @@ const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
   `}
 `;
 
+const OptionalFieldNote = styled.p`
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+  font-style: italic;
+`;
+
 interface CreateItemModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -159,7 +166,8 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     code: '',
     registracija: '',
     neto: undefined,
-    tezina: undefined, // NEW: Initialize tezina as undefined
+    tezina: undefined,
+    prijevoznik: '', // NEW: Add prijevoznik field
     pdfUrl: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -191,7 +199,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     return true;
   };
 
-  // NEW: Handler for neto changes that also updates tezina
+  // Handler for neto changes that also updates tezina
   const handleNetoChange = (value: string) => {
     const netoValue = value === '' ? undefined : Number(value);
     setFormData({
@@ -213,9 +221,15 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
         minute: '2-digit',
       });
 
+      // Clean up the data before sending
       const itemData = {
         ...formData,
         creationTime,
+        // Only include prijevoznik if it has a value
+        ...(formData.prijevoznik &&
+          formData.prijevoznik.trim() && {
+            prijevoznik: formData.prijevoznik.trim(),
+          }),
       };
 
       await apiService.createItem(itemData);
@@ -227,6 +241,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
         registracija: '',
         neto: undefined,
         tezina: undefined,
+        prijevoznik: '',
         pdfUrl: '',
       });
       setError('');
@@ -288,7 +303,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
               />
             </FormGroup>
 
-            {/* NEW: Updated neto field that also sets tezina */}
+            {/* Updated neto field that also sets tezina */}
             <FormGroup>
               <Label>Neto / Težina</Label>
               <Input
@@ -299,15 +314,27 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 id="neto"
               />
               {formData.neto !== undefined && (
-                <p
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#666',
-                    marginTop: '0.25rem',
-                  }}>
+                <OptionalFieldNote>
                   Težina će biti automatski postavljena na: {formData.tezina}
-                </p>
+                </OptionalFieldNote>
               )}
+            </FormGroup>
+
+            {/* NEW: Prijevoznik field */}
+            <FormGroup>
+              <Label>Prijevoznik</Label>
+              <Input
+                type="text"
+                value={formData.prijevoznik}
+                onChange={e =>
+                  setFormData({...formData, prijevoznik: e.target.value})
+                }
+                placeholder="Unesite prijevoznika (opcionalno)"
+                id="prijevoznik"
+              />
+              <OptionalFieldNote>
+                Opcionalno polje za unos prijevoznika
+              </OptionalFieldNote>
             </FormGroup>
 
             <FormGroup>

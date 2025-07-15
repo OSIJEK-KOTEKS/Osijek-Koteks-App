@@ -144,6 +144,7 @@ export const apiService = {
       throw error;
     }
   },
+
   getUniqueCodes: async (): Promise<string[]> => {
     try {
       const response = await api.get<string[]>('/api/items/codes');
@@ -153,6 +154,17 @@ export const apiService = {
       throw error;
     }
   },
+
+  getUserById: async (id: string): Promise<User> => {
+    try {
+      const response = await api.get<User>(`/api/users/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      throw error;
+    }
+  },
+
   // Get users with optional pagination and sorting
   getUsersPaginated: async (
     page: number = 1,
@@ -176,6 +188,7 @@ export const apiService = {
       throw error;
     }
   },
+
   createUser: async (userData: RegistrationData): Promise<User> => {
     try {
       console.log('Creating new user:', {
@@ -227,13 +240,202 @@ export const apiService = {
       throw error;
     }
   },
-  // Update the updateItemApprovalWithPdf method in api.ts (web version)
+
+  updateUserPassword: async (
+    userId: string,
+    newPassword: string,
+  ): Promise<User> => {
+    try {
+      console.log('Updating password for user:', userId);
+      const response = await api.patch<User>(`/api/users/${userId}/password`, {
+        password: newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+  },
+
+  updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
+    try {
+      const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user codes:', error);
+      throw error;
+    }
+  },
+
+  // Toggle user's full access
+  toggleUserFullAccess: async (
+    id: string,
+    hasFullAccess: boolean,
+  ): Promise<User> => {
+    try {
+      console.log('Toggling full access for user:', id, hasFullAccess);
+      const response = await api.patch<User>(`/api/users/${id}/access`, {
+        hasFullAccess,
+      });
+
+      console.log('Full access update successful:', {
+        userId: response.data._id,
+        hasFullAccess: response.data.hasFullAccess,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling user full access:', error);
+      throw error;
+    }
+  },
+
+  // Item methods
+  getItems: async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: ItemFilters,
+  ): Promise<PaginatedResponse<Item>> => {
+    try {
+      console.log('Making API request with filters:', filters);
+
+      const params = new URLSearchParams();
+
+      // Add base pagination params
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+
+      // Add filter params if they exist
+      if (filters?.startDate) params.append('startDate', filters.startDate);
+      if (filters?.endDate) params.append('endDate', filters.endDate);
+      if (filters?.code && filters.code !== 'all')
+        params.append('code', filters.code);
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+      if (filters?.searchTitle)
+        params.append('searchTitle', filters.searchTitle);
+      if (filters?.inTransitOnly) params.append('inTransitOnly', 'true');
+      // NEW: Add prijevoznik filter
+      if (filters?.prijevoznik && filters.prijevoznik.trim())
+        params.append('prijevoznik', filters.prijevoznik);
+
+      console.log('Request URL params:', params.toString());
+
+      const response = await api.get<PaginatedResponse<Item>>(
+        `/api/items?${params}`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      throw error;
+    }
+  },
+
+  createItem: async (itemData: CreateItemInput): Promise<Item> => {
+    try {
+      console.log('Creating new item:', itemData);
+
+      // Prepare the item payload
+      const itemPayload = {
+        ...itemData,
+        tezina: itemData.neto, // Set tezina to the same value as neto
+        // Only include prijevoznik if it has a value
+        ...(itemData.prijevoznik &&
+          itemData.prijevoznik.trim() && {
+            prijevoznik: itemData.prijevoznik.trim(),
+          }),
+      };
+
+      console.log('Item payload with tezina and prijevoznik:', itemPayload);
+
+      const response = await api.post<Item>('/api/items', itemPayload);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating item:', error);
+      throw error;
+    }
+  },
+
+  updateItem: async (
+    id: string,
+    itemData: Partial<
+      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
+    >,
+  ): Promise<Item> => {
+    try {
+      console.log('Updating item:', id, itemData);
+
+      // Prepare update data with prijevoznik handling
+      const updatePayload = {
+        ...itemData,
+        // Handle prijevoznik field properly
+        ...(itemData.prijevoznik !== undefined && {
+          prijevoznik: itemData.prijevoznik?.trim() || null,
+        }),
+      };
+
+      const response = await api.patch<Item>(`/api/items/${id}`, updatePayload);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item:', error);
+      throw error;
+    }
+  },
+
+  updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
+    try {
+      console.log('Updating item code:', {itemId, newCode});
+
+      const response = await api.patch(`/api/items/${itemId}/code`, {
+        code: newCode,
+      });
+
+      console.log('Code update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating item code:', error);
+      throw error;
+    }
+  },
+
+  updateItemApproval: async (
+    id: string,
+    approvalStatus: Item['approvalStatus'],
+    photoFront: File,
+    photoBack: File,
+    locationData: LocationData,
+    inTransit: boolean = false,
+  ): Promise<Item> => {
+    try {
+      const formData = new FormData();
+      formData.append('photoFront', photoFront);
+      formData.append('photoBack', photoBack);
+      formData.append('approvalStatus', approvalStatus);
+      formData.append('locationData', JSON.stringify(locationData));
+      formData.append('inTransit', inTransit.toString());
+
+      const response = await api.patch<Item>(
+        `/api/items/${id}/approval`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Error in photo approval:', error);
+      throw error;
+    }
+  },
+
   updateItemApprovalWithPdf: async (
     id: string,
     approvalStatus: Item['approvalStatus'],
     pdfDocument: File,
     inTransit: boolean = false,
-    neto?: number, // Add neto parameter
+    neto?: number,
   ): Promise<Item> => {
     try {
       console.log('Sending PDF approval request:', {
@@ -272,149 +474,6 @@ export const apiService = {
     }
   },
 
-  updateUserPassword: async (
-    userId: string,
-    newPassword: string,
-  ): Promise<User> => {
-    try {
-      console.log('Updating password for user:', userId);
-      const response = await api.patch<User>(`/api/users/${userId}/password`, {
-        password: newPassword,
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating password:', error);
-      throw error;
-    }
-  },
-
-  updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
-    try {
-      const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
-      return response.data;
-    } catch (error) {
-      console.error('Error updating user codes:', error);
-      throw error;
-    }
-  },
-
-  // Item methods
-  getItems: async (
-    page: number = 1,
-    limit: number = 10,
-    filters?: ItemFilters,
-  ): Promise<PaginatedResponse<Item>> => {
-    try {
-      console.log('Making API request with filters:', filters); // Debug log
-
-      const params = new URLSearchParams();
-
-      // Add base pagination params
-      params.append('page', page.toString());
-      params.append('limit', limit.toString());
-
-      // Add filter params if they exist
-      if (filters?.startDate) params.append('startDate', filters.startDate);
-      if (filters?.endDate) params.append('endDate', filters.endDate);
-      if (filters?.code && filters.code !== 'all')
-        params.append('code', filters.code);
-      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
-      if (filters?.searchTitle)
-        params.append('searchTitle', filters.searchTitle);
-      if (filters?.inTransitOnly) params.append('inTransitOnly', 'true'); // Add this line
-
-      console.log('Request URL params:', params.toString()); // Debug log
-
-      const response = await api.get<PaginatedResponse<Item>>(
-        `/api/items?${params}`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching items:', error);
-      throw error;
-    }
-  },
-  createItem: async (itemData: CreateItemInput): Promise<Item> => {
-    try {
-      console.log('Creating new item:', itemData);
-
-      // Ensure tezina is set to the same value as neto if neto is provided
-      const itemPayload = {
-        ...itemData,
-        tezina: itemData.neto, // Set tezina to the same value as neto
-      };
-
-      console.log('Item payload with tezina:', itemPayload);
-
-      const response = await api.post<Item>('/api/items', itemPayload);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating item:', error);
-      throw error;
-    }
-  },
-
-  updateItem: async (
-    id: string,
-    itemData: Partial<
-      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
-    >,
-  ): Promise<Item> => {
-    try {
-      const response = await api.patch<Item>(`/api/items/${id}`, itemData);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating item:', error);
-      throw error;
-    }
-  },
-
-  // Add this method to your apiService object
-  // Add this method to your apiService object in api.ts
-  updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
-    try {
-      console.log('Updating item code:', {itemId, newCode});
-
-      const response = await api.patch(`/api/items/${itemId}/code`, {
-        code: newCode,
-      });
-
-      console.log('Code update successful:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating item code:', error);
-      throw error;
-    }
-  },
-
-  // Update the updateItemApproval method in api.ts (web version)
-  updateItemApproval: async (
-    id: string,
-    approvalStatus: Item['approvalStatus'],
-    photoFront: File,
-    photoBack: File,
-    locationData: LocationData,
-    inTransit: boolean = false, // Add inTransit parameter with default value
-  ): Promise<Item> => {
-    const formData = new FormData();
-    formData.append('photoFront', photoFront);
-    formData.append('photoBack', photoBack);
-    formData.append('approvalStatus', approvalStatus);
-    formData.append('locationData', JSON.stringify(locationData));
-    formData.append('inTransit', inTransit.toString()); // Add inTransit flag
-
-    const response = await api.patch<Item>(
-      `/api/items/${id}/approval`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      },
-    );
-
-    return response.data;
-  },
   deleteItem: async (id: string): Promise<void> => {
     try {
       console.log('Attempting to delete item with ID:', id);
@@ -426,25 +485,13 @@ export const apiService = {
     }
   },
 
-  // Toggle user's full access
-  toggleUserFullAccess: async (
-    id: string,
-    hasFullAccess: boolean,
-  ): Promise<User> => {
+  // NEW: Get unique prijevoznik values for filtering
+  getUniqueCarriers: async (): Promise<string[]> => {
     try {
-      console.log('Toggling full access for user:', id, hasFullAccess);
-      const response = await api.patch<User>(`/api/users/${id}/access`, {
-        hasFullAccess,
-      });
-
-      console.log('Full access update successful:', {
-        userId: response.data._id,
-        hasFullAccess: response.data.hasFullAccess,
-      });
-
+      const response = await api.get<string[]>('/api/items/carriers');
       return response.data;
     } catch (error) {
-      console.error('Error toggling user full access:', error);
+      console.error('Error fetching unique carriers:', error);
       throw error;
     }
   },

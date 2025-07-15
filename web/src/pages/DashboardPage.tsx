@@ -774,6 +774,14 @@ const Dashboard: React.FC = () => {
                 <strong>RN:</strong> {getFormattedCode(item.code)}
               </ItemDetails>
             )}
+
+            {/* NEW: Display prijevoznik if it exists */}
+            {item.prijevoznik && (
+              <ItemDetails>
+                <strong>Prijevoznik:</strong> {item.prijevoznik}
+              </ItemDetails>
+            )}
+
             {/* Display tezina in tons */}
             {item.tezina !== undefined && (
               <ItemDetails>
@@ -825,6 +833,7 @@ const Dashboard: React.FC = () => {
               </ItemDetails>
             )}
             <ButtonGroup>
+              {/* Rest of the buttons remain the same */}
               <ActionButton onClick={() => window.open(item.pdfUrl, '_blank')}>
                 Otvori PDF
               </ActionButton>
