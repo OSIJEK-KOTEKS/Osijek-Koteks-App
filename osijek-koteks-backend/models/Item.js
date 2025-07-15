@@ -1,4 +1,4 @@
-// Item.js (MongoDB Schema) - Updated with tezina field
+// Item.js (MongoDB Schema) - Updated with prijevoznik field
 const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
@@ -41,10 +41,16 @@ const ItemSchema = new mongoose.Schema(
       type: Number,
       required: false,
     },
-    // NEW: Add tezina field
+    // Add tezina field
     tezina: {
       type: Number,
       required: false,
+    },
+    // NEW: Add prijevoznik field
+    prijevoznik: {
+      type: String,
+      required: false,
+      trim: true,
     },
     pdfUrl: {
       type: String,
@@ -136,6 +142,7 @@ const ItemSchema = new mongoose.Schema(
 ItemSchema.index({code: 1});
 ItemSchema.index({approvalStatus: 1});
 ItemSchema.index({creationDate: -1});
+ItemSchema.index({prijevoznik: 1}); // NEW: Add index for prijevoznik field
 
 // Method to format dates for response
 ItemSchema.methods.toJSON = function () {
