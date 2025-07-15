@@ -18,7 +18,8 @@ import PCUserApproveButton from '../components/PCUserApproveButton';
 import ExportExcelButton from '../components/ExportExcelButton';
 import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
 import AdminCodeEditor from '../components/AdminCodeEditor';
-// Styled Components (keeping the same as before
+
+// Styled Components
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
@@ -50,6 +51,7 @@ const ItemCard = styled.div`
     transform: translateY(-2px);
   }
 `;
+
 const RestrictedAccessMessage = styled.div`
   background: ${({theme}) => theme.colors.primary}15;
   border: 1px solid ${({theme}) => theme.colors.primary}40;
@@ -171,7 +173,7 @@ const LoadMoreButton = styled(S.Button)`
   display: block;
 `;
 
-// NEW: Styled component for total weight display
+// Styled component for total weight display
 const TotalWeightContainer = styled.div`
   background: ${({theme}) => theme.colors.white};
   padding: ${({theme}) => theme.spacing.medium};
@@ -204,12 +206,16 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Updated date state for date range
+  // Date state for date range
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
 
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
   const [selectedCode, setSelectedCode] = useState('all');
+  // NEW: Add prijevoznik filtering states
+  const [selectedPrijevoznik, setSelectedPrijevoznik] = useState('all');
+  const [availableCarriers, setAvailableCarriers] = useState<string[]>([]);
+
   const [sortOrder, setSortOrder] = useState('date-desc');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -219,18 +225,19 @@ const Dashboard: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [isCreateModalVisible, setCreateModalVisible] =
     useState<boolean>(false);
-  // NEW: Add state for total weight from backend
+  // Add state for total weight from backend
   const [totalWeight, setTotalWeight] = useState(0);
 
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
 
-  // NEW: Format weight display in tons
+  // Format weight display in tons
   const formatWeight = (weightInKg: number) => {
     const weightInTons = weightInKg / 1000;
     return weightInTons.toFixed(3);
   };
+
   const showRestrictedMessage =
     user?.role === 'admin' && user?.codes && user.codes.length > 0;
 
@@ -240,6 +247,18 @@ const Dashboard: React.FC = () => {
       setAvailableCodes(codes);
     } catch (error) {
       console.error('Error fetching codes:', error);
+    }
+  }, []);
+
+  // NEW: Function to fetch available carriers
+  const fetchAvailableCarriers = useCallback(async () => {
+    try {
+      console.log('Fetching available carriers...'); // DEBUG
+      const carriers = await apiService.getUniqueCarriers();
+      console.log('Received carriers:', carriers); // DEBUG
+      setAvailableCarriers(carriers);
+    } catch (error) {
+      console.error('Error fetching carriers:', error);
     }
   }, []);
 
@@ -273,6 +292,10 @@ const Dashboard: React.FC = () => {
             startDate: startOfDay.toISOString(),
             endDate: endOfDay.toISOString(),
             ...(selectedCode !== 'all' && {code: selectedCode}),
+            // NEW: Add prijevoznik filter
+            ...(selectedPrijevoznik !== 'all' && {
+              prijevoznik: selectedPrijevoznik,
+            }),
             sortOrder,
             ...(inTransitOnly && {inTransitOnly: true}),
           };
@@ -292,7 +315,7 @@ const Dashboard: React.FC = () => {
 
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
-        // NEW: Set total weight from backend response
+        // Set total weight from backend response
         setTotalWeight(response.totalWeight || 0);
         setError('');
       } catch (err) {
@@ -308,9 +331,10 @@ const Dashboard: React.FC = () => {
     },
     [
       page,
-      startDate, // Updated dependency
-      endDate, // Updated dependency
+      startDate,
+      endDate,
       selectedCode,
+      selectedPrijevoznik, // NEW: Add prijevoznik dependency
       sortOrder,
       searchMode,
       searchValue,
@@ -324,10 +348,12 @@ const Dashboard: React.FC = () => {
     setHasMore(true);
     fetchItems(false);
   }, [fetchItems]);
+
   const formatDateRangeForPrint = (
     startDate: Date,
     endDate: Date,
     selectedCode: string,
+    selectedPrijevoznik: string,
     inTransitOnly: boolean,
   ) => {
     const isSameDay = startDate.toDateString() === endDate.toDateString();
@@ -353,10 +379,13 @@ const Dashboard: React.FC = () => {
       dateRangeText = `${startStr} - ${endStr}`;
     }
 
-    // Add additional filters if applied
+    // ADD THE MISSING FILTERS LOGIC
     const filters = [];
     if (selectedCode !== 'all') {
       filters.push(`RN: ${selectedCode}`);
+    }
+    if (selectedPrijevoznik !== 'all') {
+      filters.push(`Prijevoznik: ${selectedPrijevoznik}`);
     }
     if (inTransitOnly) {
       filters.push('U tranzitu');
@@ -382,7 +411,6 @@ const Dashboard: React.FC = () => {
           searchTitle: searchValue,
         };
       } else {
-        // Updated to use date range
         const startOfDay = new Date(startDate);
         startOfDay.setHours(0, 0, 0, 0);
 
@@ -393,11 +421,15 @@ const Dashboard: React.FC = () => {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString(),
           ...(selectedCode !== 'all' && {code: selectedCode}),
+          ...(selectedPrijevoznik !== 'all' && {
+            prijevoznik: selectedPrijevoznik,
+          }),
           sortOrder,
           ...(inTransitOnly && {inTransitOnly: true}),
         };
       }
 
+      // ADD THE MISSING WHILE LOOP LOGIC
       while (hasMoreItems) {
         const response = await apiService.getItems(currentPage, 100, filters);
         allItems = [...allItems, ...response.items];
@@ -433,7 +465,7 @@ const Dashboard: React.FC = () => {
             setItems(response.items);
             setHasMore(response.pagination.hasMore);
             setTotalItems(response.pagination.total);
-            // NEW: Set total weight from backend response
+            // Set total weight from backend response
             setTotalWeight(response.totalWeight || 0);
             setError('');
           })
@@ -460,6 +492,7 @@ const Dashboard: React.FC = () => {
     setStartDate(today);
     setEndDate(today);
     setSelectedCode('all');
+    setSelectedPrijevoznik('all'); // NEW: Reset prijevoznik filter
     setSortOrder('date-desc');
     setInTransitOnly(false);
 
@@ -482,7 +515,7 @@ const Dashboard: React.FC = () => {
           setItems(response.items);
           setHasMore(response.pagination.hasMore);
           setTotalItems(response.pagination.total);
-          // NEW: Set total weight from backend response
+          // Set total weight from backend response
           setTotalWeight(response.totalWeight || 0);
           setError('');
         })
@@ -505,6 +538,7 @@ const Dashboard: React.FC = () => {
     setHasMore(true);
   };
 
+  // NEW: Update useEffect to include prijevoznik dependency
   useEffect(() => {
     if (!searchMode) {
       setPage(1);
@@ -512,12 +546,20 @@ const Dashboard: React.FC = () => {
       setHasMore(true);
       fetchItems(false);
     }
-  }, [startDate, endDate, selectedCode, sortOrder, inTransitOnly]);
+  }, [
+    startDate,
+    endDate,
+    selectedCode,
+    selectedPrijevoznik,
+    sortOrder,
+    inTransitOnly,
+  ]);
 
   useEffect(() => {
     const initializeDashboard = async () => {
       await fetchItems();
       await fetchAvailableCodes();
+      await fetchAvailableCarriers(); // NEW: Fetch available carriers
     };
 
     initializeDashboard();
@@ -566,6 +608,7 @@ const Dashboard: React.FC = () => {
       setError('Greška pri odjavi');
     }
   };
+
   const handleCodeUpdate = async (
     itemId: string,
     newCode: string,
@@ -637,9 +680,6 @@ const Dashboard: React.FC = () => {
     return `${startStr} - ${endStr}`;
   };
 
-  // NEW: Calculate total weight for display from backend data
-  // const totalWeight = calculateTotalWeight(); // Remove this line since we now get it from backend
-
   return (
     <S.PageContainer>
       <Header>
@@ -664,6 +704,7 @@ const Dashboard: React.FC = () => {
               startDate,
               endDate,
               selectedCode,
+              selectedPrijevoznik, // NEW: Add this parameter
               inTransitOnly,
             )}
           />
@@ -677,6 +718,7 @@ const Dashboard: React.FC = () => {
               startDate,
               endDate,
               selectedCode,
+              selectedPrijevoznik, // NEW: Add this parameter
               inTransitOnly,
             )}
             selectedCode={selectedCode}
@@ -705,7 +747,8 @@ const Dashboard: React.FC = () => {
           </S.Button>
         </HeaderActions>
       </Header>
-      {/* Add this new section for restricted access message */}
+
+      {/* Restricted access message */}
       {showRestrictedMessage && (
         <RestrictedAccessMessage>
           <RestrictedAccessIcon>🔒</RestrictedAccessIcon>
@@ -716,6 +759,7 @@ const Dashboard: React.FC = () => {
           </div>
         </RestrictedAccessMessage>
       )}
+
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
       <DashboardFilters
@@ -725,6 +769,10 @@ const Dashboard: React.FC = () => {
         selectedCode={selectedCode}
         onCodeChange={setSelectedCode}
         availableCodes={availableCodes}
+        // NEW: Add prijevoznik props
+        selectedPrijevoznik={selectedPrijevoznik}
+        onPrijevoznikChange={setSelectedPrijevoznik}
+        availableCarriers={availableCarriers}
         sortOrder={sortOrder}
         onSortOrderChange={setSortOrder}
         searchMode={searchMode}
@@ -737,7 +785,7 @@ const Dashboard: React.FC = () => {
         onInTransitChange={setInTransitOnly}
       />
 
-      {/* NEW: Total Weight Display - now shows total for ALL filtered items */}
+      {/* Total Weight Display - shows total for ALL filtered items */}
       {totalItems > 0 && totalWeight > 0 && (
         <TotalWeightContainer>
           <TotalWeightValue>{formatWeight(totalWeight)} t</TotalWeightValue>
@@ -833,7 +881,6 @@ const Dashboard: React.FC = () => {
               </ItemDetails>
             )}
             <ButtonGroup>
-              {/* Rest of the buttons remain the same */}
               <ActionButton onClick={() => window.open(item.pdfUrl, '_blank')}>
                 Otvori PDF
               </ActionButton>
@@ -843,16 +890,6 @@ const Dashboard: React.FC = () => {
                   {(item.approvalPhotoFront?.url ||
                     item.approvalPhotoBack?.url) && (
                     <PhotoButtonsGroup>
-                      {item.approvalPhotoFront?.url && (
-                        <ActionButton
-                          onClick={() =>
-                            setSelectedImage(
-                              getImageUrl(item.approvalPhotoFront!.url!),
-                            )
-                          }>
-                          Registracija
-                        </ActionButton>
-                      )}
                       {item.approvalPhotoBack?.url && (
                         <ActionButton
                           onClick={() =>
@@ -937,6 +974,7 @@ const Dashboard: React.FC = () => {
         <EmptyMessage>
           Nema dostupnih dokumenata za period: {formatDateRangeDisplay()}
           {selectedCode !== 'all' && ` (${selectedCode})`}
+          {selectedPrijevoznik !== 'all' && ` - ${selectedPrijevoznik}`}
         </EmptyMessage>
       )}
 

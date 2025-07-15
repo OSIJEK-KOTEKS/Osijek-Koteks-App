@@ -16,6 +16,10 @@ interface DashboardFiltersProps {
   selectedCode: string;
   onCodeChange: (code: string) => void;
   availableCodes: string[];
+  // NEW: Add prijevoznik props
+  selectedPrijevoznik: string;
+  onPrijevoznikChange: (prijevoznik: string) => void;
+  availableCarriers: string[];
   sortOrder: string;
   onSortOrderChange: (order: string) => void;
   searchMode: boolean;
@@ -35,6 +39,10 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedCode,
   onCodeChange,
   availableCodes,
+  // NEW: Add prijevoznik props
+  selectedPrijevoznik,
+  onPrijevoznikChange,
+  availableCarriers,
   sortOrder,
   onSortOrderChange,
   searchMode,
@@ -71,6 +79,15 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     })),
   ];
 
+  // NEW: Prepare carriers options
+  const allCarriersOptions = [
+    {value: 'all', label: 'Svi Prijevoznici'},
+    ...availableCarriers.map(carrier => ({
+      value: carrier,
+      label: carrier,
+    })),
+  ];
+
   const formatDateRange = (start: Date, end: Date) => {
     const isSameDay = start.toDateString() === end.toDateString();
 
@@ -96,67 +113,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     return maxDate > today ? today : maxDate;
   };
 
-  // Calculate min start date (31 days before end date)
-  const getMinStartDate = (toDate: Date) => {
-    const minDate = new Date(toDate);
-    minDate.setDate(toDate.getDate() - 31);
-    return minDate;
-  };
-
-  // Calculate max start date (should not be beyond today)
-  const getMaxStartDate = () => {
-    return new Date(); // Today
-  };
-
-  // Calculate min end date (should be at least the start date)
-  const getMinEndDate = (fromDate: Date) => {
-    return fromDate;
-  };
-
-  // Check if date range exceeds 31 days
-  const isRangeValid = (start: Date, end: Date) => {
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 31;
-  };
-
-  // Handle start date change
-  const handleStartDateChange = (date: Date | null) => {
-    if (date) {
-      if (date <= endDate && isRangeValid(date, endDate)) {
-        // Range is valid, use as-is
-        onDateRangeChange(date, endDate);
-      } else if (date <= endDate && !isRangeValid(date, endDate)) {
-        // Start date is before end date but range > 31 days
-        // Adjust end date to be 31 days from start date
-        const newEndDate = getMaxEndDate(date);
-        onDateRangeChange(date, newEndDate);
-      } else {
-        // Start date is after end date, set end date to start date
-        onDateRangeChange(date, date);
-      }
-    }
-  };
-
-  // Handle end date change
-  const handleEndDateChange = (date: Date | null) => {
-    if (date) {
-      if (date >= startDate && isRangeValid(startDate, date)) {
-        // Range is valid, use as-is
-        onDateRangeChange(startDate, date);
-      } else if (date >= startDate && !isRangeValid(startDate, date)) {
-        // End date is after start date but range > 31 days
-        // Adjust start date to be 31 days before end date
-        const newStartDate = getMinStartDate(date);
-        onDateRangeChange(newStartDate, date);
-      } else {
-        // End date is before start date, set start date to end date
-        onDateRangeChange(date, date);
-      }
-    }
-  };
-
-  // Quick date range presets
+  // Set date range presets
   const setToday = () => {
     const today = new Date();
     onDateRangeChange(today, today);
@@ -171,111 +128,129 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   const setLast7Days = () => {
     const today = new Date();
     const weekAgo = new Date();
-    weekAgo.setDate(today.getDate() - 7);
+    weekAgo.setDate(today.getDate() - 6);
     onDateRangeChange(weekAgo, today);
   };
 
   const setLast30Days = () => {
     const today = new Date();
     const monthAgo = new Date();
-    monthAgo.setMonth(today.getMonth() - 1);
+    monthAgo.setDate(today.getDate() - 29);
     onDateRangeChange(monthAgo, today);
   };
 
   return (
     <FiltersContainer>
       <SearchSection>
-        <SearchBar>
-          <SearchInput
-            placeholder="Pretraži po nazivu..."
-            value={searchValue}
-            onChange={e => onSearchValueChange(e.target.value)}
-            onKeyPress={handleKeyPress}
-          />
-          {searchMode ? (
-            <ClearButton onClick={onClearSearch}>
-              <span>Očisti pretragu</span>
-            </ClearButton>
-          ) : (
-            <SearchButton onClick={onSearch} disabled={!searchValue.trim()}>
-              <span>Pretraži</span>
+        <FilterLabel>Pretraga</FilterLabel>
+        <SearchControls>
+          <SearchBar>
+            <SearchInput
+              type="text"
+              placeholder="Pretražite po nazivu dokumenta..."
+              value={searchValue}
+              onChange={e => onSearchValueChange(e.target.value)}
+              onKeyPress={handleKeyPress}
+            />
+            <SearchButton
+              onClick={onSearch}
+              disabled={!searchValue.trim()}
+              type="button">
+              🔍 Traži
             </SearchButton>
-          )}
-        </SearchBar>
+            <ClearButton onClick={onClearSearch} type="button">
+              ✕ Očisti
+            </ClearButton>
+          </SearchBar>
+        </SearchControls>
       </SearchSection>
 
       <FiltersGrid>
         <FilterSection>
-          <FilterLabel $disabled={searchMode}>Datumski raspon</FilterLabel>
-          <DateRangeInputsContainer>
-            <DatePickerContainer>
-              <DatePickerRow>
-                <DatePickerLabel>Od:</DatePickerLabel>
-                <DatePickerWrapper $disabled={searchMode}>
-                  <DatePicker
-                    selected={startDate}
-                    onChange={handleStartDateChange}
-                    dateFormat="dd.MM.yyyy"
-                    locale="hr"
-                    maxDate={getMaxStartDate()}
-                    placeholderText="Početni datum"
-                    disabled={searchMode}
-                  />
-                </DatePickerWrapper>
-              </DatePickerRow>
-            </DatePickerContainer>
+          <FilterLabel $disabled={searchMode}>Datum</FilterLabel>
+          <FilterInputContainer>
+            <DateRangeInputsContainer>
+              <DatePickerContainer>
+                <DatePickerRow>
+                  <DatePickerLabel>Od:</DatePickerLabel>
+                  <DatePickerWrapper $disabled={searchMode}>
+                    <DatePicker
+                      selected={startDate}
+                      onChange={date => {
+                        if (date) {
+                          const newEndDate = date > endDate ? date : endDate;
+                          const maxEnd = getMaxEndDate(date);
+                          const finalEndDate =
+                            newEndDate > maxEnd ? maxEnd : newEndDate;
+                          onDateRangeChange(date, finalEndDate);
+                        }
+                      }}
+                      dateFormat="dd.MM.yyyy"
+                      locale="hr"
+                      maxDate={new Date()}
+                      placeholderText="Početni datum"
+                      disabled={searchMode}
+                    />
+                  </DatePickerWrapper>
+                </DatePickerRow>
+              </DatePickerContainer>
 
-            <DatePickerContainer>
-              <DatePickerRow>
-                <DatePickerLabel>Do:</DatePickerLabel>
-                <DatePickerWrapper $disabled={searchMode}>
-                  <DatePicker
-                    selected={endDate}
-                    onChange={handleEndDateChange}
-                    dateFormat="dd.MM.yyyy"
-                    locale="hr"
-                    maxDate={getMaxEndDate(startDate)}
-                    minDate={getMinEndDate(startDate)}
-                    placeholderText="Krajnji datum"
-                    disabled={searchMode}
-                  />
-                </DatePickerWrapper>
-              </DatePickerRow>
-            </DatePickerContainer>
-          </DateRangeInputsContainer>
+              <DatePickerContainer>
+                <DatePickerRow>
+                  <DatePickerLabel>Do:</DatePickerLabel>
+                  <DatePickerWrapper $disabled={searchMode}>
+                    <DatePicker
+                      selected={endDate}
+                      onChange={date => {
+                        if (date) {
+                          onDateRangeChange(startDate, date);
+                        }
+                      }}
+                      dateFormat="dd.MM.yyyy"
+                      locale="hr"
+                      minDate={startDate}
+                      maxDate={getMaxEndDate(startDate)}
+                      placeholderText="Krajnji datum"
+                      disabled={searchMode}
+                    />
+                  </DatePickerWrapper>
+                </DatePickerRow>
+              </DatePickerContainer>
+            </DateRangeInputsContainer>
 
-          {!searchMode && (
-            <DatePresets>
-              <PresetButton onClick={setToday} type="button">
-                Danas
-              </PresetButton>
-              <PresetButton onClick={setYesterday} type="button">
-                Jučer
-              </PresetButton>
-              <PresetButton onClick={setLast7Days} type="button">
-                Zadnjih 7 dana
-              </PresetButton>
-              <PresetButton onClick={setLast30Days} type="button">
-                Zadnjih 30 dana
-              </PresetButton>
-              <TransitPresetButton
-                onClick={() => onInTransitChange(!inTransitOnly)}
-                type="button"
-                $active={inTransitOnly}>
-                🚚 U tranzitu
-              </TransitPresetButton>
-            </DatePresets>
-          )}
+            {!searchMode && (
+              <DatePresets>
+                <PresetButton onClick={setToday} type="button">
+                  Danas
+                </PresetButton>
+                <PresetButton onClick={setYesterday} type="button">
+                  Jučer
+                </PresetButton>
+                <PresetButton onClick={setLast7Days} type="button">
+                  Zadnjih 7 dana
+                </PresetButton>
+                <PresetButton onClick={setLast30Days} type="button">
+                  Zadnjih 30 dana
+                </PresetButton>
+                <TransitPresetButton
+                  onClick={() => onInTransitChange(!inTransitOnly)}
+                  type="button"
+                  $active={inTransitOnly}>
+                  🚚 U tranzitu
+                </TransitPresetButton>
+              </DatePresets>
+            )}
 
-          {!searchMode && (
-            <>
-              <DateRangeDisplay>
-                Odabrani period: {formatDateRange(startDate, endDate)}
-                {inTransitOnly && ' (samo u tranzitu)'}
-              </DateRangeDisplay>
-              <RangeLimitInfo>Maksimalni raspon: 31 dan</RangeLimitInfo>
-            </>
-          )}
+            {!searchMode && (
+              <>
+                <DateRangeDisplay>
+                  Odabrani period: {formatDateRange(startDate, endDate)}
+                  {inTransitOnly && ' (samo u tranzitu)'}
+                </DateRangeDisplay>
+                <RangeLimitInfo>Maksimalni raspon: 31 dan</RangeLimitInfo>
+              </>
+            )}
+          </FilterInputContainer>
         </FilterSection>
 
         <FilterSection>
@@ -290,6 +265,27 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               disabled={searchMode}
               $disabled={searchMode}>
               {allCodesOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </FilterInputContainer>
+        </FilterSection>
+
+        {/* NEW: Prijevoznik Filter Section */}
+        <FilterSection>
+          <FilterLabel htmlFor="prijevoznik-select" $disabled={searchMode}>
+            Prijevoznik
+          </FilterLabel>
+          <FilterInputContainer>
+            <Select
+              id="prijevoznik-select"
+              value={selectedPrijevoznik}
+              onChange={e => onPrijevoznikChange(e.target.value)}
+              disabled={searchMode}
+              $disabled={searchMode}>
+              {allCarriersOptions.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -334,9 +330,15 @@ const SearchSection = styled.div`
   margin-bottom: 1.5rem;
 `;
 
+const SearchControls = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
 const SearchBar = styled.div`
   display: flex;
   gap: 8px;
+  width: 100%;
 `;
 
 const SearchInput = styled.input`
@@ -534,6 +536,7 @@ const DatePickerRow = styled.div`
     align-items: stretch;
   }
 `;
+
 const DatePickerLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 600;
@@ -631,6 +634,7 @@ const PresetButton = styled.button`
     color: white;
   }
 `;
+
 const TransitPresetButton = styled(PresetButton)<{$active?: boolean}>`
   background-color: ${({theme, $active}) =>
     $active ? theme.colors.primary : 'white'};
