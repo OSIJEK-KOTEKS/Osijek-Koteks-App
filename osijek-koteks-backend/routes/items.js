@@ -253,6 +253,179 @@ router.get('/:id', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+// NEW: Get unique carriers (prijevoznik values)
+router.get('/carriers', auth, async (req, res) => {
+  try {
+    // Apply the same filtering logic as the main items route
+    let query = {};
+
+    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      // Non-admin users: filter by their codes
+      query.code = {$in: req.user.codes};
+    } else if (
+      req.user.role === 'admin' &&
+      req.user.codes &&
+      req.user.codes.length > 0
+    ) {
+      // Admin with codes assigned: filter by those codes
+      query.code = {$in: req.user.codes};
+    }
+    // If admin with no codes assigned (empty array or null), show all carriers (no filtering)
+
+    // Only get items that have a prijevoznik field
+    query.prijevoznik = {$exists: true, $ne: null, $ne: ''};
+
+    const uniqueCarriers = await Item.distinct('prijevoznik', query);
+
+    console.log('Carriers query:', query);
+    console.log('Found unique carriers:', uniqueCarriers.length);
+
+    res.json(uniqueCarriers.sort());
+  } catch (err) {
+    console.error('Error fetching unique carriers:', err);
+    res.status(500).json({message: 'Server error'});
+  }
+});
+
+router.get('/', auth, async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      code,
+      prijevoznik, // NEW: Add prijevoznik parameter
+      sortOrder,
+      searchTitle,
+      inTransitOnly,
+    } = req.query;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Build the base query
+    let query = {};
+
+    // If search mode is active (searchTitle is provided)
+    if (searchTitle) {
+      // Use case-insensitive regex search for title
+      query.title = {$regex: searchTitle, $options: 'i'};
+    } else {
+      // Apply code filtering logic:
+      if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+        // Non-admin users: filter by their codes
+        query.code = {$in: req.user.codes};
+      } else if (
+        req.user.role === 'admin' &&
+        req.user.codes &&
+        req.user.codes.length > 0
+      ) {
+        // Admin with codes assigned: filter by those codes
+        query.code = {$in: req.user.codes};
+      }
+      // If admin with no codes assigned (empty array or null), show all items (no filtering)
+
+      // Apply date range filter
+      if (startDate && endDate) {
+        query.creationDate = {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        };
+      }
+
+      // Apply specific code filter
+      if (code && code !== 'all') {
+        query.code = code;
+      }
+
+      // NEW: Apply prijevoznik filter
+      if (prijevoznik && prijevoznik !== 'all') {
+        query.prijevoznik = prijevoznik;
+      }
+
+      // Apply in-transit filter
+      if (inTransitOnly === 'true') {
+        query.in_transit = true;
+      }
+    }
+
+    console.log('Final query:', JSON.stringify(query, null, 2));
+
+    // Build sort criteria
+    let sortCriteria = {};
+    switch (sortOrder) {
+      case 'date-asc':
+        sortCriteria = {creationDate: 1};
+        break;
+      case 'approved-first':
+        sortCriteria = {approvalStatus: -1, creationDate: -1};
+        break;
+      case 'pending-first':
+        sortCriteria = {
+          approvalStatus: 1,
+          creationDate: -1,
+        };
+        break;
+      case 'date-desc':
+      default:
+        sortCriteria = {creationDate: -1};
+        break;
+    }
+
+    // Execute queries
+    const items = await Item.find(query)
+      .populate('approvedBy', 'firstName lastName')
+      .sort(sortCriteria)
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Item.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+
+    // Calculate total weight for all filtered items (not just current page)
+    const totalWeightResult = await Item.aggregate([
+      {$match: query},
+      {
+        $group: {
+          _id: null,
+          totalWeight: {
+            $sum: {
+              $cond: [
+                {$and: [{$ne: ['$tezina', null]}, {$ne: ['$tezina', '']}]},
+                '$tezina',
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const totalWeight =
+      totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
+
+    console.log('Found items:', items.length);
+    console.log('Total weight of all filtered items:', totalWeight);
+
+    res.json({
+      items,
+      pagination: {
+        total,
+        page,
+        pages: totalPages,
+        hasMore,
+      },
+      totalWeight,
+    });
+  } catch (err) {
+    console.error('Error in items route:', err);
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
+  }
+});
 // Create a new item
 router.post('/', auth, async (req, res) => {
   try {
