@@ -1,35 +1,38 @@
-import React, {useCallback, useState} from 'react';
+import React, {useState, useCallback} from 'react';
 import styled from 'styled-components';
 import * as XLSX from 'xlsx';
 import {Item} from '../types';
 import {getFormattedCode} from '../utils/codeMapping';
 
 const ExportButton = styled.button`
-  width: 100%;
-  padding: ${({theme}) => theme.spacing.medium};
-  background-color: #228b22;
-  color: ${({theme}) => theme.colors.white};
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
-  font-size: 1rem;
-  transition: background-color 0.2s;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   &:hover:not(:disabled) {
-    background-color: #006400;
+    background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
   }
 
   &:disabled {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background: #6c757d;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 
   svg {
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
   }
 `;
 
@@ -119,6 +122,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         'Redni broj': index + 1,
         Naziv: item.title,
         RN: getFormattedCode(item.code),
+        Prijevoznik: item.prijevoznik || '-', // NEW: Add prijevoznik column after RN
         Registracija: item.registracija || '-',
         'Težina (t)': item.tezina !== undefined ? item.tezina / 1000 : null,
         'Razlika u vaganju (%)':
@@ -140,48 +144,48 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
           item.approvalLocation?.coordinates?.latitude || null,
         'Lokacija - Dužina':
           item.approvalLocation?.coordinates?.longitude || null,
-        'Lokacija - Točnost (m)': item.approvalLocation?.accuracy
-          ? Math.round(item.approvalLocation.accuracy)
-          : null,
+        'Lokacija - Točnost': item.approvalLocation?.accuracy || null,
       }));
 
       // Calculate totals for this code
-      const codeWeight = codeItems.reduce(
-        (sum, item) => sum + (item.tezina || 0),
-        0,
-      );
-      const codeCount = codeItems.length;
-      const codePending = codeItems.filter(
-        item => item.approvalStatus === 'na čekanju',
-      ).length;
-      const codeApproved = codeItems.filter(
-        item => item.approvalStatus === 'odobreno',
-      ).length;
-      const codeRejected = codeItems.filter(
-        item => item.approvalStatus === 'odbijen',
-      ).length;
-      const codeInTransit = codeItems.filter(item => item.in_transit).length;
+      const totals = {
+        count: codeItems.length,
+        weight: formatNumber(
+          codeItems.reduce((sum, item) => sum + (item.tezina || 0), 0) / 1000,
+          3,
+        ),
+        pending: codeItems.filter(item => item.approvalStatus === 'na čekanju')
+          .length,
+        approved: codeItems.filter(item => item.approvalStatus === 'odobreno')
+          .length,
+        rejected: codeItems.filter(item => item.approvalStatus === 'odbijen')
+          .length,
+        inTransit: codeItems.filter(item => item.in_transit).length,
+      };
 
       return {
         code,
         data: codeData,
-        totals: {
-          count: codeCount,
-          weight: codeWeight / 1000, // Convert to tons
-          pending: codePending,
-          approved: codeApproved,
-          rejected: codeRejected,
-          inTransit: codeInTransit,
-        },
+        totals,
       };
     });
 
-    // Overall summary data
+    // Prepare summary data
     const summaryData = [
-      ['SAŽETAK SVIH DOKUMENATA', ''],
+      ['IZVJEŠTAJ O DOKUMENTIMA', ''],
       ['', ''],
-      ['Ukupan broj dokumenta:', itemsToExport.length],
-      ['Ukupna težina (t):', totalWeight ? totalWeight / 1000 : 0],
+      ['UKUPNI PODACI', ''],
+      ['Ukupan broj dokumenata:', itemsToExport.length],
+      [
+        'Ukupna težina (t):',
+        totalWeight
+          ? formatNumber(totalWeight / 1000, 3)
+          : formatNumber(
+              itemsToExport.reduce((sum, item) => sum + (item.tezina || 0), 0) /
+                1000,
+              3,
+            ),
+      ],
       ['Broj različitih RN:', sortedCodes.length],
       ['', ''],
       ['UKUPNE STATISTIKE PO STATUSU', ''],
@@ -277,8 +281,8 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
 
         for (let row = 1; row <= range.e.r; row++) {
           // Start from row 1 (skip header)
-          // Format Težina (t) column (column E, index 4)
-          const weightCell = XLSX.utils.encode_cell({r: row, c: 4});
+          // Format Težina (t) column (now column F, index 5 - shifted by 1 due to Prijevoznik)
+          const weightCell = XLSX.utils.encode_cell({r: row, c: 5});
           if (
             worksheet[weightCell] &&
             typeof worksheet[weightCell].v === 'number'
@@ -286,8 +290,8 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
             worksheet[weightCell].z = '#,##0.000';
           }
 
-          // Format Razlika u vaganju column (column F, index 5)
-          const percentCell = XLSX.utils.encode_cell({r: row, c: 5});
+          // Format Razlika u vaganju column (now column G, index 6 - shifted by 1)
+          const percentCell = XLSX.utils.encode_cell({r: row, c: 6});
           if (
             worksheet[percentCell] &&
             typeof worksheet[percentCell].v === 'number'
@@ -295,31 +299,32 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
             worksheet[percentCell].z = '#,##0.00';
           }
 
-          // Format Lokacija - Širina column (column L, index 11)
-          const latCell = XLSX.utils.encode_cell({r: row, c: 11});
+          // Format Lokacija - Širina column (now column M, index 12 - shifted by 1)
+          const latCell = XLSX.utils.encode_cell({r: row, c: 12});
           if (worksheet[latCell] && typeof worksheet[latCell].v === 'number') {
             worksheet[latCell].z = '#,##0.000000';
           }
 
-          // Format Lokacija - Dužina column (column M, index 12)
-          const lngCell = XLSX.utils.encode_cell({r: row, c: 12});
+          // Format Lokacija - Dužina column (now column N, index 13 - shifted by 1)
+          const lngCell = XLSX.utils.encode_cell({r: row, c: 13});
           if (worksheet[lngCell] && typeof worksheet[lngCell].v === 'number') {
             worksheet[lngCell].z = '#,##0.000000';
           }
 
-          // Format Lokacija - Točnost column (column N, index 13)
-          const accCell = XLSX.utils.encode_cell({r: row, c: 13});
+          // Format Lokacija - Točnost column (now column O, index 14 - shifted by 1)
+          const accCell = XLSX.utils.encode_cell({r: row, c: 14});
           if (worksheet[accCell] && typeof worksheet[accCell].v === 'number') {
             worksheet[accCell].z = '#,##0';
           }
         }
       };
 
-      // Set standard column widths for data sheets
+      // Set standard column widths for data sheets (updated with Prijevoznik column)
       const standardColWidths = [
         {wch: 8}, // Redni broj
         {wch: 40}, // Naziv
         {wch: 25}, // RN
+        {wch: 20}, // Prijevoznik (NEW COLUMN)
         {wch: 15}, // Registracija
         {wch: 12}, // Težina
         {wch: 18}, // Razlika u vaganju
