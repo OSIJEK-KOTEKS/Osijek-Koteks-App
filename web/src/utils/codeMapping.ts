@@ -8,6 +8,7 @@ export const codeToTextMapping: Record<string, string> = {
   '22065': '1. Gimnazija OS',
   '23006': 'Most preko rijeke Vučice',
   '23010': 'Podvožnjak na DC 517, BM',
+  '23015': 'Sisak',
   '23018': 'Rek. - Baćin Dol - Rešetari',
   '23020': 'Log Expert L. - Park Osijek',
   '23022': 'Gundulićeva Ulica',
