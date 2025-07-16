@@ -11,6 +11,7 @@ const ExportButton = styled.button`
   padding: 8px 16px;
   border-radius: 4px;
   font-weight: 500;
+  font-size: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
