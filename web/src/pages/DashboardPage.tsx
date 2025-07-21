@@ -266,13 +266,26 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
-  // NEW: Function to fetch available carriers
   const fetchAvailableCarriers = useCallback(async () => {
     try {
-      console.log('Fetching available carriers...'); // DEBUG
+      console.log('Fetching available carriers...');
       const carriers = await apiService.getUniqueCarriers();
-      console.log('Received carriers:', carriers); // DEBUG
-      setAvailableCarriers(carriers);
+
+      // Ensure deduplication and filtering on frontend - handle different data types
+      const uniqueCarriers = Array.from(new Set(carriers))
+        .filter(carrier => carrier != null && carrier !== '') // Remove null/undefined/empty values
+        .map(carrier => String(carrier).trim()) // Convert to string and trim
+        .filter(carrier => carrier !== '') // Remove empty strings after trimming
+        .sort();
+
+      console.log('Raw carriers from API:', carriers);
+      console.log(
+        'Raw carriers types:',
+        carriers.map(carrier => typeof carrier),
+      );
+      console.log('Processed unique carriers:', uniqueCarriers);
+
+      setAvailableCarriers(uniqueCarriers);
     } catch (error) {
       console.error('Error fetching carriers:', error);
     }

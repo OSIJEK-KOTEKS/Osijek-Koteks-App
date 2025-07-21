@@ -9,6 +9,47 @@ import {getFormattedCode} from '../utils/codeMapping';
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
 
+// ADD THESE UTILITY FUNCTIONS AT THE TOP
+const normalizeCarrierName = (name: string): string => {
+  return (
+    name
+      .trim()
+      .toUpperCase()
+      // Normalize Croatian characters
+      .replace(/Č/g, 'C')
+      .replace(/Ć/g, 'C')
+      .replace(/Š/g, 'S')
+      .replace(/Ž/g, 'Z')
+      .replace(/Đ/g, 'D')
+      .replace(/DŽ/g, 'DZ')
+      // Remove common company suffixes for comparison
+      .replace(/\s+(D\.O\.O\.|DOO|D\.O\.O|OBRT)\.?$/i, '')
+      // Remove extra spaces
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+};
+
+const deduplicateCarriers = (carriers: string[]): string[] => {
+  const carrierMap = new Map<string, string>();
+
+  carriers.forEach(carrier => {
+    if (!carrier || carrier.trim() === '') return;
+
+    const normalized = normalizeCarrierName(carrier);
+
+    // If we haven't seen this normalized name, or if current name is "better" (has accents, longer)
+    if (
+      !carrierMap.has(normalized) ||
+      carrier.length > carrierMap.get(normalized)!.length
+    ) {
+      carrierMap.set(normalized, carrier);
+    }
+  });
+
+  return Array.from(carrierMap.values()).sort();
+};
+
 interface DashboardFiltersProps {
   startDate: Date;
   endDate: Date;
@@ -71,6 +112,9 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     .filter(code => !unusedCodes.includes(code))
     .sort(); // Sort for consistent ordering
 
+  console.log('DashboardFilters - Raw availableCodes:', availableCodes);
+  console.log('DashboardFilters - Filtered codes:', filteredCodes);
+
   const allCodesOptions = [
     {value: 'all', label: 'Svi Radni Nalozi'},
     ...filteredCodes.map(code => ({
@@ -79,8 +123,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     })),
   ];
 
-  // Also deduplicate carriers
-  const uniqueCarriers = Array.from(new Set(availableCarriers)).sort();
+  // NEW: Deduplicate carriers with smart normalization
+  const uniqueCarriers = deduplicateCarriers(availableCarriers);
+
+  console.log('DashboardFilters - Raw availableCarriers:', availableCarriers);
+  console.log('DashboardFilters - Deduplicated carriers:', uniqueCarriers);
 
   // NEW: Prepare carriers options
   const allCarriersOptions = [
@@ -108,15 +155,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     })`;
   };
 
-  // Calculate max end date (31 days from start date, but not beyond today)
-  const getMaxEndDate = (fromDate: Date) => {
-    const maxDate = new Date(fromDate);
-    maxDate.setDate(fromDate.getDate() + 31);
-    const today = new Date();
-    return maxDate > today ? today : maxDate;
-  };
-
-  // Set date range presets
+  // Date preset functions
   const setToday = () => {
     const today = new Date();
     onDateRangeChange(today, today);
@@ -130,42 +169,72 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
   const setLast7Days = () => {
     const today = new Date();
-    const weekAgo = new Date();
-    weekAgo.setDate(today.getDate() - 6);
-    onDateRangeChange(weekAgo, today);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6);
+    onDateRangeChange(sevenDaysAgo, today);
   };
 
   const setLast30Days = () => {
     const today = new Date();
-    const monthAgo = new Date();
-    monthAgo.setDate(today.getDate() - 29);
-    onDateRangeChange(monthAgo, today);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 29);
+    onDateRangeChange(thirtyDaysAgo, today);
+  };
+
+  // Calculate max date (today)
+  const maxDate = new Date();
+
+  // Calculate the minimum allowed date for the end date (start date + 31 days)
+  const getMaxEndDate = (startDate: Date) => {
+    const maxEndDate = new Date(startDate);
+    maxEndDate.setDate(startDate.getDate() + 30); // 31 days total (inclusive)
+    return maxEndDate > maxDate ? maxDate : maxEndDate;
+  };
+
+  // Calculate the minimum allowed date for the start date (end date - 31 days)
+  const getMinStartDate = (endDate: Date) => {
+    const minStartDate = new Date(endDate);
+    minStartDate.setDate(endDate.getDate() - 30); // 31 days total (inclusive)
+    return minStartDate;
   };
 
   return (
     <FiltersContainer>
       <SearchSection>
-        <FilterLabel>Pretraga</FilterLabel>
-        <SearchControls>
+        {searchMode ? (
           <SearchBar>
             <SearchInput
               type="text"
-              placeholder="Pretražite po nazivu dokumenta..."
+              placeholder="Pretraži po nazivu dokumenta..."
               value={searchValue}
               onChange={e => onSearchValueChange(e.target.value)}
               onKeyPress={handleKeyPress}
+              autoFocus
             />
+            <SearchControls>
+              <SearchButton
+                onClick={onSearch}
+                disabled={!searchValue.trim()}
+                type="button">
+                🔍 Pretraži
+              </SearchButton>
+              <ClearButton onClick={onClearSearch} type="button">
+                ✕ Otkaži
+              </ClearButton>
+            </SearchControls>
+          </SearchBar>
+        ) : (
+          <SearchControls>
             <SearchButton
-              onClick={onSearch}
-              disabled={!searchValue.trim()}
+              onClick={() => onSearchModeChange(true)}
               type="button">
-              🔍 Traži
+              🔍 Pretraži dokumente
             </SearchButton>
             <ClearButton onClick={onClearSearch} type="button">
-              ✕ Očisti
+              🔄 Resetiraj sve
             </ClearButton>
-          </SearchBar>
-        </SearchControls>
+          </SearchControls>
+        )}
       </SearchSection>
 
       <FiltersGrid>
@@ -173,52 +242,61 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           <FilterLabel $disabled={searchMode}>Datum</FilterLabel>
           <FilterInputContainer>
             <DateRangeInputsContainer>
-              <DatePickerContainer>
-                <DatePickerRow>
+              <DatePickerRow>
+                <DatePickerContainer>
                   <DatePickerLabel>Od:</DatePickerLabel>
                   <DatePickerWrapper $disabled={searchMode}>
                     <DatePicker
                       selected={startDate}
-                      onChange={date => {
+                      onChange={(date: Date | null) => {
                         if (date) {
-                          const newEndDate = date > endDate ? date : endDate;
-                          const maxEnd = getMaxEndDate(date);
-                          const finalEndDate =
-                            newEndDate > maxEnd ? maxEnd : newEndDate;
-                          onDateRangeChange(date, finalEndDate);
+                          const newEndDate =
+                            endDate > getMaxEndDate(date)
+                              ? getMaxEndDate(date)
+                              : endDate;
+                          onDateRangeChange(date, newEndDate);
                         }
                       }}
                       dateFormat="dd.MM.yyyy"
                       locale="hr"
-                      maxDate={new Date()}
-                      placeholderText="Početni datum"
+                      maxDate={maxDate}
                       disabled={searchMode}
+                      placeholderText="Odaberite datum..."
                     />
                   </DatePickerWrapper>
-                </DatePickerRow>
-              </DatePickerContainer>
+                </DatePickerContainer>
 
-              <DatePickerContainer>
-                <DatePickerRow>
+                <DatePickerContainer>
                   <DatePickerLabel>Do:</DatePickerLabel>
                   <DatePickerWrapper $disabled={searchMode}>
                     <DatePicker
                       selected={endDate}
-                      onChange={date => {
+                      onChange={(date: Date | null) => {
                         if (date) {
-                          onDateRangeChange(startDate, date);
+                          const newStartDate =
+                            startDate < getMinStartDate(date)
+                              ? getMinStartDate(date)
+                              : startDate;
+                          onDateRangeChange(newStartDate, date);
                         }
                       }}
                       dateFormat="dd.MM.yyyy"
                       locale="hr"
-                      minDate={startDate}
-                      maxDate={getMaxEndDate(startDate)}
-                      placeholderText="Krajnji datum"
+                      minDate={getMinStartDate(endDate)}
+                      maxDate={
+                        Math.min(
+                          getMaxEndDate(startDate).getTime(),
+                          maxDate.getTime(),
+                        ) === maxDate.getTime()
+                          ? maxDate
+                          : getMaxEndDate(startDate)
+                      }
                       disabled={searchMode}
+                      placeholderText="Odaberite datum..."
                     />
                   </DatePickerWrapper>
-                </DatePickerRow>
-              </DatePickerContainer>
+                </DatePickerContainer>
+              </DatePickerRow>
             </DateRangeInputsContainer>
 
             {!searchMode && (
@@ -446,60 +524,76 @@ const Select = styled.select<{$disabled?: boolean}>`
     outline: none;
     border-color: ${({theme, $disabled}) =>
       $disabled ? theme.colors.disabled : theme.colors.primary};
+    box-shadow: ${({theme, $disabled}) =>
+      $disabled ? 'none' : `0 0 0 2px ${theme.colors.primary}20`};
   }
 `;
 
-const CheckboxContainer = styled.div<{$disabled?: boolean}>`
+const DatePresets = styled.div`
   display: flex;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background-color: ${({$disabled}) => ($disabled ? '#f5f5f5' : 'white')};
-  border: 1px solid
-    ${({theme, $disabled}) =>
-      $disabled ? theme.colors.disabled : theme.colors.gray};
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+`;
+
+const PresetButton = styled.button`
+  padding: 0.5rem 0.75rem;
+  border: 1px solid ${({theme}) => theme.colors.gray};
   border-radius: ${({theme}) => theme.borderRadius};
-  cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
-  transition: all 0.2s ease-in-out;
-  height: 3rem; /* Fixed height to match other inputs */
-
-  &:hover:not([disabled]) {
-    border-color: ${({theme}) => theme.colors.primary};
-    background-color: ${({theme}) => theme.colors.background};
-  }
-`;
-
-const Checkbox = styled.input`
-  margin-right: 8px;
+  background: white;
+  color: ${({theme}) => theme.colors.text};
+  font-size: 0.875rem;
   cursor: pointer;
-  width: 16px;
-  height: 16px;
-  accent-color: ${({theme}) => theme.colors.primary};
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
-
-const CheckboxLabel = styled.label<{$disabled?: boolean}>`
-  color: ${({theme, $disabled}) =>
-    $disabled ? theme.colors.disabled : theme.colors.text};
-  cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
-  font-weight: 500;
-  user-select: none;
-  display: flex;
-  align-items: center;
+  transition: all 0.2s ease-in-out;
 
   &:hover {
-    color: ${({theme, $disabled}) =>
-      $disabled ? theme.colors.disabled : theme.colors.primary};
+    background-color: ${({theme}) => theme.colors.primary};
+    color: white;
+    border-color: ${({theme}) => theme.colors.primary};
   }
 `;
 
-const TransitIcon = styled.span`
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 16px;
+const TransitPresetButton = styled.button<{$active: boolean}>`
+  padding: 0.5rem 0.75rem;
+  border: 1px solid
+    ${({theme, $active}) =>
+      $active ? theme.colors.primary : theme.colors.gray};
+  border-radius: ${({theme}) => theme.borderRadius};
+  background: ${({theme, $active}) =>
+    $active ? theme.colors.primary : 'white'};
+  color: ${({theme, $active}) => ($active ? 'white' : theme.colors.text)};
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  &:hover {
+    background-color: ${({theme, $active}) =>
+      $active ? theme.colors.primaryDark : theme.colors.primary};
+    color: white;
+    border-color: ${({theme}) => theme.colors.primary};
+  }
+`;
+
+const DateRangeDisplay = styled.div`
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: ${({theme}) => theme.colors.background};
+  border-radius: ${({theme}) => theme.borderRadius};
+  font-size: 0.875rem;
+  color: ${({theme}) => theme.colors.text};
+  text-align: center;
+  border: 1px solid ${({theme}) => theme.colors.gray};
+`;
+
+const RangeLimitInfo = styled.div`
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: ${({theme}) => theme.colors.disabled};
+  text-align: center;
+  font-style: italic;
 `;
 
 // Updated date range container structure
@@ -578,94 +672,10 @@ const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
       outline: none;
       border-color: ${({theme, $disabled}) =>
         $disabled ? theme.colors.disabled : theme.colors.primary};
+      box-shadow: ${({theme, $disabled}) =>
+        $disabled ? 'none' : `0 0 0 2px ${theme.colors.primary}20`};
     }
   }
-
-  .react-datepicker {
-    font-family: inherit;
-    border: 1px solid ${({theme}) => theme.colors.gray};
-    border-radius: ${({theme}) => theme.borderRadius};
-  }
-
-  .react-datepicker__header {
-    background-color: ${({theme}) => theme.colors.primary};
-    border-bottom: none;
-  }
-
-  .react-datepicker__current-month,
-  .react-datepicker__day-name {
-    color: white;
-  }
-
-  .react-datepicker__day--selected {
-    background-color: ${({theme}) => theme.colors.primary};
-    color: white;
-
-    &:hover {
-      background-color: ${({theme}) => theme.colors.primaryDark};
-    }
-  }
-
-  .react-datepicker__day--keyboard-selected {
-    background-color: ${({theme}) => theme.colors.primary};
-    opacity: 0.8;
-    &:hover {
-      background-color: ${({theme}) => theme.colors.primaryDark};
-    }
-  }
-`;
-
-const DatePresets = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-`;
-
-const PresetButton = styled.button`
-  padding: 0.5rem 0.75rem;
-  border: 1px solid ${({theme}) => theme.colors.primary};
-  background-color: white;
-  color: ${({theme}) => theme.colors.primary};
-  border-radius: ${({theme}) => theme.borderRadius};
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    background-color: ${({theme}) => theme.colors.primary};
-    color: white;
-  }
-`;
-
-const TransitPresetButton = styled(PresetButton)<{$active?: boolean}>`
-  background-color: ${({theme, $active}) =>
-    $active ? theme.colors.primary : 'white'};
-  color: ${({theme, $active}) => ($active ? 'white' : theme.colors.primary)};
-  border: 1px solid ${({theme}) => theme.colors.primary};
-
-  &:hover {
-    background-color: ${({theme}) => theme.colors.primary};
-    color: white;
-  }
-`;
-
-const DateRangeDisplay = styled.div`
-  font-size: 0.875rem;
-  color: ${({theme}) => theme.colors.text};
-  font-weight: 500;
-  padding: 0.5rem;
-  background-color: ${({theme}) => theme.colors.background};
-  border-radius: ${({theme}) => theme.borderRadius};
-  text-align: center;
-  margin-bottom: 0.25rem;
-`;
-
-const RangeLimitInfo = styled.div`
-  font-size: 0.75rem;
-  color: ${({theme}) => theme.colors.primary};
-  text-align: center;
-  font-style: italic;
 `;
 
 export default DashboardFilters;
