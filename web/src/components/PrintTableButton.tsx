@@ -1,4 +1,3 @@
-// Modified PrintTableButton.tsx that can handle both item and items props
 import React, {useCallback, useRef, useState} from 'react';
 import ReactDOMServer from 'react-dom/server';
 import styled from 'styled-components';
@@ -43,6 +42,12 @@ const PrintableTable = ({
           alt="Osijek-Koteks Logo"
           className="print-logo"
         />
+        <div className="company-info">
+          <p>Osijek-Koteks d.d.</p>
+          <p>Šamačka 11, 31000 Osijek, Hrvatska</p>
+          <p>Tel: +385 31 227 700 | Fax: +385 31 227 777</p>
+          <p>Email: info@osijek-koteks.hr | Web: www.osijek-koteks.hr</p>
+        </div>
         <h1 className="print-title">Pregled dokumenata</h1>
         {dateRange && <p className="print-date-range">Period: {dateRange}</p>}
         <p className="print-date">
@@ -53,12 +58,12 @@ const PrintableTable = ({
       <table className="print-table">
         <thead>
           <tr>
-            <th>Naziv</th>
-            <th>RN</th>
+            <th>Broj otpremnice</th>
+            <th>Radni nalog</th>
             <th>Registracija</th>
             <th>Težina</th>
             <th>Razlika u vaganju</th>
-            <th>Datum kreiranja</th>
+            <th>Datum kreiranja otpremnice</th>
             <th>Status</th>
             <th>Odobrio</th>
             <th>Datum odobrenja</th>
@@ -124,49 +129,63 @@ const PrintableTable = ({
         {`
           @media print {
             .print-container {
-              padding: 20px;
+              padding: 10px;
               font-family: Arial, sans-serif;
             }
 
             .print-header {
               text-align: center;
-              margin-bottom: 30px;
+              margin-bottom: 20px;
             }
 
             .print-logo {
-              height: 60px;
-              margin-bottom: 10px;
+              height: 40px;
+              margin-bottom: 5px;
+            }
+
+            .company-info {
+              text-align: center;
+              font-size: 10px;
+              color: #666;
+              margin: 5px 0;
+              line-height: 1.2;
+            }
+
+            .company-info p {
+              margin: 2px 0;
             }
 
             .print-title {
-              font-size: 24px;
-              margin: 10px 0;
+              font-size: 18px;
+              margin: 5px 0;
             }
 
             .print-date-range {
               color: #333;
-              font-size: 16px;
+              font-size: 12px;
               font-weight: 600;
-              margin: 5px 0;
+              margin: 3px 0;
             }
 
             .print-date {
               color: #666;
-              font-size: 14px;
+              font-size: 10px;
             }
 
             .print-table {
               width: 100%;
               border-collapse: collapse;
-              margin: 20px 0;
-              font-size: 12px;
+              margin: 10px 0;
+              font-size: 9px;
+              line-height: 1.1;
             }
 
             .print-table th,
             .print-table td {
               border: 1px solid #ddd;
-              padding: 8px;
+              padding: 3px 5px;
               text-align: left;
+              vertical-align: middle;
             }
 
             .print-table th {
@@ -174,20 +193,43 @@ const PrintableTable = ({
               font-weight: bold;
             }
 
+            .print-table tr {
+              page-break-inside: avoid;
+            }
+
             .print-table tr:nth-child(even) {
               background-color: #f9f9f9;
             }
 
+            .print-table th:nth-child(1),
+            .print-table td:nth-child(1) { width: 15%; }
+            .print-table th:nth-child(2),
+            .print-table td:nth-child(2) { width: 10%; }
+            .print-table th:nth-child(3),
+            .print-table td:nth-child(3) { width: 10%; }
+            .print-table th:nth-child(4),
+            .print-table td:nth-child(4) { width: 8%; }
+            .print-table th:nth-child(5),
+            .print-table td:nth-child(5) { width: 8%; }
+            .print-table th:nth-child(6),
+            .print-table td:nth-child(6) { width: 15%; }
+            .print-table th:nth-child(7),
+            .print-table td:nth-child(7) { width: 10%; }
+            .print-table th:nth-child(8),
+            .print-table td:nth-child(8) { width: 12%; }
+            .print-table th:nth-child(9),
+            .print-table td:nth-child(9) { width: 12%; }
+
             .print-footer {
-              margin-top: 30px;
+              margin-top: 15px;
               text-align: center;
-              font-size: 12px;
+              font-size: 9px;
               color: #666;
             }
 
             @page {
               size: landscape;
-              margin: 1cm;
+              margin: 0.5cm;
             }
           }
         `}
@@ -204,17 +246,17 @@ interface PrintTableButtonProps {
   totalWeight?: number;
   isLoading?: boolean;
   onPrintAll?: () => Promise<Item[]>;
-  dateRange?: string; // NEW: Add date range prop
+  dateRange?: string;
 }
 
 const PrintTableButton: React.FC<PrintTableButtonProps> = ({
   items,
   item,
   totalItems = 0,
-  totalWeight, // NEW: Destructure total weight
+  totalWeight,
   isLoading = false,
   onPrintAll,
-  dateRange, // NEW: Destructure date range
+  dateRange,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
   const printContainerRef = useRef<HTMLDivElement>(null);
@@ -254,46 +296,46 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
         <PrintableTable items={allItems} dateRange={dateRange} />,
       );
 
-      // NEW: Generate total weight summary separately (only once, at the end)
+      // Generate total weight summary separately (only once, at the end)
       const totalWeightSummaryHtml =
         totalWeight !== undefined && totalWeight > 0
           ? `
         <div style="
-          margin-top: 40px;
-          padding: 20px;
+          margin-top: 20px;
+          padding: 10px;
           background-color: #f8f9fa;
           border: 2px solid #2196F3;
-          border-radius: 8px;
+          border-radius: 4px;
           text-align: center;
           page-break-inside: avoid;
         ">
           <div style="
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             color: #2196F3;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 1px;
           ">
-            Ukupna težina 
+            Ukupna težina
           </div>
           <div style="
             height: 2px;
             background-color: #2196F3;
-            margin: 20px 0;
+            margin: 10px 0;
           "></div>
           <div style="
-            font-size: 32px;
+            font-size: 20px;
             font-weight: bold;
             color: #2196F3;
-            margin: 15px 0;
+            margin: 8px 0;
           ">
             ${formatWeight(totalWeight)} t
           </div>
           <div style="
-            font-size: 14px;
+            font-size: 10px;
             color: #666;
-            margin-top: 10px;
+            margin-top: 5px;
           ">
             Ukupno ${allItems.length} ${
               allItems.length === 1
@@ -304,9 +346,9 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
             }
           </div>
           <div style="
-            font-size: 14px;
+            font-size: 10px;
             color: #666;
-            margin-top: 10px;
+            margin-top: 5px;
           ">
             Datum ispisa: ${new Date().toLocaleDateString('hr-HR', {
               day: '2-digit',
