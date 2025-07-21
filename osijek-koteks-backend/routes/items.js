@@ -10,6 +10,57 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
+const normalizeCarrierName = name => {
+  if (!name) return '';
+  return (
+    name
+      .trim()
+      .toUpperCase()
+      // Normalize Croatian characters
+      .replace(/Č/g, 'C')
+      .replace(/Ć/g, 'C')
+      .replace(/Š/g, 'S')
+      .replace(/Ž/g, 'Z')
+      .replace(/Đ/g, 'D')
+      .replace(/DŽ/g, 'DZ')
+      // Remove common company suffixes for comparison
+      .replace(/\s+(D\.O\.O\.|DOO|D\.O\.O|OBRT)\.?$/i, '')
+      // Remove extra spaces
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+};
+
+// Function to find all carrier variations that match the normalized form
+const findCarrierVariations = async selectedCarrier => {
+  try {
+    console.log('Finding variations for carrier:', selectedCarrier);
+
+    // Get all unique carriers from database
+    const allCarriers = await Item.distinct('prijevoznik');
+
+    // Normalize the selected carrier
+    const normalizedSelected = normalizeCarrierName(selectedCarrier);
+    console.log('Normalized selected carrier:', normalizedSelected);
+
+    // Find all carriers that normalize to the same value
+    const variations = allCarriers.filter(carrier => {
+      if (!carrier) return false;
+      const normalized = normalizeCarrierName(carrier);
+      const matches = normalized === normalizedSelected;
+      if (matches) {
+        console.log(`Found variation: "${carrier}" -> "${normalized}"`);
+      }
+      return matches;
+    });
+
+    console.log('All variations found:', variations);
+    return variations;
+  } catch (error) {
+    console.error('Error finding carrier variations:', error);
+    return [selectedCarrier]; // Fallback to original carrier
+  }
+};
 
 // Configure multer for file upload
 const storage = multer.memoryStorage();
@@ -159,9 +210,23 @@ router.get('/', auth, async (req, res) => {
         query.code = code;
       }
 
-      // Apply prijevoznik filter
+      // Apply prijevoznik filter with variation support
       if (prijevoznik && prijevoznik !== 'all') {
-        query.prijevoznik = prijevoznik;
+        // Find all variations of the carrier name
+        const carrierVariations = await findCarrierVariations(prijevoznik);
+
+        if (carrierVariations.length > 1) {
+          // Multiple variations found - use $in operator
+          query.prijevoznik = {$in: carrierVariations};
+          console.log(
+            `Prijevoznik filter: Searching for ${carrierVariations.length} variations:`,
+            carrierVariations,
+          );
+        } else {
+          // Single variation - use direct match
+          query.prijevoznik = carrierVariations[0] || prijevoznik;
+          console.log('Prijevoznik filter: Single match:', query.prijevoznik);
+        }
       }
 
       // Apply in-transit filter
