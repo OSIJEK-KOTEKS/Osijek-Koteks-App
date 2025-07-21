@@ -242,8 +242,29 @@ const AdminCodeEditor: React.FC<AdminCodeEditorProps> = ({
     }
   };
 
-  // Filter out the current code from available options
-  const filteredCodes = availableCodes.filter(code => code !== item.code);
+  // Filter out the current code from available options AND remove duplicates
+  const filteredCodes = React.useMemo(() => {
+    // First remove duplicates, then filter out current code
+    const uniqueCodes = Array.from(new Set(availableCodes));
+    return uniqueCodes.filter(code => code !== item.code);
+  }, [availableCodes, item.code]);
+
+  // Debug logging (remove in production)
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('AdminCodeEditor - availableCodes:', availableCodes);
+      console.log('AdminCodeEditor - filteredCodes:', filteredCodes);
+      console.log('AdminCodeEditor - current item code:', item.code);
+
+      // Check for duplicates in original array
+      const duplicates = availableCodes.filter(
+        (code, index) => availableCodes.indexOf(code) !== index,
+      );
+      if (duplicates.length > 0) {
+        console.warn('FOUND DUPLICATES in availableCodes:', duplicates);
+      }
+    }
+  }, [availableCodes, filteredCodes, item.code]);
 
   return (
     <Container ref={dropdownRef} className="group">

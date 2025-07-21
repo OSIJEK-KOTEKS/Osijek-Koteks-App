@@ -65,11 +65,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     onSearchModeChange(false);
   };
 
-  // Filter out unused codes
+  // Filter out unused codes AND deduplicate
   const unusedCodes = ['1111', '1996'];
-  const filteredCodes = availableCodes.filter(
-    code => !unusedCodes.includes(code),
-  );
+  const filteredCodes = Array.from(new Set(availableCodes)) // Deduplicate first
+    .filter(code => !unusedCodes.includes(code))
+    .sort(); // Sort for consistent ordering
 
   const allCodesOptions = [
     {value: 'all', label: 'Svi Radni Nalozi'},
@@ -79,10 +79,13 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     })),
   ];
 
+  // Also deduplicate carriers
+  const uniqueCarriers = Array.from(new Set(availableCarriers)).sort();
+
   // NEW: Prepare carriers options
   const allCarriersOptions = [
     {value: 'all', label: 'Svi Prijevoznici'},
-    ...availableCarriers.map(carrier => ({
+    ...uniqueCarriers.map(carrier => ({
       value: carrier,
       label: carrier,
     })),

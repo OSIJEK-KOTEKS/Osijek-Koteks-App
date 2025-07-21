@@ -243,8 +243,24 @@ const Dashboard: React.FC = () => {
 
   const fetchAvailableCodes = useCallback(async () => {
     try {
+      console.log('Fetching available codes...');
       const codes = await apiService.getUniqueCodes();
-      setAvailableCodes(codes);
+
+      // Ensure deduplication and filtering on frontend - handle different data types
+      const uniqueCodes = Array.from(new Set(codes))
+        .filter(code => code != null && code !== '') // Remove null/undefined/empty values
+        .map(code => String(code).trim()) // Convert to string and trim
+        .filter(code => code !== '') // Remove empty strings after trimming
+        .sort();
+
+      console.log('Raw codes from API:', codes);
+      console.log(
+        'Raw codes types:',
+        codes.map(code => typeof code),
+      );
+      console.log('Processed unique codes:', uniqueCodes);
+
+      setAvailableCodes(uniqueCodes);
     } catch (error) {
       console.error('Error fetching codes:', error);
     }
@@ -538,13 +554,13 @@ const Dashboard: React.FC = () => {
     setHasMore(true);
   };
 
-  // NEW: Update useEffect to include prijevoznik dependency
   useEffect(() => {
     if (!searchMode) {
       setPage(1);
       setItems([]);
       setHasMore(true);
       fetchItems(false);
+      // REMOVED: Don't fetch codes again here since they don't change based on filters
     }
   }, [
     startDate,
@@ -556,14 +572,26 @@ const Dashboard: React.FC = () => {
   ]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeDashboard = async () => {
-      await fetchItems();
-      await fetchAvailableCodes();
-      await fetchAvailableCarriers(); // NEW: Fetch available carriers
+      try {
+        await fetchItems();
+        if (isMounted) {
+          await fetchAvailableCodes();
+          await fetchAvailableCarriers();
+        }
+      } catch (error) {
+        console.error('Error initializing dashboard:', error);
+      }
     };
 
     initializeDashboard();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Keep empty dependency array - only run once on mount
 
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading) {
@@ -597,6 +625,7 @@ const Dashboard: React.FC = () => {
     setPage(1);
     setItems([]);
     await fetchItems(false);
+    // Don't fetch codes again during refresh unless they actually change
   }, [fetchItems]);
 
   const handleLogout = async () => {
