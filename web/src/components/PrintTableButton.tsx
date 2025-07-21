@@ -60,6 +60,7 @@ const PrintableTable = ({
           <tr>
             <th>Broj otpremnice</th>
             <th>Radni nalog</th>
+            <th>Prijevoznik</th> {/* NEW: Added Prijevoznik column */}
             <th>Registracija</th>
             <th>Težina</th>
             <th>Razlika u vaganju</th>
@@ -74,6 +75,8 @@ const PrintableTable = ({
             <tr key={item._id}>
               <td>{item.title}</td>
               <td>{getFormattedCode(item.code)}</td>
+              <td>{item.prijevoznik || '-'}</td>{' '}
+              {/* NEW: Display prijevoznik data */}
               <td>{item.registracija || '-'}</td>
               <td>
                 {item.tezina !== undefined
@@ -201,24 +204,27 @@ const PrintableTable = ({
               background-color: #f9f9f9;
             }
 
+            /* Updated column widths to accommodate the new Prijevoznik column */
             .print-table th:nth-child(1),
-            .print-table td:nth-child(1) { width: 15%; }
+            .print-table td:nth-child(1) { width: 13%; } /* Broj otpremnice */
             .print-table th:nth-child(2),
-            .print-table td:nth-child(2) { width: 10%; }
+            .print-table td:nth-child(2) { width: 9%; }  /* Radni nalog */
             .print-table th:nth-child(3),
-            .print-table td:nth-child(3) { width: 10%; }
+            .print-table td:nth-child(3) { width: 12%; } /* Prijevoznik - NEW */
             .print-table th:nth-child(4),
-            .print-table td:nth-child(4) { width: 8%; }
+            .print-table td:nth-child(4) { width: 9%; }  /* Registracija */
             .print-table th:nth-child(5),
-            .print-table td:nth-child(5) { width: 8%; }
+            .print-table td:nth-child(5) { width: 7%; }  /* Težina */
             .print-table th:nth-child(6),
-            .print-table td:nth-child(6) { width: 15%; }
+            .print-table td:nth-child(6) { width: 8%; }  /* Razlika u vaganju */
             .print-table th:nth-child(7),
-            .print-table td:nth-child(7) { width: 10%; }
+            .print-table td:nth-child(7) { width: 14%; } /* Datum kreiranja */
             .print-table th:nth-child(8),
-            .print-table td:nth-child(8) { width: 12%; }
+            .print-table td:nth-child(8) { width: 8%; }  /* Status */
             .print-table th:nth-child(9),
-            .print-table td:nth-child(9) { width: 12%; }
+            .print-table td:nth-child(9) { width: 10%; } /* Odobrio */
+            .print-table th:nth-child(10),
+            .print-table td:nth-child(10) { width: 10%; } /* Datum odobrenja */
 
             .print-footer {
               margin-top: 15px;
