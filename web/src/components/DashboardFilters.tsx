@@ -205,6 +205,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           <SearchBar>
             <SearchInput
               type="text"
+              id="search-bar"
               placeholder="Pretraži po nazivu dokumenta..."
               value={searchValue}
               onChange={e => onSearchValueChange(e.target.value)}
@@ -227,7 +228,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           <SearchControls>
             <SearchButton
               onClick={() => onSearchModeChange(true)}
-              type="button">
+              type="button"
+              id="search-button">
               🔍 Pretraži dokumente
             </SearchButton>
             <ClearButton onClick={onClearSearch} type="button">
