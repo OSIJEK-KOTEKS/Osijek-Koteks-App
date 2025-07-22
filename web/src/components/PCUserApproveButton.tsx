@@ -40,7 +40,7 @@ const PCUserApproveButton: React.FC<PCUserApproveButtonProps> = ({
 
   return (
     <>
-      <ApproveActionButton onClick={handleClick} type="button">
+      <ApproveActionButton onClick={handleClick} type="button" id="pc-approve">
         Potvrdi
       </ApproveActionButton>
 
