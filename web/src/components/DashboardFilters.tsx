@@ -216,7 +216,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               <SearchButton
                 onClick={onSearch}
                 disabled={!searchValue.trim()}
-                type="button">
+                type="button"
+                id="find-it-button">
                 🔍 Pretraži
               </SearchButton>
               <ClearButton onClick={onClearSearch} type="button">
