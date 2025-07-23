@@ -929,30 +929,30 @@ const Dashboard: React.FC = () => {
               <PrintButton item={item} />
               {item.approvalStatus === 'odobreno' && (
                 <>
-                   {(item.approvalPhotoFront?.url ||
-      item.approvalPhotoBack?.url) && (
-      <PhotoButtonsGroup>
-        {item.approvalPhotoFront?.url && (
-          <ActionButton
-            onClick={() =>
-              setSelectedImage(
-                getImageUrl(item.approvalPhotoFront!.url!),
-              )
-            }>
-            Registracija
-          </ActionButton>
-        )}
-        {item.approvalPhotoBack?.url && (
-          <ActionButton
-            onClick={() =>
-              setSelectedImage(
-                getImageUrl(item.approvalPhotoBack!.url!),
-              )
-            }>
-            Materijal
-          </ActionButton>
-        )}
-      </PhotoButtonsGroup>
+                  {(item.approvalPhotoFront?.url ||
+                    item.approvalPhotoBack?.url) && (
+                    <PhotoButtonsGroup>
+                      {item.approvalPhotoFront?.url && (
+                        <ActionButton
+                          onClick={() =>
+                            setSelectedImage(
+                              getImageUrl(item.approvalPhotoFront!.url!),
+                            )
+                          }>
+                          Registracija
+                        </ActionButton>
+                      )}
+                      {item.approvalPhotoBack?.url && (
+                        <ActionButton
+                          onClick={() =>
+                            setSelectedImage(
+                              getImageUrl(item.approvalPhotoBack!.url!),
+                            )
+                          }>
+                          Materijal
+                        </ActionButton>
+                      )}
+                    </PhotoButtonsGroup>
                   )}
 
                   {item.approvalDocument?.url && (
