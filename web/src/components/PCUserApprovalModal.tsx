@@ -398,6 +398,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
                     value={netoSecond}
                     onChange={handleNetoSecondChange}
                     placeholder="Unesite drugi neto"
+                    id="neto-value"
                     onClick={e => e.stopPropagation()}
                   />
                 </div>
