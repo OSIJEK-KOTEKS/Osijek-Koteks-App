@@ -505,7 +505,8 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
           <ConfirmButton
             onClick={handleApprove}
             disabled={!pdfDocument || loading}
-            type="button">
+            type="button"
+            id="approve">
             {loading ? 'Učitavanje...' : 'Odobri'}
           </ConfirmButton>
         </ButtonGroup>
