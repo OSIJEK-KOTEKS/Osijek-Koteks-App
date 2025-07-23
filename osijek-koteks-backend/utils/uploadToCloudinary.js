@@ -2,6 +2,45 @@ const cloudinary = require('../config/cloudinary');
 const sharp = require('sharp');
 const path = require('path');
 
+// Function to sanitize filename for Cloudinary
+const sanitizeFilename = filename => {
+  if (!filename) return 'document';
+
+  return (
+    filename
+      // Remove file extension first
+      .replace(/\.[^/.]+$/, '')
+      // Replace Croatian characters with ASCII equivalents
+      .replace(/[čćžšđČĆŽŠĐ]/g, match => {
+        const replacements = {
+          č: 'c',
+          ć: 'c',
+          ž: 'z',
+          š: 's',
+          đ: 'd',
+          Č: 'C',
+          Ć: 'C',
+          Ž: 'Z',
+          Š: 'S',
+          Đ: 'D',
+        };
+        return replacements[match] || match;
+      })
+      // Replace spaces with underscores
+      .replace(/\s+/g, '_')
+      // Remove or replace special characters that can cause issues
+      .replace(/[#@+&$%!?*()[\]{}|\\:";'<>,.]/g, '_')
+      // Replace multiple underscores with single underscore
+      .replace(/_+/g, '_')
+      // Remove leading/trailing underscores
+      .replace(/^_+|_+$/g, '')
+      // Limit length to avoid issues (Cloudinary has limits)
+      .substring(0, 100) ||
+    // Ensure we have something if everything was removed
+    'document'
+  );
+};
+
 const uploadToCloudinary = async file => {
   try {
     console.log('Starting file upload process...');
@@ -20,19 +59,18 @@ const uploadToCloudinary = async file => {
 
     // Handle different file types
     if (file.mimetype === 'application/pdf') {
-      // Generate a unique filename - remove any existing .pdf extension first
-      let filename = file.originalname
-        ? path.parse(file.originalname).name // Get filename without extension
-        : `document`;
-
-      // Remove .pdf if it's already in the filename to avoid duplicates
-      filename = filename.replace(/\.pdf$/i, '');
-
+      // Sanitize the filename
+      const sanitizedFilename = sanitizeFilename(file.originalname);
       const timestamp = Date.now();
-      const uniqueFilename = `${filename}-${timestamp}`;
+      const uniqueFilename = `${sanitizedFilename}_${timestamp}`;
+
+      console.log('Processing PDF file:', {
+        original: file.originalname,
+        sanitized: sanitizedFilename,
+        final: uniqueFilename,
+      });
 
       // For PDFs, just convert buffer to base64 without processing with Sharp
-      console.log('Processing PDF file:', uniqueFilename);
       const b64 = fileBuffer.toString('base64');
       dataURI = 'data:' + file.mimetype + ';base64,' + b64;
 
@@ -98,6 +136,10 @@ const uploadToCloudinary = async file => {
     };
   } catch (error) {
     console.error('Error in file upload process:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+    });
     throw error;
   }
 };
