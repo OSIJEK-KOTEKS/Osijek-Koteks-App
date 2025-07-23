@@ -338,6 +338,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
               <FileInput
                 ref={inputRef}
                 type="file"
+                id="file-input"
                 accept="application/pdf"
                 onChange={handleFileChange}
                 onClick={e => e.stopPropagation()}
