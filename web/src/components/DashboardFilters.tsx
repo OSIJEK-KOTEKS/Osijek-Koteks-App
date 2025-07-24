@@ -231,7 +231,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onClick={() => onSearchModeChange(true)}
               type="button"
               id="search-button">
-              🔍 Pretraži dokumente
+              🔍 Traži po broju otpremnice
             </SearchButton>
             <ClearButton onClick={onClearSearch} type="button">
               🔄 Resetiraj sve
