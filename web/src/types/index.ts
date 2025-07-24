@@ -103,8 +103,8 @@ export interface ItemFilters {
   sortOrder?: string;
   prijevoznik?: string;
   searchTitle?: string;
+  searchRegistration?: string; // ADD THIS LINE
   inTransitOnly?: boolean;
-  // Add any additional filtering options as needed
 }
 
 // You can also add a utility type for date range operations

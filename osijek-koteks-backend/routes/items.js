@@ -158,16 +158,16 @@ router.get('/carriers', auth, async (req, res) => {
   }
 });
 
-// Get all items with pagination and filtering - SINGLE ROUTE WITH ALL FEATURES
 router.get('/', auth, async (req, res) => {
   try {
     const {
       startDate,
       endDate,
       code,
-      prijevoznik, // Include prijevoznik parameter
+      prijevoznik,
       sortOrder,
       searchTitle,
+      searchRegistration, // ADD THIS LINE
       inTransitOnly,
     } = req.query;
 
@@ -178,15 +178,32 @@ router.get('/', auth, async (req, res) => {
     // Build the base query
     let query = {};
 
-    // If search mode is active (searchTitle is provided)
+    // Handle search modes - UPDATED SECTION
     if (searchTitle) {
       // Use case-insensitive regex search for title
       query.title = {$regex: searchTitle, $options: 'i'};
+    } else if (searchRegistration) {
+      // ADD THIS: Use case-insensitive regex search for registration
+      query.registracija = {$regex: searchRegistration, $options: 'i'};
     } else {
-      // Apply code filtering logic:
+      // Apply filtering logic only when not in search mode
       if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
-        // Non-admin users: filter by their codes
-        query.code = {$in: req.user.codes};
+        // Non-admin users: filter by their assigned codes
+        if (req.user.codes && req.user.codes.length > 0) {
+          query.code = {$in: req.user.codes};
+        } else {
+          // User with no codes assigned should see nothing
+          return res.json({
+            items: [],
+            pagination: {
+              total: 0,
+              page: page,
+              pages: 0,
+              hasMore: false,
+            },
+            totalWeight: 0,
+          });
+        }
       } else if (
         req.user.role === 'admin' &&
         req.user.codes &&
@@ -197,7 +214,7 @@ router.get('/', auth, async (req, res) => {
       }
       // If admin with no codes assigned (empty array or null), show all items (no filtering)
 
-      // Apply date range filter
+      // Apply date range filtering (only when not searching)
       if (startDate && endDate) {
         query.creationDate = {
           $gte: new Date(startDate),
@@ -205,111 +222,96 @@ router.get('/', auth, async (req, res) => {
         };
       }
 
-      // Apply specific code filter
+      // Apply code filter (only when not searching)
       if (code && code !== 'all') {
-        query.code = code;
-      }
-
-      // Apply prijevoznik filter with variation support
-      if (prijevoznik && prijevoznik !== 'all') {
-        // Find all variations of the carrier name
-        const carrierVariations = await findCarrierVariations(prijevoznik);
-
-        if (carrierVariations.length > 1) {
-          // Multiple variations found - use $in operator
-          query.prijevoznik = {$in: carrierVariations};
-          console.log(
-            `Prijevoznik filter: Searching for ${carrierVariations.length} variations:`,
-            carrierVariations,
-          );
+        // If user already has code filtering from role, intersect with selected code
+        if (query.code && query.code.$in) {
+          query.code = {$in: [code]};
         } else {
-          // Single variation - use direct match
-          query.prijevoznik = carrierVariations[0] || prijevoznik;
-          console.log('Prijevoznik filter: Single match:', query.prijevoznik);
+          query.code = code;
         }
       }
 
-      // Apply in-transit filter
+      // Apply prijevoznik filter (only when not searching)
+      if (prijevoznik && prijevoznik.trim()) {
+        query.prijevoznik = {$regex: prijevoznik, $options: 'i'};
+      }
+
+      // Apply in-transit filter (only when not searching)
       if (inTransitOnly === 'true') {
         query.in_transit = true;
       }
     }
 
-    console.log('Final query:', JSON.stringify(query, null, 2));
+    console.log('Final query:', query);
 
-    // Build sort criteria
-    let sortCriteria = {};
+    // Build the sort object
+    let sort = {};
     switch (sortOrder) {
       case 'date-asc':
-        sortCriteria = {creationDate: 1};
+        sort = {creationDate: 1};
         break;
-      case 'approved-first':
-        sortCriteria = {approvalStatus: -1, creationDate: -1};
+      case 'date-desc':
+        sort = {creationDate: -1};
         break;
       case 'pending-first':
-        sortCriteria = {
-          approvalStatus: 1,
+        sort = {
+          approvalStatus: 1, // 'na čekanju' comes before 'odobreno' alphabetically
           creationDate: -1,
         };
         break;
-      case 'date-desc':
-      default:
-        sortCriteria = {creationDate: -1};
+      case 'approved-first':
+        sort = {
+          approvalStatus: -1, // 'odobreno' comes after 'na čekanju' alphabetically, so reverse
+          creationDate: -1,
+        };
         break;
+      default:
+        sort = {creationDate: -1};
     }
 
-    // Execute queries
+    // Get total count for pagination
+    const total = await Item.countDocuments(query);
+
+    // Get items with pagination and populate user data
     const items = await Item.find(query)
       .populate('approvedBy', 'firstName lastName')
-      .sort(sortCriteria)
-      .skip(skip)
-      .limit(limit);
+      .sort(sort)
+      .limit(limit)
+      .skip(skip);
 
-    const total = await Item.countDocuments(query);
-    const totalPages = Math.ceil(total / limit);
-    const hasMore = page < totalPages;
+    // Calculate total weight for all items that match the query (not just the current page)
+    const allMatchingItems = await Item.find(query).select('tezina');
+    const totalWeight = allMatchingItems.reduce((sum, item) => {
+      return sum + (item.tezina || 0);
+    }, 0);
 
-    // Calculate total weight for all filtered items (not just current page)
-    const totalWeightResult = await Item.aggregate([
-      {$match: query},
-      {
-        $group: {
-          _id: null,
-          totalWeight: {
-            $sum: {
-              $cond: [
-                {$and: [{$ne: ['$tezina', null]}, {$ne: ['$tezina', '']}]},
-                '$tezina',
-                0,
-              ],
-            },
-          },
-        },
-      },
-    ]);
+    // Calculate pagination info
+    const pages = Math.ceil(total / limit);
+    const hasMore = page < pages;
 
-    const totalWeight =
-      totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
-
-    console.log('Found items:', items.length);
-    console.log('Total weight of all filtered items:', totalWeight);
+    console.log('Query results:', {
+      total,
+      page,
+      pages,
+      hasMore,
+      itemsCount: items.length,
+      totalWeight,
+    });
 
     res.json({
       items,
       pagination: {
         total,
         page,
-        pages: totalPages,
+        pages,
         hasMore,
       },
       totalWeight,
     });
   } catch (err) {
-    console.error('Error in items route:', err);
-    res.status(500).json({
-      message: 'Server error',
-      error: err.message,
-    });
+    console.error('Error fetching items:', err);
+    res.status(500).json({message: 'Server error'});
   }
 });
 

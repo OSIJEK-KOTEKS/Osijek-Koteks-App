@@ -57,7 +57,6 @@ interface DashboardFiltersProps {
   selectedCode: string;
   onCodeChange: (code: string) => void;
   availableCodes: string[];
-  // NEW: Add prijevoznik props
   selectedPrijevoznik: string;
   onPrijevoznikChange: (prijevoznik: string) => void;
   availableCarriers: string[];
@@ -65,14 +64,20 @@ interface DashboardFiltersProps {
   onSortOrderChange: (order: string) => void;
   searchMode: boolean;
   onSearchModeChange: (mode: boolean) => void;
+
+  // UPDATE THESE PROPS:
   searchValue: string;
   onSearchValueChange: (value: string) => void;
+  registrationSearchValue: string; // ADD THIS
+  onRegistrationSearchValueChange: (value: string) => void; // ADD THIS
+  searchType: 'title' | 'registration'; // ADD THIS
+  onSearchTypeChange: (type: 'title' | 'registration') => void; // ADD THIS
+
   onSearch: () => void;
   onClearSearch: () => void;
   inTransitOnly: boolean;
-  onInTransitChange: (inTransitOnly: boolean) => void;
+  onInTransitChange: (inTransit: boolean) => void;
 }
-
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   startDate,
   endDate,
@@ -80,7 +85,6 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedCode,
   onCodeChange,
   availableCodes,
-  // NEW: Add prijevoznik props
   selectedPrijevoznik,
   onPrijevoznikChange,
   availableCarriers,
@@ -90,6 +94,10 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   onSearchModeChange,
   searchValue,
   onSearchValueChange,
+  registrationSearchValue, // ADD THIS
+  onRegistrationSearchValueChange, // ADD THIS
+  searchType, // ADD THIS
+  onSearchTypeChange, // ADD THIS
   onSearch,
   onClearSearch,
   inTransitOnly,
@@ -206,16 +214,32 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
             <SearchInput
               type="text"
               id="search-bar"
-              placeholder="Pretraži po nazivu dokumenta..."
-              value={searchValue}
-              onChange={e => onSearchValueChange(e.target.value)}
+              placeholder={
+                searchType === 'title'
+                  ? 'Pretraži po nazivu dokumenta...'
+                  : 'Pretraži po registraciji...'
+              }
+              value={
+                searchType === 'title' ? searchValue : registrationSearchValue
+              }
+              onChange={e => {
+                if (searchType === 'title') {
+                  onSearchValueChange(e.target.value);
+                } else {
+                  onRegistrationSearchValueChange(e.target.value);
+                }
+              }}
               onKeyPress={handleKeyPress}
               autoFocus
             />
             <SearchControls>
               <SearchButton
                 onClick={onSearch}
-                disabled={!searchValue.trim()}
+                disabled={
+                  searchType === 'title'
+                    ? !searchValue.trim()
+                    : !registrationSearchValue.trim()
+                }
                 type="button"
                 id="find-it-button">
                 🔍 Pretraži
@@ -228,11 +252,26 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
         ) : (
           <SearchControls>
             <SearchButton
-              onClick={() => onSearchModeChange(true)}
+              onClick={() => {
+                onSearchTypeChange('title');
+                onSearchModeChange(true);
+              }}
               type="button"
               id="search-button">
               🔍 Traži po broju otpremnice
             </SearchButton>
+
+            {/* ADD THIS NEW BUTTON: */}
+            <SearchButton
+              onClick={() => {
+                onSearchTypeChange('registration');
+                onSearchModeChange(true);
+              }}
+              type="button"
+              id="search-registration-button">
+              🚗 Traži po registraciji
+            </SearchButton>
+
             <ClearButton onClick={onClearSearch} type="button">
               🔄 Resetiraj sve
             </ClearButton>

@@ -294,7 +294,7 @@ export const apiService = {
   getItems: async (
     page: number = 1,
     limit: number = 10,
-    filters?: ItemFilters,
+    filters: ItemFilters,
   ): Promise<PaginatedResponse<Item>> => {
     try {
       console.log('Making API request with filters:', filters);
@@ -313,8 +313,12 @@ export const apiService = {
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
       if (filters?.searchTitle)
         params.append('searchTitle', filters.searchTitle);
+
+      // ADD THIS LINE:
+      if (filters?.searchRegistration)
+        params.append('searchRegistration', filters.searchRegistration);
+
       if (filters?.inTransitOnly) params.append('inTransitOnly', 'true');
-      // NEW: Add prijevoznik filter
       if (filters?.prijevoznik && filters.prijevoznik.trim())
         params.append('prijevoznik', filters.prijevoznik);
 

@@ -222,6 +222,10 @@ const Dashboard: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [searchMode, setSearchMode] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [registrationSearchValue, setRegistrationSearchValue] = useState('');
+  const [searchType, setSearchType] = useState<'title' | 'registration'>(
+    'title',
+  ); // Track what we're searching for
   const [totalItems, setTotalItems] = useState(0);
   const [isCreateModalVisible, setCreateModalVisible] =
     useState<boolean>(false);
@@ -476,16 +480,26 @@ const Dashboard: React.FC = () => {
   };
 
   const handleSearch = useCallback(() => {
-    if (searchValue.trim()) {
-      console.log('Search triggered with:', searchValue);
+    const currentSearchValue =
+      searchType === 'title' ? searchValue : registrationSearchValue;
+
+    if (currentSearchValue.trim()) {
+      console.log(
+        'Search triggered with:',
+        currentSearchValue,
+        'type:',
+        searchType,
+      );
       setLoading(true);
       setSearchMode(true);
       setPage(1);
 
       Promise.resolve().then(() => {
-        const searchFilters: ItemFilters = {
-          searchTitle: searchValue,
-        };
+        const searchFilters: ItemFilters =
+          searchType === 'title'
+            ? {searchTitle: currentSearchValue}
+            : {searchRegistration: currentSearchValue};
+
         console.log('Fetching with search filters:', searchFilters);
 
         apiService
@@ -494,7 +508,6 @@ const Dashboard: React.FC = () => {
             setItems(response.items);
             setHasMore(response.pagination.hasMore);
             setTotalItems(response.pagination.total);
-            // Set total weight from backend response
             setTotalWeight(response.totalWeight || 0);
             setError('');
           })
@@ -507,21 +520,22 @@ const Dashboard: React.FC = () => {
           });
       });
     }
-  }, [searchValue]);
-
+  }, [searchValue, registrationSearchValue, searchType]);
   const clearSearch = useCallback(() => {
     console.log('Clearing search');
     setLoading(true);
 
     setSearchMode(false);
     setSearchValue('');
+    setRegistrationSearchValue(''); // ADD THIS LINE
+    setSearchType('title'); // ADD THIS LINE
     setPage(1);
     // Reset to today's date range
     const today = new Date();
     setStartDate(today);
     setEndDate(today);
     setSelectedCode('all');
-    setSelectedPrijevoznik('all'); // NEW: Reset prijevoznik filter
+    setSelectedPrijevoznik('all');
     setSortOrder('date-desc');
     setInTransitOnly(false);
 
@@ -544,7 +558,6 @@ const Dashboard: React.FC = () => {
           setItems(response.items);
           setHasMore(response.pagination.hasMore);
           setTotalItems(response.pagination.total);
-          // Set total weight from backend response
           setTotalWeight(response.totalWeight || 0);
           setError('');
         })
@@ -811,7 +824,6 @@ const Dashboard: React.FC = () => {
         selectedCode={selectedCode}
         onCodeChange={setSelectedCode}
         availableCodes={availableCodes}
-        // NEW: Add prijevoznik props
         selectedPrijevoznik={selectedPrijevoznik}
         onPrijevoznikChange={setSelectedPrijevoznik}
         availableCarriers={availableCarriers}
@@ -819,8 +831,13 @@ const Dashboard: React.FC = () => {
         onSortOrderChange={setSortOrder}
         searchMode={searchMode}
         onSearchModeChange={setSearchMode}
+        // ADD ALL THESE PROPS:
         searchValue={searchValue}
         onSearchValueChange={setSearchValue}
+        registrationSearchValue={registrationSearchValue}
+        onRegistrationSearchValueChange={setRegistrationSearchValue}
+        searchType={searchType}
+        onSearchTypeChange={setSearchType}
         onSearch={handleSearch}
         onClearSearch={clearSearch}
         inTransitOnly={inTransitOnly}
