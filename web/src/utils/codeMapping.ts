@@ -36,6 +36,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25009': 'Ladimirevci',
   '25013': 'Ricardo',
   '25014': 'Baras',
+  '25015': 'Novska',
   '25016': 'Bizovac',
   '25019': 'Divaltova i Vukovarska',
   '25023': 'Novokomerc',
