@@ -33,6 +33,7 @@ export const codeToTextMapping: Record<string, string> = {
   '24065': 'REKON. DC ERDUT - GP DALJ',
   '24076': 'Dom za starije SB',
   '25006': 'Ricardo',
+  '25007': 'Općina Darda - održ. nerazvr. cesta',
   '25009': 'Ladimirevci',
   '25013': 'Ricardo',
   '25014': 'Baras',
