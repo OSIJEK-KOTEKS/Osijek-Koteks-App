@@ -9,6 +9,7 @@ import {
   ItemFilters,
   PaginatedResponse,
   ApiService,
+  ItemUser, // ← ADD THIS LINE to your existing imports
 } from '../types';
 
 const API_URL =
@@ -128,7 +129,17 @@ export const apiService = {
       throw error;
     }
   },
-
+  getUniqueUsers: async (): Promise<ItemUser[]> => {
+    try {
+      console.log('Fetching unique users who created items...');
+      const response = await api.get<ItemUser[]>('/api/items/users');
+      console.log('Received unique users:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unique users:', error);
+      throw error;
+    }
+  },
   getUserProfile: async (): Promise<User> => {
     try {
       const userId = localStorage.getItem('userId');
@@ -290,22 +301,19 @@ export const apiService = {
     }
   },
 
-  // Item methods
   getItems: async (
     page: number = 1,
     limit: number = 10,
-    filters: ItemFilters,
+    filters?: ItemFilters,
   ): Promise<PaginatedResponse<Item>> => {
     try {
       console.log('Making API request with filters:', filters);
 
       const params = new URLSearchParams();
-
-      // Add base pagination params
       params.append('page', page.toString());
       params.append('limit', limit.toString());
 
-      // Add filter params if they exist
+      // YOUR EXISTING FILTER PARAMS (keep all of these as they are):
       if (filters?.startDate) params.append('startDate', filters.startDate);
       if (filters?.endDate) params.append('endDate', filters.endDate);
       if (filters?.code && filters.code !== 'all')
@@ -313,15 +321,17 @@ export const apiService = {
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
       if (filters?.searchTitle)
         params.append('searchTitle', filters.searchTitle);
-
-      // ADD THIS LINE:
       if (filters?.searchRegistration)
         params.append('searchRegistration', filters.searchRegistration);
-
       if (filters?.inTransitOnly) params.append('inTransitOnly', 'true');
       if (filters?.prijevoznik && filters.prijevoznik.trim())
         params.append('prijevoznik', filters.prijevoznik);
 
+      // ADD ONLY THIS ONE LINE to your existing params:
+      if (filters?.createdByUser && filters.createdByUser !== 'all')
+        params.append('createdByUser', filters.createdByUser);
+
+      // Keep the rest of your getItems method exactly as it is:
       console.log('Request URL params:', params.toString());
 
       const response = await api.get<PaginatedResponse<Item>>(

@@ -2,7 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {apiService, getImageUrl} from '../utils/api';
-import {Item, ItemFilters} from '../types';
+import {Item, ItemFilters, ItemUser} from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
@@ -215,6 +215,8 @@ const Dashboard: React.FC = () => {
   // NEW: Add prijevoznik filtering states
   const [selectedPrijevoznik, setSelectedPrijevoznik] = useState('all');
   const [availableCarriers, setAvailableCarriers] = useState<string[]>([]);
+  const [selectedUser, setSelectedUser] = useState('all');
+  const [availableUsers, setAvailableUsers] = useState<ItemUser[]>([]);
 
   const [sortOrder, setSortOrder] = useState('date-desc');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
@@ -294,7 +296,16 @@ const Dashboard: React.FC = () => {
       console.error('Error fetching carriers:', error);
     }
   }, []);
-
+  const fetchAvailableUsers = useCallback(async () => {
+    try {
+      console.log('Fetching available users...');
+      const users = await apiService.getUniqueUsers();
+      console.log('Processed unique users:', users);
+      setAvailableUsers(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  }, []);
   const fetchItems = useCallback(
     async (isLoadingMore: boolean = false) => {
       try {
@@ -325,10 +336,11 @@ const Dashboard: React.FC = () => {
             startDate: startOfDay.toISOString(),
             endDate: endOfDay.toISOString(),
             ...(selectedCode !== 'all' && {code: selectedCode}),
-            // NEW: Add prijevoznik filter
             ...(selectedPrijevoznik !== 'all' && {
               prijevoznik: selectedPrijevoznik,
             }),
+            // ADD THIS LINE for user filtering
+            ...(selectedUser !== 'all' && {createdByUser: selectedUser}),
             sortOrder,
             ...(inTransitOnly && {inTransitOnly: true}),
           };
@@ -348,7 +360,6 @@ const Dashboard: React.FC = () => {
 
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
-        // Set total weight from backend response
         setTotalWeight(response.totalWeight || 0);
         setError('');
       } catch (err) {
@@ -367,14 +378,14 @@ const Dashboard: React.FC = () => {
       startDate,
       endDate,
       selectedCode,
-      selectedPrijevoznik, // NEW: Add prijevoznik dependency
+      selectedPrijevoznik,
+      selectedUser, // ADD THIS DEPENDENCY
       sortOrder,
       searchMode,
       searchValue,
       inTransitOnly,
     ],
   );
-
   const handleApprovalSuccess = useCallback(() => {
     setPage(1);
     setItems([]);
@@ -387,6 +398,7 @@ const Dashboard: React.FC = () => {
     endDate: Date,
     selectedCode: string,
     selectedPrijevoznik: string,
+    selectedUser: string, // ADD THIS PARAMETER
     inTransitOnly: boolean,
   ) => {
     const isSameDay = startDate.toDateString() === endDate.toDateString();
@@ -412,7 +424,6 @@ const Dashboard: React.FC = () => {
       dateRangeText = `${startStr} - ${endStr}`;
     }
 
-    // ADD THE MISSING FILTERS LOGIC
     const filters = [];
     if (selectedCode !== 'all') {
       filters.push(`RN: ${selectedCode}`);
@@ -420,15 +431,24 @@ const Dashboard: React.FC = () => {
     if (selectedPrijevoznik !== 'all') {
       filters.push(`Prijevoznik: ${selectedPrijevoznik}`);
     }
+    // ADD THIS BLOCK
+    if (selectedUser !== 'all') {
+      const user = availableUsers.find(u => u._id === selectedUser);
+      if (user) {
+        filters.push(
+          `Kreirao: ${
+            user.displayName || `${user.firstName} ${user.lastName}`
+          }`,
+        );
+      }
+    }
     if (inTransitOnly) {
-      filters.push('U tranzitu');
+      filters.push('Samo u tranzitu');
     }
 
-    if (filters.length > 0) {
-      dateRangeText += ` (${filters.join(', ')})`;
-    }
-
-    return dateRangeText;
+    return filters.length > 0
+      ? `${dateRangeText} (${filters.join(', ')})`
+      : dateRangeText;
   };
 
   const fetchAllItemsForPrinting = async () => {
@@ -586,13 +606,13 @@ const Dashboard: React.FC = () => {
       setItems([]);
       setHasMore(true);
       fetchItems(false);
-      // REMOVED: Don't fetch codes again here since they don't change based on filters
     }
   }, [
     startDate,
     endDate,
     selectedCode,
     selectedPrijevoznik,
+    selectedUser, // ADD THIS LINE
     sortOrder,
     inTransitOnly,
   ]);
@@ -606,6 +626,7 @@ const Dashboard: React.FC = () => {
         if (isMounted) {
           await fetchAvailableCodes();
           await fetchAvailableCarriers();
+          await fetchAvailableUsers(); // ADD THIS LINE
         }
       } catch (error) {
         console.error('Error initializing dashboard:', error);
@@ -617,7 +638,12 @@ const Dashboard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []); // Keep empty dependency array - only run once on mount
+  }, [
+    fetchItems,
+    fetchAvailableCodes,
+    fetchAvailableCarriers,
+    fetchAvailableUsers,
+  ]);
 
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading) {
@@ -653,6 +679,14 @@ const Dashboard: React.FC = () => {
     await fetchItems(false);
     // Don't fetch codes again during refresh unless they actually change
   }, [fetchItems]);
+
+  const handleUserChange = (user: string) => {
+    console.log('User filter changed:', user);
+    setSelectedUser(user);
+    setPage(1);
+    setItems([]);
+    setHasMore(true);
+  };
 
   const handleLogout = async () => {
     try {
@@ -759,7 +793,8 @@ const Dashboard: React.FC = () => {
               startDate,
               endDate,
               selectedCode,
-              selectedPrijevoznik, // NEW: Add this parameter
+              selectedPrijevoznik,
+              selectedUser, // ADD THIS LINE
               inTransitOnly,
             )}
           />
@@ -773,7 +808,8 @@ const Dashboard: React.FC = () => {
               startDate,
               endDate,
               selectedCode,
-              selectedPrijevoznik, // NEW: Add this parameter
+              selectedPrijevoznik,
+              selectedUser, // ADD THIS LINE
               inTransitOnly,
             )}
             selectedCode={selectedCode}
@@ -827,11 +863,14 @@ const Dashboard: React.FC = () => {
         selectedPrijevoznik={selectedPrijevoznik}
         onPrijevoznikChange={setSelectedPrijevoznik}
         availableCarriers={availableCarriers}
+        // ADD THESE PROPS
+        selectedUser={selectedUser}
+        onUserChange={handleUserChange}
+        availableUsers={availableUsers}
         sortOrder={sortOrder}
         onSortOrderChange={setSortOrder}
         searchMode={searchMode}
         onSearchModeChange={setSearchMode}
-        // ADD ALL THESE PROPS:
         searchValue={searchValue}
         onSearchValueChange={setSearchValue}
         registrationSearchValue={registrationSearchValue}
@@ -893,6 +932,12 @@ const Dashboard: React.FC = () => {
             {item.tezina !== undefined && (
               <ItemDetails>
                 <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
+              </ItemDetails>
+            )}
+            {item.createdBy && (
+              <ItemDetails>
+                <strong>Dobavljač:</strong> {item.createdBy.firstName}{' '}
+                {item.createdBy.lastName}
               </ItemDetails>
             )}
             {item.neto !== undefined && item.approvalStatus === 'odobreno' && (

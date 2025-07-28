@@ -5,6 +5,7 @@ import {hr} from 'date-fns/locale/hr';
 import type {Locale} from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 import {getFormattedCode} from '../utils/codeMapping';
+import {ItemUser} from '../types'; // ADD THIS LINE
 
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
@@ -60,19 +61,20 @@ interface DashboardFiltersProps {
   selectedPrijevoznik: string;
   onPrijevoznikChange: (prijevoznik: string) => void;
   availableCarriers: string[];
+  // ADD THESE THREE LINES:
+  selectedUser: string;
+  onUserChange: (user: string) => void;
+  availableUsers: ItemUser[];
   sortOrder: string;
   onSortOrderChange: (order: string) => void;
   searchMode: boolean;
   onSearchModeChange: (mode: boolean) => void;
-
-  // UPDATE THESE PROPS:
   searchValue: string;
   onSearchValueChange: (value: string) => void;
-  registrationSearchValue: string; // ADD THIS
-  onRegistrationSearchValueChange: (value: string) => void; // ADD THIS
-  searchType: 'title' | 'registration'; // ADD THIS
-  onSearchTypeChange: (type: 'title' | 'registration') => void; // ADD THIS
-
+  registrationSearchValue: string;
+  onRegistrationSearchValueChange: (value: string) => void;
+  searchType: 'title' | 'registration';
+  onSearchTypeChange: (type: 'title' | 'registration') => void;
   onSearch: () => void;
   onClearSearch: () => void;
   inTransitOnly: boolean;
@@ -88,16 +90,20 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedPrijevoznik,
   onPrijevoznikChange,
   availableCarriers,
+  // ADD THESE THREE LINES:
+  selectedUser,
+  onUserChange,
+  availableUsers,
   sortOrder,
   onSortOrderChange,
   searchMode,
   onSearchModeChange,
   searchValue,
   onSearchValueChange,
-  registrationSearchValue, // ADD THIS
-  onRegistrationSearchValueChange, // ADD THIS
-  searchType, // ADD THIS
-  onSearchTypeChange, // ADD THIS
+  registrationSearchValue,
+  onRegistrationSearchValueChange,
+  searchType,
+  onSearchTypeChange,
   onSearch,
   onClearSearch,
   inTransitOnly,
@@ -145,7 +151,13 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
       label: carrier,
     })),
   ];
-
+  const allUsersOptions = [
+    {value: 'all', label: 'Svi Dobavljači'},
+    ...availableUsers.map(user => ({
+      value: user._id,
+      label: user.displayName || `${user.firstName} ${user.lastName}`,
+    })),
+  ];
   const formatDateRange = (start: Date, end: Date) => {
     const isSameDay = start.toDateString() === end.toDateString();
 
@@ -432,6 +444,25 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               <option value="date-desc">Najnoviji prvo</option>
               <option value="date-asc">Najstariji prvo</option>
               <option value="approved-first">Odobreni prvo</option>
+            </Select>
+          </FilterInputContainer>
+        </FilterSection>
+        <FilterSection>
+          <FilterLabel htmlFor="user-select" $disabled={searchMode}>
+            Dobavljač
+          </FilterLabel>
+          <FilterInputContainer>
+            <Select
+              id="user-select"
+              value={selectedUser}
+              onChange={e => onUserChange(e.target.value)}
+              disabled={searchMode}
+              $disabled={searchMode}>
+              {allUsersOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </Select>
           </FilterInputContainer>
         </FilterSection>

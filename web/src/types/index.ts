@@ -28,7 +28,7 @@ export interface Item {
   code: string;
   registracija?: string;
   neto?: number;
-  tezina?: number; // NEW: Add tezina field
+  tezina?: number;
   prijevoznik?: string;
   pdfUrl: string;
   creationDate: string;
@@ -39,6 +39,13 @@ export interface Item {
     _id: string;
     firstName: string;
     lastName: string;
+  };
+  // ADD THIS FIELD
+  createdBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
   };
   in_transit: boolean;
   approvalPhotoFront?: {
@@ -67,6 +74,14 @@ export interface Item {
     accuracy: number;
     timestamp: Date;
   };
+}
+
+export interface ItemUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  displayName: string;
 }
 
 export interface LocationData {
@@ -103,10 +118,10 @@ export interface ItemFilters {
   sortOrder?: string;
   prijevoznik?: string;
   searchTitle?: string;
-  searchRegistration?: string; // ADD THIS LINE
+  searchRegistration?: string;
   inTransitOnly?: boolean;
+  createdByUser?: string; // ADD THIS LINE
 }
-
 // You can also add a utility type for date range operations
 export interface DateRange {
   startDate: Date;
