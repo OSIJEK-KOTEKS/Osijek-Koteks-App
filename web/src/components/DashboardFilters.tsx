@@ -204,17 +204,16 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   // Calculate max date (today)
   const maxDate = new Date();
 
-  // Calculate the minimum allowed date for the end date (start date + 31 days)
   const getMaxEndDate = (startDate: Date) => {
     const maxEndDate = new Date(startDate);
-    maxEndDate.setDate(startDate.getDate() + 30); // 31 days total (inclusive)
+    maxEndDate.setDate(startDate.getDate() + 365); // CHANGE from 30 to 365 (366 days total)
     return maxEndDate > maxDate ? maxDate : maxEndDate;
   };
 
-  // Calculate the minimum allowed date for the start date (end date - 31 days)
+  // 2. UPDATE getMinStartDate function (around line 196):
   const getMinStartDate = (endDate: Date) => {
     const minStartDate = new Date(endDate);
-    minStartDate.setDate(endDate.getDate() - 30); // 31 days total (inclusive)
+    minStartDate.setDate(endDate.getDate() - 365); // CHANGE from 30 to 365 (366 days total)
     return minStartDate;
   };
 
@@ -382,7 +381,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   Odabrani period: {formatDateRange(startDate, endDate)}
                   {inTransitOnly && ' (samo u tranzitu)'}
                 </DateRangeDisplay>
-                <RangeLimitInfo>Maksimalni raspon: 31 dan</RangeLimitInfo>
+                <RangeLimitInfo>Maksimalni raspon: 366 dana</RangeLimitInfo>
               </>
             )}
           </FilterInputContainer>
