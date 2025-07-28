@@ -433,13 +433,34 @@ const Dashboard: React.FC = () => {
     }
     // ADD THIS BLOCK
     if (selectedUser !== 'all') {
-      const user = availableUsers.find(u => u._id === selectedUser);
-      if (user) {
-        filters.push(
-          `Kreirao: ${
-            user.displayName || `${user.firstName} ${user.lastName}`
-          }`,
+      if (selectedUser.includes(',')) {
+        // This is a grouped user - find the display name from the filters component
+        // For now, we'll check if it's the VELIČKI KAMEN group
+        const userIds = selectedUser.split(',');
+        const matchingUsers = availableUsers.filter(u =>
+          userIds.includes(u._id),
         );
+        const hasVelickiKamen = matchingUsers.some(
+          u =>
+            u.email === 'vetovo.vaga@velicki-kamen.hr' ||
+            u.email === 'velicki.vaga@velicki-kamen.hr',
+        );
+
+        if (hasVelickiKamen) {
+          filters.push('Dobavljač: VELIČKI KAMEN d.o.o.');
+        } else {
+          filters.push(`Dobavljač: Grupa (${matchingUsers.length} korisnika)`);
+        }
+      } else {
+        // Single user
+        const user = availableUsers.find(u => u._id === selectedUser);
+        if (user) {
+          filters.push(
+            `Dobavljač: ${
+              user.displayName || `${user.firstName} ${user.lastName}`
+            }`,
+          );
+        }
       }
     }
     if (inTransitOnly) {

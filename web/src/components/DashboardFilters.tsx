@@ -5,12 +5,12 @@ import {hr} from 'date-fns/locale/hr';
 import type {Locale} from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 import {getFormattedCode} from '../utils/codeMapping';
-import {ItemUser} from '../types'; // ADD THIS LINE
+import {ItemUser} from '../types';
 
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
 
-// ADD THESE UTILITY FUNCTIONS AT THE TOP
+// Utility functions
 const normalizeCarrierName = (name: string): string => {
   return (
     name
@@ -51,6 +51,55 @@ const deduplicateCarriers = (carriers: string[]): string[] => {
   return Array.from(carrierMap.values()).sort();
 };
 
+// Interface for grouped users
+interface GroupedUser {
+  value: string;
+  label: string;
+  userIds: string[];
+}
+
+// Function to create user groups
+const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
+  const groups: GroupedUser[] = [];
+  const processedUserIds = new Set<string>();
+
+  // Define user groups - add more groups here as needed
+  const userGroupDefinitions = {
+    'VELIČKI KAMEN d.o.o.': [
+      'vetovo.vaga@velicki-kamen.hr',
+      'velicki.vaga@velicki-kamen.hr',
+    ],
+    // Add more groups here in the future:
+    // 'ANOTHER COMPANY d.o.o.': ['email1@company.com', 'email2@company.com']
+  };
+
+  // Create grouped entries
+  Object.entries(userGroupDefinitions).forEach(([groupName, emails]) => {
+    const matchingUsers = users.filter(user => emails.includes(user.email));
+    if (matchingUsers.length > 0) {
+      groups.push({
+        value: matchingUsers.map(u => u._id).join(','), // Comma-separated IDs
+        label: groupName,
+        userIds: matchingUsers.map(u => u._id),
+      });
+      matchingUsers.forEach(user => processedUserIds.add(user._id));
+    }
+  });
+
+  // Add individual users that aren't in groups
+  users.forEach(user => {
+    if (!processedUserIds.has(user._id)) {
+      groups.push({
+        value: user._id,
+        label: user.displayName || `${user.firstName} ${user.lastName}`,
+        userIds: [user._id],
+      });
+    }
+  });
+
+  return groups.sort((a, b) => a.label.localeCompare(b.label));
+};
+
 interface DashboardFiltersProps {
   startDate: Date;
   endDate: Date;
@@ -61,7 +110,6 @@ interface DashboardFiltersProps {
   selectedPrijevoznik: string;
   onPrijevoznikChange: (prijevoznik: string) => void;
   availableCarriers: string[];
-  // ADD THESE THREE LINES:
   selectedUser: string;
   onUserChange: (user: string) => void;
   availableUsers: ItemUser[];
@@ -80,6 +128,7 @@ interface DashboardFiltersProps {
   inTransitOnly: boolean;
   onInTransitChange: (inTransit: boolean) => void;
 }
+
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   startDate,
   endDate,
@@ -90,7 +139,6 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedPrijevoznik,
   onPrijevoznikChange,
   availableCarriers,
-  // ADD THESE THREE LINES:
   selectedUser,
   onUserChange,
   availableUsers,
@@ -137,13 +185,13 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     })),
   ];
 
-  // NEW: Deduplicate carriers with smart normalization
+  // Deduplicate carriers with smart normalization
   const uniqueCarriers = deduplicateCarriers(availableCarriers);
 
   console.log('DashboardFilters - Raw availableCarriers:', availableCarriers);
   console.log('DashboardFilters - Deduplicated carriers:', uniqueCarriers);
 
-  // NEW: Prepare carriers options
+  // Prepare carriers options
   const allCarriersOptions = [
     {value: 'all', label: 'Svi Prijevoznici'},
     ...uniqueCarriers.map(carrier => ({
@@ -151,13 +199,14 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
       label: carrier,
     })),
   ];
+
+  // Create grouped users
+  const userGroups = createUserGroups(availableUsers);
   const allUsersOptions = [
     {value: 'all', label: 'Svi Dobavljači'},
-    ...availableUsers.map(user => ({
-      value: user._id,
-      label: user.displayName || `${user.firstName} ${user.lastName}`,
-    })),
+    ...userGroups,
   ];
+
   const formatDateRange = (start: Date, end: Date) => {
     const isSameDay = start.toDateString() === end.toDateString();
 
@@ -206,14 +255,13 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
   const getMaxEndDate = (startDate: Date) => {
     const maxEndDate = new Date(startDate);
-    maxEndDate.setDate(startDate.getDate() + 365); // CHANGE from 30 to 365 (366 days total)
+    maxEndDate.setDate(startDate.getDate() + 365); // 366 days total (inclusive)
     return maxEndDate > maxDate ? maxDate : maxEndDate;
   };
 
-  // 2. UPDATE getMinStartDate function (around line 196):
   const getMinStartDate = (endDate: Date) => {
     const minStartDate = new Date(endDate);
-    minStartDate.setDate(endDate.getDate() - 365); // CHANGE from 30 to 365 (366 days total)
+    minStartDate.setDate(endDate.getDate() - 365); // 366 days total (inclusive)
     return minStartDate;
   };
 
@@ -272,7 +320,6 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               🔍 Traži po broju otpremnice
             </SearchButton>
 
-            {/* ADD THIS NEW BUTTON: */}
             <SearchButton
               onClick={() => {
                 onSearchTypeChange('registration');
@@ -407,7 +454,6 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           </FilterInputContainer>
         </FilterSection>
 
-        {/* NEW: Prijevoznik Filter Section */}
         <FilterSection>
           <FilterLabel htmlFor="prijevoznik-select" $disabled={searchMode}>
             Prijevoznik
@@ -446,6 +492,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
             </Select>
           </FilterInputContainer>
         </FilterSection>
+
         <FilterSection>
           <FilterLabel htmlFor="user-select" $disabled={searchMode}>
             Dobavljač
@@ -558,7 +605,7 @@ const FiltersGrid = styled.div`
 const FilterSection = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%; /* Ensure all sections have the same height */
+  height: 100%;
 `;
 
 const FilterLabel = styled.label<{$disabled?: boolean}>`
@@ -567,11 +614,10 @@ const FilterLabel = styled.label<{$disabled?: boolean}>`
   font-weight: 500;
   color: ${({theme, $disabled}) =>
     $disabled ? theme.colors.disabled : theme.colors.text};
-  height: 1.5rem; /* Fixed height for all labels */
+  height: 1.5rem;
   line-height: 1.5rem;
 `;
 
-// New container to ensure consistent height for all filter inputs
 const FilterInputContainer = styled.div`
   flex: 1;
   display: flex;
@@ -590,7 +636,7 @@ const Select = styled.select<{$disabled?: boolean}>`
   color: ${({theme, $disabled}) =>
     $disabled ? theme.colors.disabled : theme.colors.text};
   cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
-  height: 3rem; /* Fixed height to match date picker inputs */
+  height: 3rem;
 
   &:focus {
     outline: none;
@@ -668,7 +714,6 @@ const RangeLimitInfo = styled.div`
   font-style: italic;
 `;
 
-// Updated date range container s
 const DateRangeInputsContainer = styled.div`
   display: flex;
   gap: 1rem;
@@ -737,7 +782,7 @@ const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
       $disabled ? theme.colors.disabled : theme.colors.text};
     background-color: ${({$disabled}) => ($disabled ? '#f5f5f5' : 'white')};
     cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
-    height: 3rem; /* Fixed height to match other inputs */
+    height: 3rem;
     box-sizing: border-box;
 
     &:focus {
