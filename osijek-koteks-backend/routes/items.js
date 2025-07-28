@@ -302,7 +302,14 @@ router.get('/', auth, async (req, res) => {
 
       // ADD USER FILTERING
       if (createdByUser && createdByUser !== 'all') {
-        query.createdBy = createdByUser;
+        if (createdByUser.includes(',')) {
+          // Multiple user IDs separated by comma (grouped users)
+          const userIds = createdByUser.split(',').filter(id => id.trim());
+          query.createdBy = {$in: userIds};
+        } else {
+          // Single user ID
+          query.createdBy = createdByUser;
+        }
       }
     }
 
