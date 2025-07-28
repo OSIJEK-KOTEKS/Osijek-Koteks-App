@@ -48,6 +48,24 @@ interface ExportExcelButtonProps {
   selectedCode?: string;
   inTransitOnly?: boolean;
 }
+const getDisplayNameForUser = (item: Item): string => {
+  if (!item.createdBy) return 'Nepoznato';
+
+  // Check if this user should be grouped
+  if (
+    item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
+    item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
+  ) {
+    return 'VELIČKI KAMEN d.o.o.';
+  }
+
+  if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
+    return 'KAMEN - PSUNJ d.o.o.';
+  }
+
+  // For all other users, use existing logic
+  return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
+};
 
 const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
   items,
@@ -121,9 +139,10 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       const codeItems = itemsByCode[code];
       const codeData = codeItems.map((item, index) => ({
         'Redni broj': index + 1,
-        Naziv: item.title,
-        RN: getFormattedCode(item.code),
-        Prijevoznik: item.prijevoznik || '-', // NEW: Add prijevoznik column after RN
+        'Broj otpremnice': item.title, // CHANGED from 'Naziv'
+        'Radni nalog': getFormattedCode(item.code), // CHANGED from 'RN'
+        Dobavljač: getDisplayNameForUser(item),
+        Prijevoznik: item.prijevoznik || '-',
         Registracija: item.registracija || '-',
         'Težina (t)': item.tezina !== undefined ? item.tezina / 1000 : null,
         'Razlika u vaganju (%)':
@@ -132,7 +151,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
               ? '/'
               : item.neto
             : null,
-        'Datum kreiranja': item.creationTime
+        'Datum kreiranja otpremnice': item.creationTime // CHANGED from 'Datum kreiranja'
           ? `${item.creationDate} ${item.creationTime}`
           : item.creationDate,
         Status: item.approvalStatus,
@@ -281,9 +300,8 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
 
         for (let row = 1; row <= range.e.r; row++) {
-          // Start from row 1 (skip header)
-          // Format Težina (t) column (now column F, index 5 - shifted by 1 due to Prijevoznik)
-          const weightCell = XLSX.utils.encode_cell({r: row, c: 5});
+          // Format Težina (t) column (now column G, index 6)
+          const weightCell = XLSX.utils.encode_cell({r: row, c: 6});
           if (
             worksheet[weightCell] &&
             typeof worksheet[weightCell].v === 'number'
@@ -291,8 +309,8 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
             worksheet[weightCell].z = '#,##0.000';
           }
 
-          // Format Razlika u vaganju column (now column G, index 6 - shifted by 1)
-          const percentCell = XLSX.utils.encode_cell({r: row, c: 6});
+          // Format Razlika u vaganju column (now column H, index 7)
+          const percentCell = XLSX.utils.encode_cell({r: row, c: 7});
           if (
             worksheet[percentCell] &&
             typeof worksheet[percentCell].v === 'number'
@@ -300,20 +318,20 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
             worksheet[percentCell].z = '#,##0.00';
           }
 
-          // Format Lokacija - Širina column (now column M, index 12 - shifted by 1)
-          const latCell = XLSX.utils.encode_cell({r: row, c: 12});
+          // Format Lokacija - Širina column (now column N, index 13)
+          const latCell = XLSX.utils.encode_cell({r: row, c: 13});
           if (worksheet[latCell] && typeof worksheet[latCell].v === 'number') {
             worksheet[latCell].z = '#,##0.000000';
           }
 
-          // Format Lokacija - Dužina column (now column N, index 13 - shifted by 1)
-          const lngCell = XLSX.utils.encode_cell({r: row, c: 13});
+          // Format Lokacija - Dužina column (now column O, index 14)
+          const lngCell = XLSX.utils.encode_cell({r: row, c: 14});
           if (worksheet[lngCell] && typeof worksheet[lngCell].v === 'number') {
             worksheet[lngCell].z = '#,##0.000000';
           }
 
-          // Format Lokacija - Točnost column (now column O, index 14 - shifted by 1)
-          const accCell = XLSX.utils.encode_cell({r: row, c: 14});
+          // Format Lokacija - Točnost column (now column P, index 15)
+          const accCell = XLSX.utils.encode_cell({r: row, c: 15});
           if (worksheet[accCell] && typeof worksheet[accCell].v === 'number') {
             worksheet[accCell].z = '#,##0';
           }
@@ -323,9 +341,10 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       // Set standard column widths for data sheets (updated with Prijevoznik column)
       const standardColWidths = [
         {wch: 8}, // Redni broj
-        {wch: 40}, // Naziv
+        {wch: 10}, // Naziv
         {wch: 25}, // RN
-        {wch: 20}, // Prijevoznik (NEW COLUMN)
+        {wch: 15}, // Dobavljač (NEW COLUMN)
+        {wch: 30}, // Prijevoznik
         {wch: 15}, // Registracija
         {wch: 12}, // Težina
         {wch: 18}, // Razlika u vaganju
@@ -338,7 +357,6 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         {wch: 15}, // Lokacija - Dužina
         {wch: 15}, // Lokacija - Točnost
       ];
-
       // Create summary worksheet first
       const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
       summaryWorksheet['!cols'] = [

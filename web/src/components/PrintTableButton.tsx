@@ -26,7 +26,28 @@ const PrintButton = styled.button`
     cursor: not-allowed;
   }
 `;
+const getDisplayNameForUser = (item: Item): string => {
+  if (!item.createdBy) return 'Nepoznato';
 
+  // Check if this user should be grouped
+  if (
+    item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
+    item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
+  ) {
+    return 'VELIČKI KAMEN d.o.o.';
+  }
+
+  if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
+    return 'KAMEN - PSUNJ d.o.o.';
+  }
+
+  // For all other users, use existing logic
+  return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
+};
+
+// PrintTableButton.tsx - Fix the TypeScript error
+
+// FIND the PrintableTable component and UPDATE it:
 const PrintableTable = ({
   items,
   dateRange,
@@ -60,52 +81,36 @@ const PrintableTable = ({
           <tr>
             <th>Broj otpremnice</th>
             <th>Radni nalog</th>
-            <th>Prijevoznik</th> {/* NEW: Added Prijevoznik column */}
+            <th>Dobavljač</th>
+            <th>Prijevoznik</th>
             <th>Registracija</th>
-            <th>Težina</th>
-            <th>Razlika u vaganju</th>
-            <th>Datum kreiranja otpremnice</th>
+            <th>Težina (t)</th>
+            <th>Razlika u vaganju (%)</th>
+            <th>Datum kreiranja</th>
             <th>Status</th>
             <th>Odobrio</th>
             <th>Datum odobrenja</th>
           </tr>
         </thead>
         <tbody>
-          {items.map(item => (
+          {items.map((item: Item, index: number) => (
             <tr key={item._id}>
               <td>{item.title}</td>
               <td>{getFormattedCode(item.code)}</td>
-              <td>{item.prijevoznik || '-'}</td>{' '}
-              {/* NEW: Display prijevoznik data */}
+              <td>{getDisplayNameForUser(item)}</td>
+              <td>{item.prijevoznik || '-'}</td>
               <td>{item.registracija || '-'}</td>
               <td>
                 {item.tezina !== undefined
-                  ? `${(item.tezina / 1000).toFixed(3)} t`
+                  ? (item.tezina / 1000).toFixed(3)
                   : '-'}
               </td>
               <td>
-                {item.approvalStatus === 'odobreno' &&
-                item.neto !== undefined ? (
-                  item.neto > 1000 ? (
-                    <span>/</span>
-                  ) : (
-                    <span
-                      style={{
-                        color:
-                          item.neto < -5
-                            ? '#f44336'
-                            : item.neto > 5
-                            ? '#4caf50'
-                            : '#000',
-                        fontWeight:
-                          item.neto < -5 || item.neto > 5 ? 'bold' : 'normal',
-                      }}>
-                      {item.neto}%
-                    </span>
-                  )
-                ) : (
-                  '-'
-                )}
+                {item.approvalStatus === 'odobreno' && item.neto !== undefined
+                  ? item.neto > 1000
+                    ? '/'
+                    : `${item.neto}%`
+                  : '-'}
               </td>
               <td>
                 {item.creationTime
@@ -204,27 +209,28 @@ const PrintableTable = ({
               background-color: #f9f9f9;
             }
 
-            /* Updated column widths to accommodate the new Prijevoznik column */
             .print-table th:nth-child(1),
             .print-table td:nth-child(1) { width: 13%; } /* Broj otpremnice */
             .print-table th:nth-child(2),
             .print-table td:nth-child(2) { width: 9%; }  /* Radni nalog */
             .print-table th:nth-child(3),
-            .print-table td:nth-child(3) { width: 12%; } /* Prijevoznik - NEW */
+            .print-table td:nth-child(3) { width: 12%; } /* Dobavljač */
             .print-table th:nth-child(4),
-            .print-table td:nth-child(4) { width: 9%; }  /* Registracija */
+            .print-table td:nth-child(4) { width: 10%; } /* Prijevoznik */
             .print-table th:nth-child(5),
-            .print-table td:nth-child(5) { width: 7%; }  /* Težina */
+            .print-table td:nth-child(5) { width: 9%; }  /* Registracija */
             .print-table th:nth-child(6),
-            .print-table td:nth-child(6) { width: 8%; }  /* Razlika u vaganju */
+            .print-table td:nth-child(6) { width: 7%; }  /* Težina */
             .print-table th:nth-child(7),
-            .print-table td:nth-child(7) { width: 14%; } /* Datum kreiranja */
+            .print-table td:nth-child(7) { width: 8%; }  /* Razlika u vaganju */
             .print-table th:nth-child(8),
-            .print-table td:nth-child(8) { width: 8%; }  /* Status */
+            .print-table td:nth-child(8) { width: 12%; } /* Datum kreiranja */
             .print-table th:nth-child(9),
-            .print-table td:nth-child(9) { width: 10%; } /* Odobrio */
+            .print-table td:nth-child(9) { width: 8%; }  /* Status */
             .print-table th:nth-child(10),
-            .print-table td:nth-child(10) { width: 10%; } /* Datum odobrenja */
+            .print-table td:nth-child(10) { width: 8%; } /* Odobrio */
+            .print-table th:nth-child(11),
+            .print-table td:nth-child(11) { width: 8%; } /* Datum odobrenja */
 
             .print-footer {
               margin-top: 15px;
