@@ -245,6 +245,11 @@ const Dashboard: React.FC = () => {
       return 'VELIČKI KAMEN d.o.o.';
     }
 
+    // ADD THIS NEW GROUP CHECK:
+    if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
+      return 'KAMEN - PSUNJ d.o.o.';
+    }
+
     // For all other users, use existing logic
     return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
   };
@@ -445,25 +450,32 @@ const Dashboard: React.FC = () => {
     // ADD THIS BLOCK
     if (selectedUser !== 'all') {
       if (selectedUser.includes(',')) {
-        // This is a grouped user - find the display name from the filters component
-        // For now, we'll check if it's the VELIČKI KAMEN group
+        // This is a grouped user
         const userIds = selectedUser.split(',');
         const matchingUsers = availableUsers.filter(u =>
           userIds.includes(u._id),
         );
+
         const hasVelickiKamen = matchingUsers.some(
           u =>
             u.email === 'vetovo.vaga@velicki-kamen.hr' ||
             u.email === 'velicki.vaga@velicki-kamen.hr',
         );
 
+        // ADD THIS NEW CHECK:
+        const hasKamenPsunj = matchingUsers.some(
+          u => u.email === 'vaga.fukinac@kamen-psunj.hr',
+        );
+
         if (hasVelickiKamen) {
           filters.push('Dobavljač: VELIČKI KAMEN d.o.o.');
+        } else if (hasKamenPsunj) {
+          filters.push('Dobavljač: KAMEN - PSUNJ d.o.o.');
         } else {
           filters.push(`Dobavljač: Grupa (${matchingUsers.length} korisnika)`);
         }
       } else {
-        // Single user
+        // Single user logic remains the same
         const user = availableUsers.find(u => u._id === selectedUser);
         if (user) {
           filters.push(
@@ -474,6 +486,7 @@ const Dashboard: React.FC = () => {
         }
       }
     }
+
     if (inTransitOnly) {
       filters.push('Samo u tranzitu');
     }

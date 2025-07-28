@@ -63,22 +63,26 @@ const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
   const groups: GroupedUser[] = [];
   const processedUserIds = new Set<string>();
 
-  // Define user groups - add more groups here as needed
+  // Define user groups
   const userGroupDefinitions = {
     'VELIČKI KAMEN d.o.o.': [
       'vetovo.vaga@velicki-kamen.hr',
       'velicki.vaga@velicki-kamen.hr',
     ],
-    // Add more groups here in the future:
-    // 'ANOTHER COMPANY d.o.o.': ['email1@company.com', 'email2@company.com']
+    'KAMEN - PSUNJ d.o.o.': ['vaga.fukinac@kamen-psunj.hr'],
   };
+
+  // Define users to exclude from the filter list
+  const excludedUsers = [
+    'Marko Krajina', // ADD THIS - you can add more names here if needed
+  ];
 
   // Create grouped entries
   Object.entries(userGroupDefinitions).forEach(([groupName, emails]) => {
     const matchingUsers = users.filter(user => emails.includes(user.email));
     if (matchingUsers.length > 0) {
       groups.push({
-        value: matchingUsers.map(u => u._id).join(','), // Comma-separated IDs
+        value: matchingUsers.map(u => u._id).join(','),
         label: groupName,
         userIds: matchingUsers.map(u => u._id),
       });
@@ -86,14 +90,20 @@ const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
     }
   });
 
-  // Add individual users that aren't in groups
+  // Add individual users that aren't in groups AND aren't excluded
   users.forEach(user => {
     if (!processedUserIds.has(user._id)) {
-      groups.push({
-        value: user._id,
-        label: user.displayName || `${user.firstName} ${user.lastName}`,
-        userIds: [user._id],
-      });
+      const displayName =
+        user.displayName || `${user.firstName} ${user.lastName}`;
+
+      // EXCLUDE specified users from the filter list
+      if (!excludedUsers.includes(displayName)) {
+        groups.push({
+          value: user._id,
+          label: displayName,
+          userIds: [user._id],
+        });
+      }
     }
   });
 
@@ -317,7 +327,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               }}
               type="button"
               id="search-button">
-              🔍 Traži po broju otpremnice
+              Traži po broju otpremnice
             </SearchButton>
 
             <SearchButton
@@ -327,7 +337,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               }}
               type="button"
               id="search-registration-button">
-              🚗 Traži po registraciji
+              Traži po registraciji
             </SearchButton>
 
             <ClearButton onClick={onClearSearch} type="button">
