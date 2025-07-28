@@ -205,11 +205,9 @@ const Dashboard: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
   // Date state for date range
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
-
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
   const [selectedCode, setSelectedCode] = useState('all');
   // NEW: Add prijevoznik filtering states
@@ -217,7 +215,6 @@ const Dashboard: React.FC = () => {
   const [availableCarriers, setAvailableCarriers] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState('all');
   const [availableUsers, setAvailableUsers] = useState<ItemUser[]>([]);
-
   const [sortOrder, setSortOrder] = useState('date-desc');
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -233,10 +230,24 @@ const Dashboard: React.FC = () => {
     useState<boolean>(false);
   // Add state for total weight from backend
   const [totalWeight, setTotalWeight] = useState(0);
-
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
+
+  const getDisplayNameForUser = (item: Item): string => {
+    if (!item.createdBy) return 'Nepoznato';
+
+    // Check if this user should be grouped
+    if (
+      item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
+      item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
+    ) {
+      return 'VELIČKI KAMEN d.o.o.';
+    }
+
+    // For all other users, use existing logic
+    return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
+  };
 
   // Format weight display in tons
   const formatWeight = (weightInKg: number) => {
@@ -926,8 +937,7 @@ const Dashboard: React.FC = () => {
             <ItemTitle>{item.title}</ItemTitle>
             {item.createdBy && (
               <ItemDetails>
-                <strong>Dobavljač:</strong> {item.createdBy.firstName}{' '}
-                {item.createdBy.lastName}
+                <strong>Dobavljač:</strong> {getDisplayNameForUser(item)}
               </ItemDetails>
             )}
             {user?.role === 'admin' ? (
