@@ -355,7 +355,6 @@ const Dashboard: React.FC = () => {
             ...(selectedPrijevoznik !== 'all' && {
               prijevoznik: selectedPrijevoznik,
             }),
-            // ADD THIS LINE for user filtering
             ...(selectedUser !== 'all' && {createdByUser: selectedUser}),
             sortOrder,
             ...(inTransitOnly && {inTransitOnly: true}),
@@ -395,10 +394,10 @@ const Dashboard: React.FC = () => {
       endDate,
       selectedCode,
       selectedPrijevoznik,
-      selectedUser, // ADD THIS DEPENDENCY
+      selectedUser,
       sortOrder,
-      searchMode,
-      searchValue,
+      searchMode, // Keep searchMode but REMOVE searchValue
+      // searchValue, // REMOVE THIS LINE
       inTransitOnly,
     ],
   );
@@ -559,31 +558,30 @@ const Dashboard: React.FC = () => {
       setSearchMode(true);
       setPage(1);
 
-      Promise.resolve().then(() => {
-        const searchFilters: ItemFilters =
-          searchType === 'title'
-            ? {searchTitle: currentSearchValue}
-            : {searchRegistration: currentSearchValue};
+      // DIRECTLY call the API instead of relying on fetchItems
+      const searchFilters: ItemFilters =
+        searchType === 'title'
+          ? {searchTitle: currentSearchValue}
+          : {searchRegistration: currentSearchValue};
 
-        console.log('Fetching with search filters:', searchFilters);
+      console.log('Fetching with search filters:', searchFilters);
 
-        apiService
-          .getItems(1, 10, searchFilters)
-          .then(response => {
-            setItems(response.items);
-            setHasMore(response.pagination.hasMore);
-            setTotalItems(response.pagination.total);
-            setTotalWeight(response.totalWeight || 0);
-            setError('');
-          })
-          .catch(err => {
-            console.error('Error fetching items:', err);
-            setError('Greška pri dohvaćanju dokumenata');
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      });
+      apiService
+        .getItems(1, 10, searchFilters)
+        .then(response => {
+          setItems(response.items);
+          setHasMore(response.pagination.hasMore);
+          setTotalItems(response.pagination.total);
+          setTotalWeight(response.totalWeight || 0);
+          setError('');
+        })
+        .catch(err => {
+          console.error('Error fetching items:', err);
+          setError('Greška pri dohvaćanju dokumenata');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [searchValue, registrationSearchValue, searchType]);
   const clearSearch = useCallback(() => {
@@ -657,9 +655,10 @@ const Dashboard: React.FC = () => {
     endDate,
     selectedCode,
     selectedPrijevoznik,
-    selectedUser, // ADD THIS LINE
+    selectedUser,
     sortOrder,
     inTransitOnly,
+    fetchItems,
   ]);
 
   useEffect(() => {
