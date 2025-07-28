@@ -903,12 +903,12 @@ const Dashboard: React.FC = () => {
         {items.map(item => (
           <ItemCard key={item._id}>
             <ItemTitle>{item.title}</ItemTitle>
-            {item.registracija && (
+            {item.createdBy && (
               <ItemDetails>
-                <strong>Registracija:</strong> {item.registracija}
+                <strong>Dobavljač:</strong> {item.createdBy.firstName}{' '}
+                {item.createdBy.lastName}
               </ItemDetails>
             )}
-
             {user?.role === 'admin' ? (
               <AdminCodeEditor
                 item={item}
@@ -920,11 +920,15 @@ const Dashboard: React.FC = () => {
                 <strong>RN:</strong> {getFormattedCode(item.code)}
               </ItemDetails>
             )}
-
             {/* NEW: Display prijevoznik if it exists */}
             {item.prijevoznik && (
               <ItemDetails>
                 <strong>Prijevoznik:</strong> {item.prijevoznik}
+              </ItemDetails>
+            )}
+            {item.registracija && (
+              <ItemDetails>
+                <strong>Registracija:</strong> {item.registracija}
               </ItemDetails>
             )}
 
@@ -934,12 +938,7 @@ const Dashboard: React.FC = () => {
                 <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
               </ItemDetails>
             )}
-            {item.createdBy && (
-              <ItemDetails>
-                <strong>Dobavljač:</strong> {item.createdBy.firstName}{' '}
-                {item.createdBy.lastName}
-              </ItemDetails>
-            )}
+
             {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
               <ItemDetails>
                 <strong>Razlika u vaganju:</strong>{' '}
