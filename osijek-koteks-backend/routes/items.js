@@ -123,7 +123,72 @@ router.get('/codes', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
+router.get('/users', auth, async (req, res) => {
+  try {
+    console.log('Fetching unique users who created items...');
 
+    // Build query based on user permissions (same logic as main items route)
+    let matchQuery = {};
+
+    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      // Non-admin users: filter by their assigned codes
+      if (req.user.codes && req.user.codes.length > 0) {
+        matchQuery.code = {$in: req.user.codes};
+      } else {
+        // User with no codes assigned should see nothing
+        return res.json([]);
+      }
+    } else if (
+      req.user.role === 'admin' &&
+      req.user.codes &&
+      req.user.codes.length > 0
+    ) {
+      // Admin with codes assigned: filter by those codes
+      matchQuery.code = {$in: req.user.codes};
+    }
+
+    // Aggregate to get unique users with their info
+    const uniqueUsers = await Item.aggregate([
+      {$match: matchQuery},
+      {
+        $group: {
+          _id: '$createdBy',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'userInfo',
+        },
+      },
+      {
+        $unwind: '$userInfo',
+      },
+      {
+        $project: {
+          _id: '$userInfo._id',
+          firstName: '$userInfo.firstName',
+          lastName: '$userInfo.lastName',
+          email: '$userInfo.email',
+          displayName: {
+            $concat: ['$userInfo.firstName', ' ', '$userInfo.lastName'],
+          },
+        },
+      },
+      {
+        $sort: {displayName: 1},
+      },
+    ]);
+
+    console.log('Found unique users:', uniqueUsers.length);
+    res.json(uniqueUsers);
+  } catch (err) {
+    console.error('Error fetching unique users:', err);
+    res.status(500).json({message: 'Server error'});
+  }
+});
 // Get unique carriers (prijevoznik values) - BEFORE /:id route
 router.get('/carriers', auth, async (req, res) => {
   try {
@@ -167,8 +232,9 @@ router.get('/', auth, async (req, res) => {
       prijevoznik,
       sortOrder,
       searchTitle,
-      searchRegistration, // ADD THIS LINE
+      searchRegistration,
       inTransitOnly,
+      createdByUser, // ADD THIS LINE
     } = req.query;
 
     const page = parseInt(req.query.page) || 1;
@@ -178,21 +244,19 @@ router.get('/', auth, async (req, res) => {
     // Build the base query
     let query = {};
 
-    // Handle search modes - UPDATED SECTION
+    // Handle search modes
     if (searchTitle) {
-      // Use case-insensitive regex search for title
       query.title = {$regex: searchTitle, $options: 'i'};
     } else if (searchRegistration) {
-      // ADD THIS: Use case-insensitive regex search for registration
       query.registracija = {$regex: searchRegistration, $options: 'i'};
     } else {
       // Apply filtering logic only when not in search mode
+
+      // Your existing role-based filtering logic...
       if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
-        // Non-admin users: filter by their assigned codes
         if (req.user.codes && req.user.codes.length > 0) {
           query.code = {$in: req.user.codes};
         } else {
-          // User with no codes assigned should see nothing
           return res.json({
             items: [],
             pagination: {
@@ -209,12 +273,10 @@ router.get('/', auth, async (req, res) => {
         req.user.codes &&
         req.user.codes.length > 0
       ) {
-        // Admin with codes assigned: filter by those codes
         query.code = {$in: req.user.codes};
       }
-      // If admin with no codes assigned (empty array or null), show all items (no filtering)
 
-      // Apply date range filtering (only when not searching)
+      // Your existing date, code, prijevoznik, and inTransit filtering...
       if (startDate && endDate) {
         query.creationDate = {
           $gte: new Date(startDate),
@@ -222,9 +284,7 @@ router.get('/', auth, async (req, res) => {
         };
       }
 
-      // Apply code filter (only when not searching)
       if (code && code !== 'all') {
-        // If user already has code filtering from role, intersect with selected code
         if (query.code && query.code.$in) {
           query.code = {$in: [code]};
         } else {
@@ -232,20 +292,23 @@ router.get('/', auth, async (req, res) => {
         }
       }
 
-      // Apply prijevoznik filter (only when not searching)
       if (prijevoznik && prijevoznik.trim()) {
         query.prijevoznik = {$regex: prijevoznik, $options: 'i'};
       }
 
-      // Apply in-transit filter (only when not searching)
       if (inTransitOnly === 'true') {
         query.in_transit = true;
+      }
+
+      // ADD USER FILTERING
+      if (createdByUser && createdByUser !== 'all') {
+        query.createdBy = createdByUser;
       }
     }
 
     console.log('Final query:', query);
 
-    // Build the sort object
+    // Your existing sort logic...
     let sort = {};
     switch (sortOrder) {
       case 'date-asc':
@@ -256,13 +319,13 @@ router.get('/', auth, async (req, res) => {
         break;
       case 'pending-first':
         sort = {
-          approvalStatus: 1, // 'na čekanju' comes before 'odobreno' alphabetically
+          approvalStatus: 1,
           creationDate: -1,
         };
         break;
       case 'approved-first':
         sort = {
-          approvalStatus: -1, // 'odobreno' comes after 'na čekanju' alphabetically, so reverse
+          approvalStatus: -1,
           creationDate: -1,
         };
         break;
@@ -270,44 +333,27 @@ router.get('/', auth, async (req, res) => {
         sort = {creationDate: -1};
     }
 
-    // Get total count for pagination
-    const total = await Item.countDocuments(query);
-
-    // Get items with pagination and populate user data
+    // Get items with user population
     const items = await Item.find(query)
+      .populate('createdBy', 'firstName lastName email') // ADD THIS LINE
       .populate('approvedBy', 'firstName lastName')
       .sort(sort)
-      .limit(limit)
-      .skip(skip);
+      .skip(skip)
+      .limit(limit);
 
-    // Calculate total weight for all items that match the query (not just the current page)
-    const allMatchingItems = await Item.find(query).select('tezina');
-    const totalWeight = allMatchingItems.reduce((sum, item) => {
-      return sum + (item.tezina || 0);
-    }, 0);
-
-    // Calculate pagination info
-    const pages = Math.ceil(total / limit);
-    const hasMore = page < pages;
-
-    console.log('Query results:', {
-      total,
-      page,
-      pages,
-      hasMore,
-      itemsCount: items.length,
-      totalWeight,
-    });
+    // Your existing pagination and response logic...
+    const total = await Item.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
 
     res.json({
       items,
       pagination: {
         total,
         page,
-        pages,
-        hasMore,
+        pages: totalPages,
+        hasMore: page < totalPages,
       },
-      totalWeight,
+      totalWeight: items.reduce((sum, item) => sum + (item.tezina || 0), 0),
     });
   } catch (err) {
     console.error('Error fetching items:', err);
@@ -359,16 +405,17 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Create a new item
+// Create a new item - Complete POST route
 router.post('/', auth, async (req, res) => {
   try {
+    // Only admin and bot users can create items
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
       return res
         .status(403)
         .json({message: 'Access denied. Admin or Bot users only.'});
     }
 
-    // Add prijevoznik to the destructuring
+    // Extract fields from request body including prijevoznik
     const {
       title,
       code,
@@ -388,6 +435,7 @@ router.post('/', auth, async (req, res) => {
       tezina,
       prijevoznik,
       hasTitle: !!title,
+      createdBy: req.user._id, // LOG the user who is creating
     });
 
     // Validate required fields
@@ -449,7 +497,7 @@ router.post('/', auth, async (req, res) => {
       timeZone: 'Europe/Zagreb',
     });
 
-    // Create the new item object with prijevoznik handling
+    // Create the new item object with all fields including createdBy
     const item = new Item({
       title: title.trim(),
       code: code.trim(),
@@ -457,6 +505,7 @@ router.post('/', auth, async (req, res) => {
       prijevoznik:
         prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
       pdfUrl: pdfUrl.trim(),
+      createdBy: req.user._id, // ADD THIS LINE - Store who created the item
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,
       approvalStatus: 'na čekanju',
@@ -494,6 +543,7 @@ router.post('/', auth, async (req, res) => {
     }
     // If neither is provided, both remain undefined (which is fine)
 
+    // Save the new item
     const newItem = await item.save();
     console.log('Created new item:', {
       id: newItem._id,
@@ -501,6 +551,7 @@ router.post('/', auth, async (req, res) => {
       neto: newItem.neto,
       tezina: newItem.tezina,
       prijevoznik: newItem.prijevoznik,
+      createdBy: newItem.createdBy, // LOG the creator
     });
 
     res.status(201).json(newItem);
@@ -512,7 +563,6 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-
 // Update item code (admin only) - Allow duplicate codes
 router.patch('/:id/code', auth, async (req, res) => {
   try {

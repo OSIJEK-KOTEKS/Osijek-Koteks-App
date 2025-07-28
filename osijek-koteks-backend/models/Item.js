@@ -1,4 +1,4 @@
-// Item.js (MongoDB Schema) - Updated with prijevoznik field
+// Item.js (MongoDB Schema) - Complete file with user filter support
 const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
@@ -37,6 +37,12 @@ const ItemSchema = new mongoose.Schema(
         message: 'Code cannot be empty',
       },
     },
+    // ADD: createdBy field for user filtering
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true, // Make it required for new items
+    },
     neto: {
       type: Number,
       required: false,
@@ -46,7 +52,7 @@ const ItemSchema = new mongoose.Schema(
       type: Number,
       required: false,
     },
-    // NEW: Add prijevoznik field
+    // Add prijevoznik field
     prijevoznik: {
       type: String,
       required: false,
@@ -89,7 +95,7 @@ const ItemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    //  Updated to have two photos
+    // Updated to have two photos
     approvalPhotoFront: photoSchema,
     approvalPhotoBack: photoSchema,
     approvalLocation: {
@@ -132,7 +138,6 @@ const ItemSchema = new mongoose.Schema(
       },
     },
   },
-
   {
     timestamps: true,
   },
@@ -142,7 +147,8 @@ const ItemSchema = new mongoose.Schema(
 ItemSchema.index({code: 1});
 ItemSchema.index({approvalStatus: 1});
 ItemSchema.index({creationDate: -1});
-ItemSchema.index({prijevoznik: 1}); // NEW: Add index for prijevoznik field
+ItemSchema.index({prijevoznik: 1});
+ItemSchema.index({createdBy: 1}); // ADD: Index for user filtering
 
 // Method to format dates for response
 ItemSchema.methods.toJSON = function () {
