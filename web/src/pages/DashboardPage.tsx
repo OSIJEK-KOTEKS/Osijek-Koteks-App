@@ -151,6 +151,7 @@ const ButtonGroup = styled.div`
 `;
 const PhotoButtonsGroup = styled.div`
   display: flex;
+  flex-wrap: wrap; /* Add this to prevent overflow */
   gap: ${({theme}) => theme.spacing.small};
   width: 100%;
 `;
