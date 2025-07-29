@@ -867,7 +867,7 @@ const Dashboard: React.FC = () => {
         </HeaderLeft>
         <HeaderActions>
           {(user?.role === 'admin' || user?.role === 'bot') && (
-            <S.Button onClick={() => setCreateModalVisible(true)}>
+            <S.Button id="add-item" onClick={() => setCreateModalVisible(true)}>
               Dodaj novi dokument
             </S.Button>
           )}
