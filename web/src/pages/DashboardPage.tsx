@@ -868,7 +868,6 @@ const Dashboard: React.FC = () => {
         <HeaderActions>
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button
-              id="add-item"
               id="create_item"
               onClick={() => setCreateModalVisible(true)}>
               Dodaj novi dokument
