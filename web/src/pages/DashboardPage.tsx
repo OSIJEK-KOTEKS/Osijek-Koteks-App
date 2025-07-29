@@ -953,7 +953,7 @@ const Dashboard: React.FC = () => {
 
           {/* User Management button - only for admins */}
           {user?.role === 'admin' && (
-            <S.Button onClick={() => navigate('/users')} variant="secondary">
+            <S.Button onClick={() => navigate('/users')}>
               Upravljanje korisnicima
             </S.Button>
           )}
