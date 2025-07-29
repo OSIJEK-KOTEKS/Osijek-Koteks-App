@@ -123,8 +123,32 @@ const ButtonGroup = styled.div`
   gap: ${({theme}) => theme.spacing.small};
   margin-top: ${({theme}) => theme.spacing.medium};
   flex-wrap: wrap;
-`;
+  width: 100%;
 
+  /* Make buttons smaller and more responsive */
+  & > button {
+    flex: 1 1 calc(25% - ${({theme}) => theme.spacing.small}); /* 4 buttons per row max */
+    min-width: 80px; /* Minimum button width */
+    max-width: 120px; /* Maximum button width to prevent overflow */
+    padding: 6px 8px !important; /* Smaller padding */
+    font-size: 0.8rem !important; /* Smaller font */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+  }
+
+  /* For narrow cards, allow 3 buttons per row */
+  @media (max-width: 400px) {
+    & > button {
+      flex: 1 1 calc(33.333% - ${({theme}) => theme.spacing.small});
+      min-width: 70px;
+      max-width: 100px;
+      padding: 5px 6px !important;
+      font-size: 0.75rem !important;
+    }
+  }
+`;
 const PhotoButtonsGroup = styled.div`
   display: flex;
   gap: ${({theme}) => theme.spacing.small};
@@ -172,6 +196,25 @@ const DashboardContainer = styled.div`
 const HeaderActions = styled.div`
   display: flex;
   gap: ${({theme}) => theme.spacing.medium};
+
+  /* Target all buttons within HeaderActions and reduce their size by 15% */
+  & > button,
+  & button {
+    padding: 0.638rem 0.85rem !important; /* Original was ~0.75rem 1rem, reduced by 15% */
+    font-size: 0.935rem !important; /* Original was ~1.1rem, reduced by 15% */
+  }
+
+  /* For buttons that specifically have the S.Button styling */
+  & > ${S.Button}, & ${S.Button} {
+    padding: 0.638rem 0.85rem !important;
+    font-size: 0.935rem !important;
+  }
+`;
+
+// Alternative approach: Create a smaller variant of the button
+const SmallButton = styled(S.Button)`
+  padding: 0.638rem 0.85rem; /* 15% smaller than standard */
+  font-size: 0.935rem; /* 15% smaller font */
 `;
 
 const LoadMoreButton = styled(S.Button)`
@@ -863,9 +906,42 @@ const Dashboard: React.FC = () => {
       <Header>
         <HeaderLeft>
           <Logo />
-          <h1>Dokument Dashboard</h1>
         </HeaderLeft>
         <HeaderActions>
+          <ExportExcelButton
+            items={items}
+            totalItems={totalItems}
+            totalWeight={totalWeight}
+            isLoading={loading}
+            onExportAll={fetchAllItemsForPrinting}
+            dateRange={formatDateRangeForPrint(
+              startDate,
+              endDate,
+              selectedCode,
+              selectedPrijevoznik,
+              selectedUser,
+              inTransitOnly,
+            )}
+            selectedCode={selectedCode}
+            inTransitOnly={inTransitOnly}
+          />
+          {/* Print and Export buttons */}
+          <PrintTableButton
+            items={items}
+            totalItems={totalItems}
+            totalWeight={totalWeight}
+            isLoading={loading}
+            onPrintAll={fetchAllItemsForPrinting}
+            dateRange={formatDateRangeForPrint(
+              startDate,
+              endDate,
+              selectedCode,
+              selectedPrijevoznik,
+              selectedUser,
+              inTransitOnly,
+            )}
+          />
+          {/* Document creation buttons */}
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button
               id="create_item"
@@ -873,6 +949,23 @@ const Dashboard: React.FC = () => {
               Dodaj novi dokument
             </S.Button>
           )}
+
+          {/* User Management button - only for admins */}
+          {user?.role === 'admin' && (
+            <S.Button onClick={() => navigate('/users')} variant="secondary">
+              Upravljanje korisnicima
+            </S.Button>
+          )}
+
+          <PrintAllButton
+            items={items}
+            totalItems={totalItems}
+            totalWeight={totalWeight}
+            isLoading={loading}
+            onPrintAll={fetchAllItemsForPrinting}
+          />
+
+          {/* Logout button */}
           <S.Button onClick={handleLogout}>Odjava</S.Button>
         </HeaderActions>
       </Header>
@@ -914,55 +1007,6 @@ const Dashboard: React.FC = () => {
           inTransitOnly={inTransitOnly}
           onInTransitChange={setInTransitOnly}
         />
-
-        {/* Print Buttons */}
-        <div
-          style={{
-            marginBottom: '20px',
-            display: 'flex',
-            gap: '10px',
-            flexWrap: 'wrap',
-          }}>
-          <PrintTableButton
-            items={items}
-            totalItems={totalItems}
-            totalWeight={totalWeight}
-            isLoading={loading}
-            onPrintAll={fetchAllItemsForPrinting}
-            dateRange={formatDateRangeForPrint(
-              startDate,
-              endDate,
-              selectedCode,
-              selectedPrijevoznik,
-              selectedUser,
-              inTransitOnly,
-            )}
-          />
-          <PrintAllButton
-            items={items}
-            totalItems={totalItems}
-            totalWeight={totalWeight}
-            isLoading={loading}
-            onPrintAll={fetchAllItemsForPrinting}
-          />
-          <ExportExcelButton
-            items={items}
-            totalItems={totalItems}
-            totalWeight={totalWeight}
-            isLoading={loading}
-            onExportAll={fetchAllItemsForPrinting}
-            dateRange={formatDateRangeForPrint(
-              startDate,
-              endDate,
-              selectedCode,
-              selectedPrijevoznik,
-              selectedUser,
-              inTransitOnly,
-            )}
-            selectedCode={selectedCode}
-            inTransitOnly={inTransitOnly}
-          />
-        </div>
       </DashboardContainer>
 
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
@@ -1092,6 +1136,18 @@ const Dashboard: React.FC = () => {
                   <PhotoButtonsGroup>
                     <PrintButton item={item} />
 
+                    {/* RESTORED: Original PDF button */}
+                    <ActionButton
+                      onClick={() => {
+                        try {
+                          window.open(item.pdfUrl, '_blank');
+                        } catch (error) {
+                          console.error('Error opening PDF:', error);
+                        }
+                      }}>
+                      PDF
+                    </ActionButton>
+
                     {/* Show approval photos if they exist */}
                     {item.approvalPhotoFront?.url && (
                       <ActionButton
@@ -1101,7 +1157,7 @@ const Dashboard: React.FC = () => {
                             setSelectedImage(getImageUrl(imageUrl));
                           }
                         }}>
-                        Prednja strana
+                        Registracija
                       </ActionButton>
                     )}
 
@@ -1113,10 +1169,49 @@ const Dashboard: React.FC = () => {
                             setSelectedImage(getImageUrl(imageUrl));
                           }
                         }}>
-                        Stražnja strana
+                        materijal
                       </ActionButton>
                     )}
                   </PhotoButtonsGroup>
+
+                  {/* RESTORED: PC User Approval PDF Document */}
+                  {item.approvalDocument?.url && (
+                    <ActionButton
+                      onClick={async () => {
+                        try {
+                          const pdfUrl = item.approvalDocument!.url!;
+
+                          // Extract filename from URL for download
+                          const urlParts = pdfUrl.split('/');
+                          const filename = `${
+                            urlParts[urlParts.length - 1]
+                          }.pdf`;
+
+                          // Try to download the PDF
+                          const response = await fetch(pdfUrl);
+                          const blob = await response.blob();
+
+                          const blobUrl = window.URL.createObjectURL(
+                            new Blob([blob], {type: 'application/pdf'}),
+                          );
+
+                          const a = document.createElement('a');
+                          a.href = blobUrl;
+                          a.download = filename;
+                          document.body.appendChild(a);
+                          a.click();
+
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                          console.error('Error downloading PDF:', error);
+                          // Fallback to opening in new tab
+                          window.open(item.approvalDocument!.url!, '_blank');
+                        }
+                      }}>
+                      Dokumentacija PDF
+                    </ActionButton>
+                  )}
 
                   {/* Location button */}
                   {item.approvalLocation && (
