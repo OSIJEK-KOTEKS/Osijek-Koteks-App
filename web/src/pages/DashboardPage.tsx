@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {apiService, getImageUrl} from '../utils/api';
@@ -19,7 +19,7 @@ import ExportExcelButton from '../components/ExportExcelButton';
 import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
 import AdminCodeEditor from '../components/AdminCodeEditor';
 
-// Styled Components
+// ORIGINAL STYLED COMPONENTS - Restored from project
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
@@ -163,6 +163,12 @@ const EmptyMessage = styled.div`
   box-shadow: ${({theme}) => theme.shadows.main};
 `;
 
+const DashboardContainer = styled.div`
+  background: ${({theme}) => theme.colors.white};
+  border-radius: ${({theme}) => theme.borderRadius};
+  box-shadow: ${({theme}) => theme.shadows.main};
+`;
+
 const HeaderActions = styled.div`
   display: flex;
   gap: ${({theme}) => theme.spacing.medium};
@@ -199,41 +205,58 @@ const TotalWeightLabel = styled.div`
 `;
 
 const Dashboard: React.FC = () => {
+  // Main state
   const [items, setItems] = useState<Item[]>([]);
-  const [inTransitOnly, setInTransitOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  // Date state for date range
+  const [inTransitOnly, setInTransitOnly] = useState(false);
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Filter states
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
   const [selectedCode, setSelectedCode] = useState('all');
-  // NEW: Add prijevoznik filtering states
   const [selectedPrijevoznik, setSelectedPrijevoznik] = useState('all');
-  const [availableCarriers, setAvailableCarriers] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState('all');
-  const [availableUsers, setAvailableUsers] = useState<ItemUser[]>([]);
   const [sortOrder, setSortOrder] = useState('date-desc');
+
+  // Available options for filters
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [availableCarriers, setAvailableCarriers] = useState<string[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<ItemUser[]>([]);
+
+  // Search states
   const [searchMode, setSearchMode] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [registrationSearchValue, setRegistrationSearchValue] = useState('');
   const [searchType, setSearchType] = useState<'title' | 'registration'>(
     'title',
-  ); // Track what we're searching for
-  const [totalItems, setTotalItems] = useState(0);
+  );
+
+  // Modal states
   const [isCreateModalVisible, setCreateModalVisible] =
     useState<boolean>(false);
-  // Add state for total weight from backend
+
+  // Other states
   const [totalWeight, setTotalWeight] = useState(0);
+
+  // Refs for preventing race conditions
+  const isFetchingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Hooks
   const {user, signOut} = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
 
+  // Utility functions
   const getDisplayNameForUser = (item: Item): string => {
     if (!item.createdBy) return 'Nepoznato';
 
@@ -245,7 +268,6 @@ const Dashboard: React.FC = () => {
       return 'VELIČKI KAMEN d.o.o.';
     }
 
-    // ADD THIS NEW GROUP CHECK:
     if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
       return 'KAMEN - PSUNJ d.o.o.';
     }
@@ -254,80 +276,70 @@ const Dashboard: React.FC = () => {
     return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
   };
 
-  // Format weight display in tons
   const formatWeight = (weightInKg: number) => {
     const weightInTons = weightInKg / 1000;
     return weightInTons.toFixed(3);
   };
 
+  // FIXED: Add safe date parsing function
+  const safeParseDate = (dateString: string): string => {
+    if (!dateString) return 'N/A';
+
+    // If it's already a formatted Croatian date string (dd.mm.yyyy), return as is
+    if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+      return dateString;
+    }
+
+    // Try to parse as ISO date or other formats
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      console.log('Failed to parse date:', dateString); // Debug log
+      return dateString; // Return original string instead of N/A to see what we're getting
+    }
+
+    return date.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  // FIXED: Add safe date and time formatting
+  const formatDateAndTime = (
+    creationDate: string,
+    creationTime?: string,
+  ): string => {
+    const formattedDate = safeParseDate(creationDate);
+
+    if (!formattedDate || formattedDate === 'N/A') {
+      console.log('formatDateAndTime - bad date:', creationDate); // Debug log
+      return creationTime ? `${creationDate} ${creationTime}` : creationDate; // Show original data for debugging
+    }
+
+    return creationTime ? `${formattedDate} ${creationTime}` : formattedDate;
+  };
+
   const showRestrictedMessage =
     user?.role === 'admin' && user?.codes && user.codes.length > 0;
 
-  const fetchAvailableCodes = useCallback(async () => {
-    try {
-      console.log('Fetching available codes...');
-      const codes = await apiService.getUniqueCodes();
-
-      // Ensure deduplication and filtering on frontend - handle different data types
-      const uniqueCodes = Array.from(new Set(codes))
-        .filter(code => code != null && code !== '') // Remove null/undefined/empty values
-        .map(code => String(code).trim()) // Convert to string and trim
-        .filter(code => code !== '') // Remove empty strings after trimming
-        .sort();
-
-      console.log('Raw codes from API:', codes);
-      console.log(
-        'Raw codes types:',
-        codes.map(code => typeof code),
-      );
-      console.log('Processed unique codes:', uniqueCodes);
-
-      setAvailableCodes(uniqueCodes);
-    } catch (error) {
-      console.error('Error fetching codes:', error);
-    }
-  }, []);
-
-  const fetchAvailableCarriers = useCallback(async () => {
-    try {
-      console.log('Fetching available carriers...');
-      const carriers = await apiService.getUniqueCarriers();
-
-      // Ensure deduplication and filtering on frontend - handle different data types
-      const uniqueCarriers = Array.from(new Set(carriers))
-        .filter(carrier => carrier != null && carrier !== '') // Remove null/undefined/empty values
-        .map(carrier => String(carrier).trim()) // Convert to string and trim
-        .filter(carrier => carrier !== '') // Remove empty strings after trimming
-        .sort();
-
-      console.log('Raw carriers from API:', carriers);
-      console.log(
-        'Raw carriers types:',
-        carriers.map(carrier => typeof carrier),
-      );
-      console.log('Processed unique carriers:', uniqueCarriers);
-
-      setAvailableCarriers(uniqueCarriers);
-    } catch (error) {
-      console.error('Error fetching carriers:', error);
-    }
-  }, []);
-  const fetchAvailableUsers = useCallback(async () => {
-    try {
-      console.log('Fetching available users...');
-      const users = await apiService.getUniqueUsers();
-      console.log('Processed unique users:', users);
-      setAvailableUsers(users);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  }, []);
+  // FIXED: Main fetch function with proper pagination logic
   const fetchItems = useCallback(
-    async (isLoadingMore: boolean = false) => {
-      try {
-        const currentPage = isLoadingMore ? page : 1;
+    async (
+      pageNumber: number = 1,
+      append: boolean = false,
+      signal?: AbortSignal,
+    ) => {
+      // Prevent multiple simultaneous requests
+      if (isFetchingRef.current && !signal) {
+        console.log('Fetch already in progress, skipping...');
+        return;
+      }
 
-        if (isLoadingMore) {
+      try {
+        isFetchingRef.current = true;
+
+        // Set loading states
+        if (append && pageNumber > 1) {
           setLoadingMore(true);
         } else {
           setLoading(true);
@@ -335,13 +347,17 @@ const Dashboard: React.FC = () => {
 
         let filters: ItemFilters;
 
-        if (searchMode && searchValue) {
+        if (searchMode && searchValue.trim()) {
+          // Search mode filters
           filters = {
-            searchTitle: searchValue,
+            searchTitle: searchValue.trim(),
           };
-          console.log('Using search filters:', filters);
+        } else if (searchMode && registrationSearchValue.trim()) {
+          filters = {
+            searchRegistration: registrationSearchValue.trim(),
+          };
         } else {
-          // Updated to use date range
+          // Normal mode filters with date range
           const startOfDay = new Date(startDate);
           startOfDay.setHours(0, 0, 0, 0);
 
@@ -359,190 +375,220 @@ const Dashboard: React.FC = () => {
             sortOrder,
             ...(inTransitOnly && {inTransitOnly: true}),
           };
-          console.log('Using date range filters:', filters);
         }
 
-        console.log('Making request with filters:', filters);
+        console.log(`Fetching page ${pageNumber} with filters:`, filters);
 
-        const response = await apiService.getItems(currentPage, 10, filters);
-        console.log('API Response:', response);
+        const response = await apiService.getItems(pageNumber, 10, filters);
 
-        if (isLoadingMore) {
-          setItems(prevItems => [...prevItems, ...response.items]);
+        if (signal?.aborted) {
+          return;
+        }
+
+        // Update items based on append mode
+        if (append && pageNumber > 1) {
+          setItems(prevItems => {
+            // Prevent duplicates
+            const existingIds = new Set(prevItems.map(item => item._id));
+            const newItems = response.items.filter(
+              item => !existingIds.has(item._id),
+            );
+            return [...prevItems, ...newItems];
+          });
         } else {
           setItems(response.items);
+          setPage(pageNumber); // Set page to current page
         }
 
+        // Update pagination info
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
         setTotalWeight(response.totalWeight || 0);
         setError('');
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.log('Fetch aborted');
+          return;
+        }
         console.error('Error fetching items:', err);
         setError('Greška pri dohvaćanju dokumenata');
       } finally {
-        if (isLoadingMore) {
-          setLoadingMore(false);
-        } else {
-          setLoading(false);
-        }
+        isFetchingRef.current = false;
+        setLoading(false);
+        setLoadingMore(false);
       }
     },
     [
-      page,
       startDate,
       endDate,
       selectedCode,
       selectedPrijevoznik,
       selectedUser,
       sortOrder,
-      searchMode, // Keep searchMode but REMOVE searchValue
-      // searchValue, // REMOVE THIS LINE
       inTransitOnly,
+      searchMode,
+      searchValue,
+      registrationSearchValue,
     ],
   );
-  const handleApprovalSuccess = useCallback(() => {
+
+  // Fetch functions for filter options
+  const fetchAvailableCodes = useCallback(async () => {
+    try {
+      console.log('Fetching available codes...');
+      const codes = await apiService.getUniqueCodes();
+
+      // Ensure deduplication and filtering on frontend
+      const uniqueCodes = Array.from(new Set(codes))
+        .filter(code => code != null && code !== '')
+        .map(code => String(code).trim())
+        .filter(code => code !== '')
+        .sort();
+
+      console.log('Processed unique codes:', uniqueCodes);
+      setAvailableCodes(uniqueCodes);
+    } catch (error) {
+      console.error('Error fetching codes:', error);
+    }
+  }, []);
+
+  const fetchAvailableCarriers = useCallback(async () => {
+    try {
+      console.log('Fetching available carriers...');
+      const carriers = await apiService.getUniqueCarriers();
+
+      // Ensure deduplication and filtering on frontend
+      const uniqueCarriers = Array.from(new Set(carriers))
+        .filter(carrier => carrier != null && carrier !== '')
+        .map(carrier => String(carrier).trim())
+        .filter(carrier => carrier !== '')
+        .sort();
+
+      console.log('Processed unique carriers:', uniqueCarriers);
+      setAvailableCarriers(uniqueCarriers);
+    } catch (error) {
+      console.error('Error fetching carriers:', error);
+    }
+  }, []);
+
+  const fetchAvailableUsers = useCallback(async () => {
+    try {
+      console.log('Fetching available users...');
+      const users = await apiService.getUniqueUsers();
+      console.log('Processed unique users:', users);
+      setAvailableUsers(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  }, []);
+
+  // FIXED: Load more handler
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMore || loadingMore || loading || isFetchingRef.current) {
+      console.log('Skipping load more:', {
+        hasMore,
+        loadingMore,
+        loading,
+        isFetching: isFetchingRef.current,
+      });
+      return;
+    }
+
+    if (items.length >= totalItems) {
+      console.log('All items loaded');
+      setHasMore(false);
+      return;
+    }
+
+    const nextPage = page + 1;
+    console.log(`Loading more items, page ${nextPage}`);
+
+    setPage(nextPage);
+    await fetchItems(nextPage, true); // append = true
+  }, [
+    hasMore,
+    loadingMore,
+    loading,
+    page,
+    fetchItems,
+    items.length,
+    totalItems,
+  ]);
+
+  // FIXED: Filter change handler
+  const handleFilterChange = useCallback(() => {
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+
+    // Reset pagination and fetch first page
     setPage(1);
     setItems([]);
     setHasMore(true);
-    fetchItems(false);
+
+    fetchItems(1, false, abortControllerRef.current.signal);
   }, [fetchItems]);
 
-  const formatDateRangeForPrint = (
-    startDate: Date,
-    endDate: Date,
-    selectedCode: string,
-    selectedPrijevoznik: string,
-    selectedUser: string, // ADD THIS PARAMETER
-    inTransitOnly: boolean,
-  ) => {
-    const isSameDay = startDate.toDateString() === endDate.toDateString();
+  // Date range change handler
+  const handleDateRangeChange = useCallback(
+    (newStartDate: Date, newEndDate: Date) => {
+      setStartDate(newStartDate);
+      setEndDate(newEndDate);
+      // handleFilterChange will be triggered by the useEffect
+    },
+    [],
+  );
 
-    let dateRangeText = '';
-    if (isSameDay) {
-      dateRangeText = startDate.toLocaleDateString('hr-HR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-    } else {
-      const startStr = startDate.toLocaleDateString('hr-HR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      const endStr = endDate.toLocaleDateString('hr-HR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      dateRangeText = `${startStr} - ${endStr}`;
+  // User change handler
+  const handleUserChange = useCallback((user: string) => {
+    console.log('User filter changed:', user);
+    setSelectedUser(user);
+    // handleFilterChange will be triggered by the useEffect
+  }, []);
+
+  // FIXED: Effects with proper dependencies
+  useEffect(() => {
+    if (!searchMode) {
+      handleFilterChange();
     }
+  }, [
+    startDate,
+    endDate,
+    selectedCode,
+    selectedPrijevoznik,
+    selectedUser,
+    sortOrder,
+    inTransitOnly,
+    searchMode, // Added searchMode to dependencies
+    handleFilterChange,
+  ]);
 
-    const filters = [];
-    if (selectedCode !== 'all') {
-      filters.push(`RN: ${selectedCode}`);
-    }
-    if (selectedPrijevoznik !== 'all') {
-      filters.push(`Prijevoznik: ${selectedPrijevoznik}`);
-    }
-    // ADD THIS BLOCK
-    if (selectedUser !== 'all') {
-      if (selectedUser.includes(',')) {
-        // This is a grouped user
-        const userIds = selectedUser.split(',');
-        const matchingUsers = availableUsers.filter(u =>
-          userIds.includes(u._id),
-        );
+  // Initial load effect
+  useEffect(() => {
+    const initializeDashboard = async () => {
+      try {
+        abortControllerRef.current = new AbortController();
+        await fetchItems(1, false, abortControllerRef.current.signal);
 
-        const hasVelickiKamen = matchingUsers.some(
-          u =>
-            u.email === 'vetovo.vaga@velicki-kamen.hr' ||
-            u.email === 'velicki.vaga@velicki-kamen.hr',
-        );
-
-        // ADD THIS NEW CHECK:
-        const hasKamenPsunj = matchingUsers.some(
-          u => u.email === 'vaga.fukinac@kamen-psunj.hr',
-        );
-
-        if (hasVelickiKamen) {
-          filters.push('Dobavljač: VELIČKI KAMEN d.o.o.');
-        } else if (hasKamenPsunj) {
-          filters.push('Dobavljač: KAMEN - PSUNJ d.o.o.');
-        } else {
-          filters.push(`Dobavljač: Grupa (${matchingUsers.length} korisnika)`);
-        }
-      } else {
-        // Single user logic remains the same
-        const user = availableUsers.find(u => u._id === selectedUser);
-        if (user) {
-          filters.push(
-            `Dobavljač: ${
-              user.displayName || `${user.firstName} ${user.lastName}`
-            }`,
-          );
-        }
+        // Fetch filter options
+        await Promise.all([
+          fetchAvailableCodes(),
+          fetchAvailableCarriers(),
+          fetchAvailableUsers(),
+        ]);
+      } catch (error) {
+        console.error('Error initializing dashboard:', error);
       }
-    }
+    };
 
-    if (inTransitOnly) {
-      filters.push('Samo u tranzitu');
-    }
+    initializeDashboard();
+  }, []); // Empty dependency array for initial load only
 
-    return filters.length > 0
-      ? `${dateRangeText} (${filters.join(', ')})`
-      : dateRangeText;
-  };
-
-  const fetchAllItemsForPrinting = async () => {
-    try {
-      setLoading(true);
-      let allItems: Item[] = [];
-      let currentPage = 1;
-      let hasMoreItems = true;
-
-      let filters: ItemFilters;
-      if (searchMode && searchValue) {
-        filters = {
-          searchTitle: searchValue,
-        };
-      } else {
-        const startOfDay = new Date(startDate);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date(endDate);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        filters = {
-          startDate: startOfDay.toISOString(),
-          endDate: endOfDay.toISOString(),
-          ...(selectedCode !== 'all' && {code: selectedCode}),
-          ...(selectedPrijevoznik !== 'all' && {
-            prijevoznik: selectedPrijevoznik,
-          }),
-          sortOrder,
-          ...(inTransitOnly && {inTransitOnly: true}),
-        };
-      }
-
-      // ADD THE MISSING WHILE LOOP LOGIC
-      while (hasMoreItems) {
-        const response = await apiService.getItems(currentPage, 100, filters);
-        allItems = [...allItems, ...response.items];
-        hasMoreItems = response.pagination.hasMore;
-        currentPage++;
-      }
-
-      return allItems;
-    } catch (error) {
-      console.error('Error fetching all items:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Search handlers
   const handleSearch = useCallback(() => {
     const currentSearchValue =
       searchType === 'title' ? searchValue : registrationSearchValue;
@@ -554,184 +600,69 @@ const Dashboard: React.FC = () => {
         'type:',
         searchType,
       );
-      setLoading(true);
+
+      // Cancel any ongoing request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      abortControllerRef.current = new AbortController();
+
       setSearchMode(true);
       setPage(1);
+      setItems([]);
+      setHasMore(true);
 
-      // DIRECTLY call the API instead of relying on fetchItems
-      const searchFilters: ItemFilters =
-        searchType === 'title'
-          ? {searchTitle: currentSearchValue}
-          : {searchRegistration: currentSearchValue};
-
-      console.log('Fetching with search filters:', searchFilters);
-
-      apiService
-        .getItems(1, 10, searchFilters)
-        .then(response => {
-          setItems(response.items);
-          setHasMore(response.pagination.hasMore);
-          setTotalItems(response.pagination.total);
-          setTotalWeight(response.totalWeight || 0);
-          setError('');
-        })
-        .catch(err => {
-          console.error('Error fetching items:', err);
-          setError('Greška pri dohvaćanju dokumenata');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+      fetchItems(1, false, abortControllerRef.current.signal);
     }
-  }, [searchValue, registrationSearchValue, searchType]);
+  }, [searchValue, registrationSearchValue, searchType, fetchItems]);
+
   const clearSearch = useCallback(() => {
     console.log('Clearing search');
-    setLoading(true);
+
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
     setSearchMode(false);
     setSearchValue('');
-    setRegistrationSearchValue(''); // ADD THIS LINE
-    setSearchType('title'); // ADD THIS LINE
+    setRegistrationSearchValue('');
+    setSearchType('title');
     setPage(1);
-    // Reset to today's date range
+    setItems([]);
+    setHasMore(true);
+
+    // Reset to today's date
     const today = new Date();
     setStartDate(today);
     setEndDate(today);
     setSelectedCode('all');
     setSelectedPrijevoznik('all');
+    setSelectedUser('all');
     setSortOrder('date-desc');
     setInTransitOnly(false);
-
-    Promise.resolve().then(() => {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-
-      const initialFilters: ItemFilters = {
-        startDate: todayStart.toISOString(),
-        endDate: todayEnd.toISOString(),
-        sortOrder: 'date-desc',
-      };
-
-      apiService
-        .getItems(1, 10, initialFilters)
-        .then(response => {
-          setItems(response.items);
-          setHasMore(response.pagination.hasMore);
-          setTotalItems(response.pagination.total);
-          setTotalWeight(response.totalWeight || 0);
-          setError('');
-        })
-        .catch(err => {
-          console.error('Error fetching items:', err);
-          setError('Greška pri dohvaćanju dokumenata');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    });
   }, []);
 
-  // Updated date range change handler
-  const handleDateRangeChange = (newStartDate: Date, newEndDate: Date) => {
-    setStartDate(newStartDate);
-    setEndDate(newEndDate);
-    setPage(1);
-    setItems([]);
-    setHasMore(true);
-  };
-
-  useEffect(() => {
-    if (!searchMode) {
-      setPage(1);
-      setItems([]);
-      setHasMore(true);
-      fetchItems(false);
-    }
-  }, [
-    startDate,
-    endDate,
-    selectedCode,
-    selectedPrijevoznik,
-    selectedUser,
-    sortOrder,
-    inTransitOnly,
-    fetchItems,
-  ]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const initializeDashboard = async () => {
-      try {
-        await fetchItems();
-        if (isMounted) {
-          await fetchAvailableCodes();
-          await fetchAvailableCarriers();
-          await fetchAvailableUsers(); // ADD THIS LINE
-        }
-      } catch (error) {
-        console.error('Error initializing dashboard:', error);
-      }
-    };
-
-    initializeDashboard();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    fetchItems,
-    fetchAvailableCodes,
-    fetchAvailableCarriers,
-    fetchAvailableUsers,
-  ]);
-
-  const handleLoadMore = useCallback(async () => {
-    if (!hasMore || loadingMore || loading) {
-      console.log('Skipping load more:', {
-        hasMore,
-        loadingMore,
-        loading,
-      });
-      return;
-    }
-
-    if (items.length >= totalItems) {
-      console.log('All items loaded');
-      setHasMore(false);
-      return;
-    }
-
-    console.log('Loading more items, increasing page');
-    setPage(prevPage => prevPage + 1);
-  }, [hasMore, loadingMore, loading, items.length, totalItems]);
-
-  useEffect(() => {
-    if (page > 1) {
-      console.log('Page changed to:', page);
-      fetchItems(true);
-    }
-  }, [page, fetchItems]);
-
+  // FIXED: Refresh handler
   const handleRefresh = useCallback(async () => {
     console.log('Manual refresh triggered');
-    setPage(1);
-    setItems([]);
-    await fetchItems(false);
-    // Don't fetch codes again during refresh unless they actually change
-  }, [fetchItems]);
 
-  const handleUserChange = (user: string) => {
-    console.log('User filter changed:', user);
-    setSelectedUser(user);
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+
     setPage(1);
     setItems([]);
     setHasMore(true);
-  };
 
+    await fetchItems(1, false, abortControllerRef.current.signal);
+  }, [fetchItems]);
+
+  // Other handlers
   const handleLogout = async () => {
     try {
       await signOut();
@@ -768,65 +699,228 @@ const Dashboard: React.FC = () => {
   const handleDelete = async (itemId: string) => {
     if (window.confirm('Jeste li sigurni da želite izbrisati ovaj dokument?')) {
       try {
-        setLoading(true);
         await apiService.deleteItem(itemId);
         setItems(prevItems => prevItems.filter(item => item._id !== itemId));
-      } catch (err) {
-        console.error('Error deleting item:', err);
+      } catch (error) {
+        console.error('Error deleting item:', error);
         setError('Greška pri brisanju dokumenta');
-      } finally {
-        setLoading(false);
       }
     }
   };
 
-  if (loading && !loadingMore) {
-    return (
-      <S.PageContainer>
-        <LoadingContainer>Učitavanje...</LoadingContainer>
-      </S.PageContainer>
-    );
-  }
+  const handleApprovalSuccess = useCallback(() => {
+    handleRefresh();
+  }, [handleRefresh]);
 
-  // Format date range for display
-  const formatDateRangeDisplay = () => {
+  // Utility functions for printing
+  const formatDateRangeForPrint = (
+    startDate: Date,
+    endDate: Date,
+    selectedCode: string,
+    selectedPrijevoznik: string,
+    selectedUser: string,
+    inTransitOnly: boolean,
+  ) => {
     const isSameDay = startDate.toDateString() === endDate.toDateString();
 
+    let dateRangeText = '';
     if (isSameDay) {
-      return startDate.toLocaleDateString('hr-HR', {
+      dateRangeText = startDate.toLocaleDateString('hr-HR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
       });
+    } else {
+      dateRangeText = `${startDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })} - ${endDate.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })}`;
     }
 
-    const startStr = startDate.toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    const endStr = endDate.toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    return `${startStr} - ${endStr}`;
+    const filters: string[] = [];
+
+    if (selectedCode !== 'all') {
+      filters.push(`Šifra: ${getFormattedCode(selectedCode)}`);
+    }
+
+    if (selectedPrijevoznik !== 'all') {
+      filters.push(`Prijevoznik: ${selectedPrijevoznik}`);
+    }
+
+    if (selectedUser !== 'all') {
+      // Handle grouped users
+      if (selectedUser.startsWith('group_')) {
+        const groupName = selectedUser.replace('group_', '');
+        const matchingUsers = availableUsers.filter(u =>
+          groupName === 'velicki_kamen'
+            ? [
+                'vetovo.vaga@velicki-kamen.hr',
+                'velicki.vaga@velicki-kamen.hr',
+              ].includes(u.email)
+            : groupName === 'kamen_psunj'
+            ? ['vaga.fukinac@kamen-psunj.hr'].includes(u.email)
+            : false,
+        );
+
+        if (matchingUsers.length === 1) {
+          const user = matchingUsers[0];
+          filters.push(
+            `Dobavljač: ${
+              user.displayName || `${user.firstName} ${user.lastName}`
+            }`,
+          );
+        } else {
+          filters.push(`Dobavljač: Grupa (${matchingUsers.length} korisnika)`);
+        }
+      } else {
+        // Single user logic
+        const user = availableUsers.find(u => u._id === selectedUser);
+        if (user) {
+          filters.push(
+            `Dobavljač: ${
+              user.displayName || `${user.firstName} ${user.lastName}`
+            }`,
+          );
+        }
+      }
+    }
+
+    if (inTransitOnly) {
+      filters.push('Samo u tranzitu');
+    }
+
+    return filters.length > 0
+      ? `${dateRangeText} (${filters.join(', ')})`
+      : dateRangeText;
   };
 
+  const fetchAllItemsForPrinting = async () => {
+    try {
+      setLoading(true);
+      let allItems: Item[] = [];
+      let currentPage = 1;
+      let hasMoreItems = true;
+
+      let filters: ItemFilters;
+      if (searchMode && (searchValue || registrationSearchValue)) {
+        filters =
+          searchType === 'title'
+            ? {searchTitle: searchValue}
+            : {searchRegistration: registrationSearchValue};
+      } else {
+        const startOfDay = new Date(startDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        filters = {
+          startDate: startOfDay.toISOString(),
+          endDate: endOfDay.toISOString(),
+          ...(selectedCode !== 'all' && {code: selectedCode}),
+          ...(selectedPrijevoznik !== 'all' && {
+            prijevoznik: selectedPrijevoznik,
+          }),
+          ...(selectedUser !== 'all' && {createdByUser: selectedUser}),
+          sortOrder,
+          ...(inTransitOnly && {inTransitOnly: true}),
+        };
+      }
+
+      while (hasMoreItems) {
+        const response = await apiService.getItems(currentPage, 100, filters);
+        allItems = [...allItems, ...response.items];
+        hasMoreItems = response.pagination.hasMore;
+        currentPage++;
+      }
+
+      return allItems;
+    } catch (error) {
+      console.error('Error fetching all items:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Render JSX - RESTORED ORIGINAL LAYOUT
   return (
     <S.PageContainer>
       <Header>
         <HeaderLeft>
           <Logo />
-          <div>
-            <h1>Dokumenti ({totalItems})</h1>
-            <UserInfo>
-              Dobrodošli, {user?.firstName} {user?.lastName}
-              {user?.company && ` (${user.company})`}
-            </UserInfo>
-          </div>
+          <h1>Dokument Dashboard</h1>
         </HeaderLeft>
         <HeaderActions>
+          {(user?.role === 'admin' || user?.role === 'bot') && (
+            <S.Button onClick={() => setCreateModalVisible(true)}>
+              Dodaj novi dokument
+            </S.Button>
+          )}
+          <S.Button onClick={handleLogout}>Odjava</S.Button>
+        </HeaderActions>
+      </Header>
+
+      {showRestrictedMessage && (
+        <RestrictedAccessMessage>
+          <RestrictedAccessIcon>🔒</RestrictedAccessIcon>
+          Ograničen pristup: Možete vidjeti samo dokumente s šiframa{' '}
+          {user?.codes?.join(', ')}
+        </RestrictedAccessMessage>
+      )}
+
+      <DashboardContainer>
+        <DashboardFilters
+          startDate={startDate}
+          endDate={endDate}
+          onDateRangeChange={handleDateRangeChange}
+          selectedCode={selectedCode}
+          onCodeChange={setSelectedCode}
+          availableCodes={availableCodes}
+          selectedPrijevoznik={selectedPrijevoznik}
+          onPrijevoznikChange={setSelectedPrijevoznik}
+          availableCarriers={availableCarriers}
+          selectedUser={selectedUser}
+          onUserChange={handleUserChange}
+          availableUsers={availableUsers}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
+          searchValue={searchValue}
+          onSearchValueChange={setSearchValue}
+          registrationSearchValue={registrationSearchValue}
+          onRegistrationSearchValueChange={setRegistrationSearchValue}
+          searchType={searchType}
+          onSearchTypeChange={setSearchType}
+          onSearch={handleSearch}
+          onClearSearch={clearSearch}
+          searchMode={searchMode}
+          onSearchModeChange={setSearchMode}
+          inTransitOnly={inTransitOnly}
+          onInTransitChange={setInTransitOnly}
+        />
+
+        {/* Print Buttons */}
+        <div
+          style={{
+            marginBottom: '20px',
+            display: 'flex',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}>
           <PrintTableButton
             items={items}
             totalItems={totalItems}
@@ -838,9 +932,16 @@ const Dashboard: React.FC = () => {
               endDate,
               selectedCode,
               selectedPrijevoznik,
-              selectedUser, // ADD THIS LINE
+              selectedUser,
               inTransitOnly,
             )}
+          />
+          <PrintAllButton
+            items={items}
+            totalItems={totalItems}
+            totalWeight={totalWeight}
+            isLoading={loading}
+            onPrintAll={fetchAllItemsForPrinting}
           />
           <ExportExcelButton
             items={items}
@@ -853,82 +954,19 @@ const Dashboard: React.FC = () => {
               endDate,
               selectedCode,
               selectedPrijevoznik,
-              selectedUser, // ADD THIS LINE
+              selectedUser,
               inTransitOnly,
             )}
             selectedCode={selectedCode}
             inTransitOnly={inTransitOnly}
           />
-          <PrintAllButton
-            items={items}
-            totalItems={totalItems}
-            totalWeight={totalWeight}
-            isLoading={loading}
-            onPrintAll={fetchAllItemsForPrinting}
-          />
-          {(user?.role === 'admin' || user?.role === 'bot') && (
-            <S.Button
-              onClick={() => setCreateModalVisible(true)}
-              variant="primary"
-              id="create_item">
-              Dodaj dokument
-            </S.Button>
-          )}
-          {user?.role === 'admin' && (
-            <S.Button onClick={() => navigate('/users')}>Korisnici</S.Button>
-          )}
-          <S.Button variant="secondary" onClick={handleLogout}>
-            Odjava
-          </S.Button>
-        </HeaderActions>
-      </Header>
-
-      {/* Restricted access message */}
-      {showRestrictedMessage && (
-        <RestrictedAccessMessage>
-          <RestrictedAccessIcon>🔒</RestrictedAccessIcon>
-          <div>
-            <strong>Ograničeni pristup:</strong> Kao administrator s
-            dodijeljenim kodovima, vidite samo stavke za kodove:{' '}
-            <strong>{user.codes.join(', ')}</strong>
-          </div>
-        </RestrictedAccessMessage>
-      )}
+        </div>
+      </DashboardContainer>
 
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
-      <DashboardFilters
-        startDate={startDate}
-        endDate={endDate}
-        onDateRangeChange={handleDateRangeChange}
-        selectedCode={selectedCode}
-        onCodeChange={setSelectedCode}
-        availableCodes={availableCodes}
-        selectedPrijevoznik={selectedPrijevoznik}
-        onPrijevoznikChange={setSelectedPrijevoznik}
-        availableCarriers={availableCarriers}
-        // ADD THESE PROPS
-        selectedUser={selectedUser}
-        onUserChange={handleUserChange}
-        availableUsers={availableUsers}
-        sortOrder={sortOrder}
-        onSortOrderChange={setSortOrder}
-        searchMode={searchMode}
-        onSearchModeChange={setSearchMode}
-        searchValue={searchValue}
-        onSearchValueChange={setSearchValue}
-        registrationSearchValue={registrationSearchValue}
-        onRegistrationSearchValueChange={setRegistrationSearchValue}
-        searchType={searchType}
-        onSearchTypeChange={setSearchType}
-        onSearch={handleSearch}
-        onClearSearch={clearSearch}
-        inTransitOnly={inTransitOnly}
-        onInTransitChange={setInTransitOnly}
-      />
-
-      {/* Total Weight Display - shows total for ALL filtered items */}
-      {totalItems > 0 && totalWeight > 0 && (
+      {/* Total Weight Display - ORIGINAL STYLING */}
+      {totalWeight > 0 && (
         <TotalWeightContainer>
           <TotalWeightValue>{formatWeight(totalWeight)} t</TotalWeightValue>
           <TotalWeightLabel>
@@ -943,203 +981,215 @@ const Dashboard: React.FC = () => {
         </TotalWeightContainer>
       )}
 
-      <ItemsGrid>
-        {items.map(item => (
-          <ItemCard key={item._id}>
-            <ItemTitle>{item.title}</ItemTitle>
-            {item.createdBy && (
-              <ItemDetails>
-                <strong>Dobavljač:</strong> {getDisplayNameForUser(item)}
-              </ItemDetails>
-            )}
-            {user?.role === 'admin' ? (
-              <AdminCodeEditor
-                item={item}
-                availableCodes={availableCodes}
-                onCodeUpdate={handleCodeUpdate}
-              />
-            ) : (
-              <ItemDetails>
-                <strong>RN:</strong> {getFormattedCode(item.code)}
-              </ItemDetails>
-            )}
-            {/* NEW: Display prijevoznik if it exists */}
-            {item.prijevoznik && (
-              <ItemDetails>
-                <strong>Prijevoznik:</strong> {item.prijevoznik}
-              </ItemDetails>
-            )}
-            {item.registracija && (
-              <ItemDetails>
-                <strong>Registracija:</strong> {item.registracija}
-              </ItemDetails>
-            )}
+      {loading && page === 1 ? (
+        <LoadingContainer>Učitavanje...</LoadingContainer>
+      ) : (
+        <>
+          {/* ORIGINAL ITEMS GRID LAYOUT */}
+          <ItemsGrid>
+            {items.map(item => (
+              <ItemCard key={item._id}>
+                <ItemTitle>{item.title}</ItemTitle>
 
-            {/* Display tezina in tons */}
-            {item.tezina !== undefined && (
-              <ItemDetails>
-                <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
-              </ItemDetails>
-            )}
-
-            {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
-              <ItemDetails>
-                <strong>Razlika u vaganju:</strong>{' '}
-                {item.neto > 1000 ? (
-                  <span>/</span>
-                ) : (
-                  <span
-                    style={{
-                      color:
-                        item.neto < -5
-                          ? '#f44336'
-                          : item.neto > 5
-                          ? '#4caf50'
-                          : 'inherit',
-                      fontWeight:
-                        item.neto < -5 || item.neto > 5 ? '600' : 'normal',
-                    }}>
-                    {item.neto}%
-                  </span>
+                {item.createdBy && (
+                  <ItemDetails>
+                    <strong>Dobavljač:</strong> {getDisplayNameForUser(item)}
+                  </ItemDetails>
                 )}
-              </ItemDetails>
-            )}
-            <ItemDetails>
-              <strong>Datum i vrijeme:</strong>{' '}
-              {item.creationTime
-                ? `${item.creationDate} ${item.creationTime}`
-                : item.creationDate}
-            </ItemDetails>
-            <StatusBadge status={item.approvalStatus}>
-              {item.approvalStatus}
-            </StatusBadge>
-            {item.in_transit && <TransitBadge>U tranzitu</TransitBadge>}
 
-            {item.approvedBy && (
-              <ItemDetails>
-                <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
-                {item.approvedBy.lastName}
-              </ItemDetails>
-            )}
-            {item.approvalDate && (
-              <ItemDetails>
-                <strong>Datum odobrenja:</strong> {item.approvalDate}
-              </ItemDetails>
-            )}
-            <ButtonGroup>
-              <ActionButton onClick={() => window.open(item.pdfUrl, '_blank')}>
-                Otvori PDF
-              </ActionButton>
-              <PrintButton item={item} />
-              {item.approvalStatus === 'odobreno' && (
-                <>
-                  {(item.approvalPhotoFront?.url ||
-                    item.approvalPhotoBack?.url) && (
-                    <PhotoButtonsGroup>
-                      {item.approvalPhotoFront?.url && (
-                        <ActionButton
-                          onClick={() =>
-                            setSelectedImage(
-                              getImageUrl(item.approvalPhotoFront!.url!),
-                            )
-                          }>
-                          Registracija
-                        </ActionButton>
+                {user?.role === 'admin' ? (
+                  <AdminCodeEditor
+                    item={item}
+                    availableCodes={availableCodes}
+                    onCodeUpdate={handleCodeUpdate}
+                  />
+                ) : (
+                  <ItemDetails>
+                    <strong>RN:</strong> {getFormattedCode(item.code)}
+                  </ItemDetails>
+                )}
+
+                {/* Display prijevoznik if it exists */}
+                {item.prijevoznik && (
+                  <ItemDetails>
+                    <strong>Prijevoznik:</strong> {item.prijevoznik}
+                  </ItemDetails>
+                )}
+
+                {item.registracija && (
+                  <ItemDetails>
+                    <strong>Registracija:</strong> {item.registracija}
+                  </ItemDetails>
+                )}
+
+                {/* Display tezina in tons */}
+                {item.tezina !== undefined && (
+                  <ItemDetails>
+                    <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
+                  </ItemDetails>
+                )}
+
+                {item.neto !== undefined &&
+                  item.approvalStatus === 'odobreno' && (
+                    <ItemDetails>
+                      <strong>Razlika u vaganju:</strong>{' '}
+                      {item.neto > 1000 ? (
+                        <span>/</span>
+                      ) : (
+                        <span
+                          style={{
+                            color:
+                              item.neto < -5
+                                ? '#f44336'
+                                : item.neto > 5
+                                ? '#4caf50'
+                                : 'inherit',
+                            fontWeight:
+                              item.neto < -5 || item.neto > 5
+                                ? '600'
+                                : 'normal',
+                          }}>
+                          {item.neto}%
+                        </span>
                       )}
-                      {item.approvalPhotoBack?.url && (
-                        <ActionButton
-                          onClick={() =>
-                            setSelectedImage(
-                              getImageUrl(item.approvalPhotoBack!.url!),
-                            )
-                          }>
-                          Materijal
-                        </ActionButton>
-                      )}
-                    </PhotoButtonsGroup>
+                    </ItemDetails>
                   )}
 
-                  {item.approvalDocument?.url && (
-                    <ActionButton
-                      onClick={async () => {
-                        try {
-                          const pdfUrl = item.approvalDocument!.url!;
+                <ItemDetails>
+                  <strong>Datum i vrijeme:</strong>{' '}
+                  {formatDateAndTime(item.creationDate, item.creationTime)}
+                </ItemDetails>
 
-                          const urlParts = pdfUrl.split('/');
-                          const filename = `${
-                            urlParts[urlParts.length - 1]
-                          }.pdf`;
+                <div>
+                  <StatusBadge status={item.approvalStatus}>
+                    {item.approvalStatus === 'odobreno'
+                      ? 'Odobreno'
+                      : item.approvalStatus === 'odbijen'
+                      ? 'Odbijeno'
+                      : 'Na čekanju'}
+                  </StatusBadge>
 
-                          const response = await fetch(pdfUrl);
-                          const blob = await response.blob();
+                  {/* Show in transit badge */}
+                  {item.in_transit && (
+                    <TransitBadge>🚛 U tranzitu</TransitBadge>
+                  )}
+                </div>
 
-                          const blobUrl = window.URL.createObjectURL(
-                            new Blob([blob], {type: 'application/pdf'}),
-                          );
+                {item.approvalStatus === 'odobreno' && item.approvedBy && (
+                  <ItemDetails>
+                    <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
+                    {item.approvedBy.lastName}
+                    {item.approvalDate && (
+                      <> ({safeParseDate(item.approvalDate)})</>
+                    )}
+                  </ItemDetails>
+                )}
 
-                          const a = document.createElement('a');
-                          a.href = blobUrl;
-                          a.download = filename;
-                          document.body.appendChild(a);
-                          a.click();
+                {/* ORIGINAL BUTTON LAYOUT */}
+                <ButtonGroup>
+                  <PhotoButtonsGroup>
+                    <PrintButton item={item} />
 
-                          document.body.removeChild(a);
-                          window.URL.revokeObjectURL(blobUrl);
-                        } catch (error) {
-                          console.error('Error downloading PDF:', error);
-                          window.open(item.approvalDocument!.url!, '_blank');
-                        }
-                      }}>
-                      Dokumentacija PDF
+                    {/* Show approval photos if they exist */}
+                    {item.approvalPhotoFront?.url && (
+                      <ActionButton
+                        onClick={() => {
+                          const imageUrl = item.approvalPhotoFront?.url;
+                          if (imageUrl) {
+                            setSelectedImage(getImageUrl(imageUrl));
+                          }
+                        }}>
+                        Prednja strana
+                      </ActionButton>
+                    )}
+
+                    {item.approvalPhotoBack?.url && (
+                      <ActionButton
+                        onClick={() => {
+                          const imageUrl = item.approvalPhotoBack?.url;
+                          if (imageUrl) {
+                            setSelectedImage(getImageUrl(imageUrl));
+                          }
+                        }}>
+                        Stražnja strana
+                      </ActionButton>
+                    )}
+                  </PhotoButtonsGroup>
+
+                  {/* Location button */}
+                  {item.approvalLocation && (
+                    <ActionButton onClick={() => setSelectedLocation(item)}>
+                      Lokacija odobrenja
                     </ActionButton>
                   )}
-                </>
-              )}
-              {item.approvalStatus === 'odobreno' && item.approvalLocation && (
-                <ActionButton onClick={() => setSelectedLocation(item)}>
-                  Lokacija
-                </ActionButton>
-              )}
-              {item.approvalStatus === 'na čekanju' && (
-                <>
+
+                  {/* Approval buttons based on user role */}
+                  {user?.role === 'admin' &&
+                    item.approvalStatus === 'na čekanju' && (
+                      <ApproveButton
+                        item={item}
+                        onSuccess={handleApprovalSuccess}
+                      />
+                    )}
+
+                  {user?.role === 'pc-user' &&
+                    item.approvalStatus === 'na čekanju' && (
+                      <PCUserApproveButton
+                        item={item}
+                        onSuccess={handleApprovalSuccess}
+                      />
+                    )}
+
+                  {/* Delete button for admin */}
                   {user?.role === 'admin' && (
-                    <ApproveButton
-                      item={item}
-                      onSuccess={handleApprovalSuccess}
-                    />
+                    <DeleteButton onClick={() => handleDelete(item._id)}>
+                      Obriši
+                    </DeleteButton>
                   )}
-                  {user?.role === 'pc-user' && (
-                    <PCUserApproveButton
-                      item={item}
-                      onSuccess={handleApprovalSuccess}
-                    />
-                  )}
-                </>
-              )}
-              {user?.role === 'admin' && (
-                <DeleteButton onClick={() => handleDelete(item._id)}>
-                  Izbriši
-                </DeleteButton>
-              )}
-            </ButtonGroup>
-          </ItemCard>
-        ))}
-      </ItemsGrid>
+                </ButtonGroup>
+              </ItemCard>
+            ))}
+          </ItemsGrid>
 
-      {items.length === 0 && !loading && (
-        <EmptyMessage>
-          Nema dostupnih dokumenata za period: {formatDateRangeDisplay()}
-          {selectedCode !== 'all' && ` (${selectedCode})`}
-          {selectedPrijevoznik !== 'all' && ` - ${selectedPrijevoznik}`}
-        </EmptyMessage>
+          {/* Load More Button */}
+          {hasMore && !loading && items.length > 0 && (
+            <LoadMoreButton
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              style={{
+                backgroundColor: loadingMore ? '#ccc' : undefined,
+                cursor: loadingMore ? 'not-allowed' : 'pointer',
+              }}>
+              {loadingMore ? 'Učitavanje...' : 'Učitaj više'}
+            </LoadMoreButton>
+          )}
+
+          {/* Loading indicator for load more */}
+          {loadingMore && (
+            <div style={{textAlign: 'center', padding: '20px'}}>
+              <LoadingContainer>Učitavanje dodatnih stavki...</LoadingContainer>
+            </div>
+          )}
+
+          {/* No more items message */}
+          {!hasMore && items.length > 0 && (
+            <div style={{textAlign: 'center', padding: '20px', color: '#666'}}>
+              Nema više stavki za učitavanje
+            </div>
+          )}
+
+          {/* No items found message */}
+          {!loading && items.length === 0 && !error && (
+            <EmptyMessage>
+              {searchMode
+                ? 'Nema rezultata pretrage'
+                : 'Nema dokumenata za prikaz'}
+            </EmptyMessage>
+          )}
+        </>
       )}
 
-      {hasMore && items.length > 0 && items.length < totalItems && (
-        <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
-          {loadingMore ? 'Učitavanje...' : 'Učitaj još'}
-        </LoadMoreButton>
-      )}
-
+      {/* Modals */}
       {selectedImage && token && (
         <ImageViewerModal
           imageUrl={selectedImage}
@@ -1162,7 +1212,7 @@ const Dashboard: React.FC = () => {
           onClose={() => setCreateModalVisible(false)}
           onSuccess={() => {
             setCreateModalVisible(false);
-            fetchItems(false);
+            handleRefresh();
           }}
         />
       )}
