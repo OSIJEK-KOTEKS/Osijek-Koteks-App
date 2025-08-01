@@ -222,7 +222,7 @@ router.get('/carriers', auth, async (req, res) => {
     res.status(500).json({message: 'Server error'});
   }
 });
-
+//get items
 router.get('/', auth, async (req, res) => {
   try {
     const {
