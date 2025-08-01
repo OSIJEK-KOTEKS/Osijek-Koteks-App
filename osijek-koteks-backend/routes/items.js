@@ -300,7 +300,7 @@ router.get('/', auth, async (req, res) => {
         query.in_transit = true;
       }
 
-      // ADD USER FILTERING
+      //ADD USER FILTERING
       if (createdByUser && createdByUser !== 'all') {
         if (createdByUser.includes(',')) {
           // Multiple user IDs separated by comma (grouped users)
