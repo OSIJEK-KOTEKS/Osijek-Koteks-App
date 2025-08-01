@@ -230,92 +230,140 @@ router.get('/', auth, async (req, res) => {
       endDate,
       code,
       prijevoznik,
-      sortOrder,
+      sortOrder = 'date-desc',
       searchTitle,
       searchRegistration,
       inTransitOnly,
-      createdByUser, // ADD THIS LINE
+      createdByUser,
     } = req.query;
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Build the base query
+    console.log('Items fetch request:', {
+      userId: req.user._id,
+      userRole: req.user.role,
+      userCodes: req.user.codes,
+      hasFullAccess: req.user.hasFullAccess,
+      page,
+      limit,
+      filters: req.query,
+    });
+
     let query = {};
 
-    // Handle search modes
-    if (searchTitle) {
-      query.title = {$regex: searchTitle, $options: 'i'};
-    } else if (searchRegistration) {
-      query.registracija = {$regex: searchRegistration, $options: 'i'};
-    } else {
-      // Apply filtering logic only when not in search mode
+    // Date filtering
+    if (startDate || endDate) {
+      query.creationDate = {};
+      if (startDate) {
+        query.creationDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        query.creationDate.$lte = endDateTime;
+      }
+    }
 
-      // Your existing role-based filtering logic...
-      if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
-        if (req.user.codes && req.user.codes.length > 0) {
+    // Code filtering - with access control
+    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      // Non-admin users: filter by their codes
+      if (req.user.codes && req.user.codes.length > 0) {
+        if (code && req.user.codes.includes(code)) {
+          query.code = code;
+        } else if (!code) {
           query.code = {$in: req.user.codes};
         } else {
+          // User requested a code they don't have access to
           return res.json({
             items: [],
             pagination: {
               total: 0,
-              page: page,
+              page: 1,
               pages: 0,
               hasMore: false,
             },
             totalWeight: 0,
           });
         }
-      } else if (
-        req.user.role === 'admin' &&
-        req.user.codes &&
-        req.user.codes.length > 0
-      ) {
+      } else {
+        // User with no codes assigned should see nothing
+        return res.json({
+          items: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pages: 0,
+            hasMore: false,
+          },
+          totalWeight: 0,
+        });
+      }
+    } else if (
+      req.user.role === 'admin' &&
+      req.user.codes &&
+      req.user.codes.length > 0
+    ) {
+      // Admin with codes assigned: filter by those codes
+      if (code && req.user.codes.includes(code)) {
+        query.code = code;
+      } else if (!code) {
         query.code = {$in: req.user.codes};
+      } else {
+        // Admin requested a code they don't have access to
+        return res.json({
+          items: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pages: 0,
+            hasMore: false,
+          },
+          totalWeight: 0,
+        });
       }
-
-      // Your existing date, code, prijevoznik, and inTransit filtering...
-      if (startDate && endDate) {
-        query.creationDate = {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate),
-        };
+    } else {
+      // Admin with no codes assigned (empty array or null): can see all
+      if (code) {
+        query.code = code;
       }
+    }
 
-      if (code && code !== 'all') {
-        if (query.code && query.code.$in) {
-          query.code = {$in: [code]};
-        } else {
-          query.code = code;
-        }
-      }
+    // Prijevoznik filtering
+    if (prijevoznik) {
+      query.prijevoznik = prijevoznik;
+    }
 
-      if (prijevoznik && prijevoznik.trim()) {
-        query.prijevoznik = {$regex: prijevoznik, $options: 'i'};
-      }
+    // Search filtering
+    if (searchTitle) {
+      query.title = {$regex: searchTitle, $options: 'i'};
+    }
 
-      if (inTransitOnly === 'true') {
-        query.in_transit = true;
-      }
+    if (searchRegistration) {
+      query.registracija = {$regex: searchRegistration, $options: 'i'};
+    }
 
-      //ADD USER FILTERING
-      if (createdByUser && createdByUser !== 'all') {
-        if (createdByUser.includes(',')) {
-          // Multiple user IDs separated by comma (grouped users)
-          const userIds = createdByUser.split(',').filter(id => id.trim());
-          query.createdBy = {$in: userIds};
-        } else {
-          // Single user ID
-          query.createdBy = createdByUser;
-        }
+    // In transit filtering
+    if (inTransitOnly === 'true') {
+      query.inTransit = true;
+    }
+
+    // Filter by user who created the item
+    if (createdByUser) {
+      if (createdByUser.includes(',')) {
+        // Multiple user IDs
+        const userIds = createdByUser.split(',').filter(id => id.trim());
+        query.createdBy = {$in: userIds};
+      } else {
+        // Single user ID
+        query.createdBy = createdByUser;
       }
     }
 
     console.log('Final query:', query);
 
-    // Your existing sort logic...
+    // Sort logic
     let sort = {};
     switch (sortOrder) {
       case 'date-asc':
@@ -340,17 +388,31 @@ router.get('/', auth, async (req, res) => {
         sort = {creationDate: -1};
     }
 
-    // Get items with user population
+    // Get paginated items
     const items = await Item.find(query)
-      .populate('createdBy', 'firstName lastName email') // ADD THIS LINE
+      .populate('createdBy', 'firstName lastName email')
       .populate('approvedBy', 'firstName lastName')
       .sort(sort)
       .skip(skip)
       .limit(limit);
 
-    // Your existing pagination and response logic...
+    // Get total count for pagination
     const total = await Item.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
+
+    // FIXED: Calculate total weight for ALL filtered items, not just paginated ones
+    const totalWeightResult = await Item.aggregate([
+      {$match: query},
+      {
+        $group: {
+          _id: null,
+          totalWeight: {$sum: {$ifNull: ['$tezina', 0]}},
+        },
+      },
+    ]);
+
+    const totalWeight =
+      totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
 
     res.json({
       items,
@@ -360,7 +422,7 @@ router.get('/', auth, async (req, res) => {
         pages: totalPages,
         hasMore: page < totalPages,
       },
-      totalWeight: items.reduce((sum, item) => sum + (item.tezina || 0), 0),
+      totalWeight: totalWeight, // This now includes ALL filtered items
     });
   } catch (err) {
     console.error('Error fetching items:', err);
