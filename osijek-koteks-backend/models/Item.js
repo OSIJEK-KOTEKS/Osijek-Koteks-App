@@ -172,10 +172,14 @@ ItemSchema.methods.toJSON = function () {
   }
 
   if (obj.approvalDate) {
-    obj.approvalDate = obj.approvalDate.toLocaleDateString('hr-HR', {
+    // Format as "DD.MM.YYYY HH:MM"
+    obj.approvalDate = obj.approvalDate.toLocaleString('hr-HR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
     });
   }
 
