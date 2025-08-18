@@ -30,6 +30,7 @@ export const codeToTextMapping: Record<string, string> = {
   '24050': 'Rek. kan. mreže Nemetin',
   '24051': 'Građ. obrt. radovi - tvor cem. Našice',
   '24058': 'Dom za starije Vrpolje',
+  '24060': 'Našice - Rad. na san. kanalali.',
   '24065': 'REKON. DC ERDUT - GP DALJ',
   '24076': 'Dom za starije SB',
   '25006': 'Ricardo',
@@ -48,7 +49,9 @@ export const codeToTextMapping: Record<string, string> = {
   '25033': 'PS Beli Manastir',
   '25034': 'PS Đakovo',
   '25051': 'Osatina Viškovci',
+  '25054': 'Nexe cementara',
   '25062': 'Pevex Đakovo',
+  '25074': 'Kaufland Osijek',
   '5014': 'Betonara',
 };
 
