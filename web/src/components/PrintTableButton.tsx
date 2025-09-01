@@ -26,6 +26,8 @@ const PrintButton = styled.button`
     cursor: not-allowed;
   }
 `;
+
+// Helper function to get display name for user
 const getDisplayNameForUser = (item: Item): string => {
   if (!item.createdBy) return 'Nepoznato';
 
@@ -45,9 +47,107 @@ const getDisplayNameForUser = (item: Item): string => {
   return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
 };
 
-// PrintTableButton.tsx - Fix the TypeScript error
+// FIXED: Date formatting functions for consistent DD/MM/YYYY display
+const safeParseDate = (dateInput: any): string => {
+  if (!dateInput) return 'N/A';
 
-// FIND the PrintableTable component and UPDATE it:
+  let date: Date;
+
+  try {
+    // Handle MongoDB date objects with $date property
+    if (typeof dateInput === 'object' && dateInput.$date) {
+      date = new Date(dateInput.$date);
+    }
+    // Handle Date objects
+    else if (dateInput instanceof Date) {
+      date = dateInput;
+    }
+    // Handle string inputs
+    else if (typeof dateInput === 'string') {
+      // If it's already a Croatian formatted date (DD.MM.YYYY or DD.M.YYYY or D.MM.YYYY), return as is
+      if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+        return dateInput;
+      }
+
+      // For ISO strings or other date formats, parse them
+      date = new Date(dateInput);
+    }
+    // Handle any other type by converting to string and trying to parse
+    else {
+      date = new Date(String(dateInput));
+    }
+
+    // Check if parsing was successful
+    if (isNaN(date.getTime())) {
+      console.warn('Failed to parse date:', dateInput);
+      return String(dateInput); // Return as string for debugging
+    }
+
+    // Always format to Croatian format consistently
+    return date.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Zagreb',
+    });
+  } catch (error) {
+    console.error('Error parsing date:', dateInput, error);
+    return String(dateInput);
+  }
+};
+
+const formatDateAndTime = (
+  creationDate: any,
+  creationTime?: string,
+): string => {
+  const formattedDate = safeParseDate(creationDate);
+
+  if (!formattedDate || formattedDate === 'N/A') {
+    console.warn('formatDateAndTime - failed to format date:', creationDate);
+    const fallback = String(creationDate);
+    return creationTime ? `${fallback} ${creationTime}` : fallback;
+  }
+
+  return creationTime ? `${formattedDate} ${creationTime}` : formattedDate;
+};
+
+const formatApprovalDate = (approvalDate: any): string => {
+  if (!approvalDate) return '-';
+
+  let date: Date;
+
+  try {
+    if (typeof approvalDate === 'object' && approvalDate.$date) {
+      date = new Date(approvalDate.$date);
+    } else if (typeof approvalDate === 'string') {
+      // If it's already formatted Croatian datetime (DD.MM.YYYY HH:MM), return as is
+      if (approvalDate.match(/^\d{1,2}\.\d{1,2}\.\d{4} \d{1,2}:\d{2}$/)) {
+        return approvalDate;
+      }
+      date = new Date(approvalDate);
+    } else {
+      date = new Date(approvalDate);
+    }
+
+    if (isNaN(date.getTime())) {
+      return String(approvalDate);
+    }
+
+    return date.toLocaleString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
+    });
+  } catch (error) {
+    console.error('Error formatting approval date:', approvalDate, error);
+    return String(approvalDate);
+  }
+};
+
+// PrintableTable component with fixed date formatting
 const PrintableTable = ({
   items,
   dateRange,
@@ -65,14 +165,20 @@ const PrintableTable = ({
         />
         <div className="company-info">
           <p>Osijek-Koteks d.d.</p>
-          <p>Šamačka 11, 31000 Osijek, Hrvatska</p>
+          <p>Šamaćka 11, 31000 Osijek, Hrvatska</p>
           <p>Tel: +385 31 227 700 | Fax: +385 31 227 777</p>
           <p>Email: info@osijek-koteks.hr | Web: www.osijek-koteks.hr</p>
         </div>
         <h1 className="print-title">Pregled dokumenata</h1>
         {dateRange && <p className="print-date-range">Period: {dateRange}</p>}
         <p className="print-date">
-          Datum ispisa: {new Date().toLocaleDateString('hr-HR')}
+          Datum ispisa:{' '}
+          {new Date().toLocaleDateString('hr-HR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            timeZone: 'Europe/Zagreb',
+          })}
         </p>
       </div>
 
@@ -113,9 +219,8 @@ const PrintableTable = ({
                   : '-'}
               </td>
               <td>
-                {item.creationTime
-                  ? `${item.creationDate} ${item.creationTime}`
-                  : item.creationDate}
+                {/* FIXED: Use consistent date formatting */}
+                {formatDateAndTime(item.creationDate, item.creationTime)}
               </td>
               <td>{item.approvalStatus}</td>
               <td>
@@ -123,7 +228,10 @@ const PrintableTable = ({
                   ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}`
                   : '-'}
               </td>
-              <td>{item.approvalDate || '-'}</td>
+              <td>
+                {/* FIXED: Use consistent approval date formatting */}
+                {formatApprovalDate(item.approvalDate)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -277,85 +385,65 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
   const itemsToDisplay = item ? [item] : items || [];
 
   const handlePrint = useCallback(async () => {
+    if (!itemsToDisplay.length && totalItems === 0) return;
+
     try {
       setIsPrinting(true);
 
-      // If we have a single item, just use that
-      // Otherwise, if we have onPrintAll function, use that to get all items
-      // Otherwise, just use the items we have
-      let allItems = item
-        ? [item]
-        : onPrintAll
-        ? await onPrintAll()
-        : itemsToDisplay;
+      let allItems = itemsToDisplay;
 
-      if (!allItems.length) {
-        alert('Nema dokumenata za ispis');
-        return;
+      // If we need to fetch all items for printing
+      if (onPrintAll && totalItems > itemsToDisplay.length) {
+        try {
+          allItems = await onPrintAll();
+        } catch (error) {
+          console.error('Error fetching all items for printing:', error);
+          alert('Greška pri dohvaćanju svih dokumenata za ispis');
+          return;
+        }
       }
 
       const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
+      if (!printWindow) {
+        alert('Molimo omogućite pop-up prozore za ispis');
+        return;
+      }
 
-      // Format weight function
-      const formatWeight = (weightInKg: number) => {
-        const weightInTons = weightInKg / 1000;
-        return weightInTons.toFixed(3);
-      };
-
-      // Generate the main table
-      const printableTableHtml = ReactDOMServer.renderToStaticMarkup(
+      // Generate the printable table HTML
+      const printableTableHtml = ReactDOMServer.renderToString(
         <PrintableTable items={allItems} dateRange={dateRange} />,
       );
 
-      // Generate total weight summary separately (only once, at the end)
-      const totalWeightSummaryHtml =
-        totalWeight !== undefined && totalWeight > 0
-          ? `
+      // Generate total weight summary if available
+      const totalWeightSummaryHtml = totalWeight
+        ? `
         <div style="
           margin-top: 20px;
-          padding: 10px;
+          padding: 15px;
           background-color: #f8f9fa;
-          border: 2px solid #2196F3;
-          border-radius: 4px;
+          border: 1px solid #dee2e6;
+          border-radius: 5px;
           text-align: center;
-          page-break-inside: avoid;
         ">
           <div style="
             font-size: 14px;
             font-weight: bold;
-            color: #2196F3;
+            color: #333;
             margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
           ">
-            Ukupna težina
+            Ukupna težina: ${(totalWeight / 1000).toFixed(3)} t
           </div>
           <div style="
-            height: 2px;
-            background-color: #2196F3;
-            margin: 10px 0;
-          "></div>
-          <div style="
-            font-size: 20px;
-            font-weight: bold;
-            color: #2196F3;
-            margin: 8px 0;
-          ">
-            ${formatWeight(totalWeight)} t
-          </div>
-          <div style="
-            font-size: 10px;
+            font-size: 12px;
             color: #666;
-            margin-top: 5px;
           ">
             Ukupno ${allItems.length} ${
-              allItems.length === 1
-                ? 'kamion'
-                : allItems.length < 2
-                ? 'kamiona'
-                : 'kamiona'
-            }
+            allItems.length === 1
+              ? 'kamion'
+              : allItems.length < 5
+              ? 'kamiona'
+              : 'kamiona'
+          }
           </div>
           <div style="
             font-size: 10px;
@@ -372,7 +460,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
           </div>
         </div>
       `
-          : '';
+        : '';
 
       const printContent = `
         <!DOCTYPE html>
@@ -439,7 +527,15 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
     } finally {
       setIsPrinting(false);
     }
-  }, [item, items, itemsToDisplay, onPrintAll, totalWeight]);
+  }, [
+    item,
+    items,
+    itemsToDisplay,
+    onPrintAll,
+    totalWeight,
+    dateRange,
+    totalItems,
+  ]);
 
   return (
     <>

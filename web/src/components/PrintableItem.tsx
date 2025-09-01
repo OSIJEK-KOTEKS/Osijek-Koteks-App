@@ -1,4 +1,4 @@
-// Updated PrintableItem.tsx
+// Updated PrintableItem.tsx with consistent DD/MM/YYYY date formatting
 import React from 'react';
 import {Item} from '../types';
 import {getImageUrl} from '../utils/api';
@@ -7,6 +7,106 @@ import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
 interface PrintableItemProps {
   item: Item;
 }
+
+// Add the same date formatting functions as in the other components
+const safeParseDate = (dateInput: any): string => {
+  if (!dateInput) return 'N/A';
+
+  let date: Date;
+
+  try {
+    // Handle MongoDB date objects with $date property
+    if (typeof dateInput === 'object' && dateInput.$date) {
+      date = new Date(dateInput.$date);
+    }
+    // Handle Date objects
+    else if (dateInput instanceof Date) {
+      date = dateInput;
+    }
+    // Handle string inputs
+    else if (typeof dateInput === 'string') {
+      // If it's already a Croatian formatted date (DD.MM.YYYY or DD.M.YYYY or D.MM.YYYY), return as is
+      if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+        return dateInput;
+      }
+
+      // For ISO strings or other date formats, parse them
+      date = new Date(dateInput);
+    }
+    // Handle any other type by converting to string and trying to parse
+    else {
+      date = new Date(String(dateInput));
+    }
+
+    // Check if parsing was successful
+    if (isNaN(date.getTime())) {
+      console.warn('Failed to parse date:', dateInput);
+      return String(dateInput); // Return as string for debugging
+    }
+
+    // Always format to Croatian format consistently
+    return date.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Zagreb',
+    });
+  } catch (error) {
+    console.error('Error parsing date:', dateInput, error);
+    return String(dateInput);
+  }
+};
+
+const formatDateAndTime = (
+  creationDate: any,
+  creationTime?: string,
+): string => {
+  const formattedDate = safeParseDate(creationDate);
+
+  if (!formattedDate || formattedDate === 'N/A') {
+    console.warn('formatDateAndTime - failed to format date:', creationDate);
+    const fallback = String(creationDate);
+    return creationTime ? `${fallback} ${creationTime}` : fallback;
+  }
+
+  return creationTime ? `${formattedDate} ${creationTime}` : formattedDate;
+};
+
+const formatApprovalDate = (approvalDate: any): string => {
+  if (!approvalDate) return 'N/A';
+
+  let date: Date;
+
+  try {
+    if (typeof approvalDate === 'object' && approvalDate.$date) {
+      date = new Date(approvalDate.$date);
+    } else if (typeof approvalDate === 'string') {
+      // If it's already formatted Croatian datetime (DD.MM.YYYY HH:MM), return as is
+      if (approvalDate.match(/^\d{1,2}\.\d{1,2}\.\d{4} \d{1,2}:\d{2}$/)) {
+        return approvalDate;
+      }
+      date = new Date(approvalDate);
+    } else {
+      date = new Date(approvalDate);
+    }
+
+    if (isNaN(date.getTime())) {
+      return String(approvalDate);
+    }
+
+    return date.toLocaleString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
+    });
+  } catch (error) {
+    console.error('Error formatting approval date:', approvalDate, error);
+    return String(approvalDate);
+  }
+};
 
 const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
   return (
@@ -56,9 +156,8 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           <div className="print-info-item">
             <span className="print-label">Datum kreiranja:</span>
             <span className="print-value">
-              {item.creationTime
-                ? `${item.creationDate} ${item.creationTime}`
-                : item.creationDate}
+              {/* FIXED: Use consistent date formatting */}
+              {formatDateAndTime(item.creationDate, item.creationTime)}
             </span>
           </div>
           <div className="print-info-item">
@@ -75,12 +174,16 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
               </div>
               <div className="print-info-item">
                 <span className="print-label">Datum odobrenja:</span>
-                <span className="print-value">{item.approvalDate}</span>
+                <span className="print-value">
+                  {/* FIXED: Use consistent approval date formatting */}
+                  {formatApprovalDate(item.approvalDate)}
+                </span>
               </div>
             </>
           )}
         </div>
       </div>
+
       {item.approvalStatus === 'odobreno' && (
         <>
           {(item.approvalPhotoFront?.url || item.approvalPhotoBack?.url) && (
@@ -115,10 +218,9 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
                 <div className="print-info-item">
                   <span className="print-label">Datum prilaganja:</span>
                   <span className="print-value">
+                    {/* FIXED: Use consistent date formatting for document upload date */}
                     {item.approvalDocument.uploadDate &&
-                      new Date(
-                        item.approvalDocument.uploadDate,
-                      ).toLocaleDateString('hr-HR')}
+                      safeParseDate(item.approvalDocument.uploadDate)}
                   </span>
                 </div>
               </div>
@@ -132,8 +234,19 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           )}
         </>
       )}
+
       <div className="print-footer">
-        <p>Ispisano: {new Date().toLocaleString('hr-HR')}</p>
+        <p>
+          Ispisano:{' '}
+          {new Date().toLocaleString('hr-HR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Europe/Zagreb',
+          })}
+        </p>
         <p>© Osijek-Koteks d.d. Sva prava pridržana.</p>
       </div>
     </div>
