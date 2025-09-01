@@ -325,44 +325,70 @@ const Dashboard: React.FC = () => {
     return weightInTons.toFixed(3);
   };
 
-  // FIXED: Add safe date parsing function
-  const safeParseDate = (dateString: string): string => {
-    if (!dateString) return 'N/A';
+  // FIXED: Consistent date parsing that handles all date formats properly
+  const safeParseDate = (dateInput: any): string => {
+    if (!dateInput) return 'N/A';
 
-    // If it's already a formatted Croatian date string (dd.mm.yyyy), return as is
-    if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
-      return dateString;
+    let date: Date;
+
+    try {
+      // Handle MongoDB date objects with $date property
+      if (typeof dateInput === 'object' && dateInput.$date) {
+        date = new Date(dateInput.$date);
+      }
+      // Handle Date objects
+      else if (dateInput instanceof Date) {
+        date = dateInput;
+      }
+      // Handle string inputs
+      else if (typeof dateInput === 'string') {
+        // If it's already a Croatian formatted date (DD.MM.YYYY or DD.M.YYYY or D.MM.YYYY), return as is
+        if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+          return dateInput;
+        }
+
+        // For ISO strings or other date formats, parse them
+        date = new Date(dateInput);
+      }
+      // Handle any other type by converting to string and trying to parse
+      else {
+        date = new Date(String(dateInput));
+      }
+
+      // Check if parsing was successful
+      if (isNaN(date.getTime())) {
+        console.warn('Failed to parse date:', dateInput);
+        return String(dateInput); // Return as string for debugging
+      }
+
+      // Always format to Croatian format consistently
+      return date.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'Europe/Zagreb',
+      });
+    } catch (error) {
+      console.error('Error parsing date:', dateInput, error);
+      return String(dateInput);
     }
-
-    // Try to parse as ISO date or other formats
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      console.log('Failed to parse date:', dateString); // Debug log
-      return dateString; // Return original string instead of N/A to see what we're getting
-    }
-
-    return date.toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
   };
 
-  // FIXED: Add safe date and time formatting
+  // FIXED: Consistent date and time formatting
   const formatDateAndTime = (
-    creationDate: string,
+    creationDate: any,
     creationTime?: string,
   ): string => {
     const formattedDate = safeParseDate(creationDate);
 
     if (!formattedDate || formattedDate === 'N/A') {
-      console.log('formatDateAndTime - bad date:', creationDate); // Debug log
-      return creationTime ? `${creationDate} ${creationTime}` : creationDate; // Show original data for debugging
+      console.warn('formatDateAndTime - failed to format date:', creationDate);
+      const fallback = String(creationDate);
+      return creationTime ? `${fallback} ${creationTime}` : fallback;
     }
 
     return creationTime ? `${formattedDate} ${creationTime}` : formattedDate;
   };
-
   const showRestrictedMessage =
     user?.role === 'admin' && user?.codes && user.codes.length > 0;
 

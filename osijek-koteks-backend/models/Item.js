@@ -1,4 +1,4 @@
-// Item.js (MongoDB Schema) - Complete file with user filter support
+// Item.js (MongoDB Schema) - Complete file with user filter support and FIXED date formatting
 const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
@@ -150,7 +150,9 @@ ItemSchema.index({creationDate: -1});
 ItemSchema.index({prijevoznik: 1});
 ItemSchema.index({createdBy: 1}); // ADD: Index for user filtering
 
-// Method to format dates for response
+// REMOVED: The problematic toJSON method that was causing inconsistent date formatting
+// This was the root cause of the MM/DD/YYYY vs DD/MM/YYYY issue
+/*
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();
 
@@ -185,5 +187,44 @@ ItemSchema.methods.toJSON = function () {
 
   return obj;
 };
+*/
+
+// OPTIONAL: Add virtual fields for formatted dates (if needed for specific use cases)
+// These won't be included in JSON responses by default, but can be accessed when needed
+ItemSchema.virtual('formattedCreationDate').get(function () {
+  if (!this.creationDate) return null;
+  return this.creationDate.toLocaleDateString('hr-HR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Zagreb',
+  });
+});
+
+ItemSchema.virtual('formattedApprovalDate').get(function () {
+  if (!this.approvalDate) return null;
+  return this.approvalDate.toLocaleString('hr-HR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Zagreb',
+  });
+});
+
+ItemSchema.virtual('formattedCreationTime').get(function () {
+  if (this.creationTime) return this.creationTime;
+  if (!this.createdAt) return null;
+  return this.createdAt.toLocaleTimeString('hr-HR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Zagreb',
+  });
+});
+
+// Ensure virtual fields are NOT included in JSON by default
+// This prevents breaking changes and lets frontend handle formatting
+ItemSchema.set('toJSON', {virtuals: false});
 
 module.exports = mongoose.model('Item', ItemSchema);
