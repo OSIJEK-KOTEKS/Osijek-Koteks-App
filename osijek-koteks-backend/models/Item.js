@@ -150,14 +150,34 @@ ItemSchema.index({creationDate: -1});
 ItemSchema.index({prijevoznik: 1});
 ItemSchema.index({createdBy: 1}); // ADD: Index for user filtering
 
-// REMOVED: The problematic toJSON method that was causing inconsistent date formatting
-// This was the root cause of the MM/DD/YYYY vs DD/MM/YYYY issue
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();
 
-  // ONLY ensure creationTime exists - don't format dates
+  // Format creationDate to DD.MM.YYYY for consistent display
+  if (obj.creationDate) {
+    obj.creationDate = obj.creationDate.toLocaleDateString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Zagreb',
+    });
+  }
+
+  // Ensure creationTime exists and is formatted
   if (!obj.creationTime && obj.createdAt) {
     obj.creationTime = obj.createdAt.toLocaleTimeString('hr-HR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zagreb',
+    });
+  }
+
+  // Format approvalDate if it exists
+  if (obj.approvalDate) {
+    obj.approvalDate = obj.approvalDate.toLocaleString('hr-HR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'Europe/Zagreb',
