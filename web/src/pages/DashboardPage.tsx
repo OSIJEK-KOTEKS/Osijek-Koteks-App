@@ -325,51 +325,93 @@ const Dashboard: React.FC = () => {
     return weightInTons.toFixed(3);
   };
 
-  // FIXED: Consistent date parsing that handles all date formats properly
+  // FIXED: Updated safeParseDate function to handle the backend's Croatian format with spaces
   const safeParseDate = (dateInput: any): string => {
     if (!dateInput) return 'N/A';
-
-    let date: Date;
 
     try {
       // Handle MongoDB date objects with $date property
       if (typeof dateInput === 'object' && dateInput.$date) {
-        date = new Date(dateInput.$date);
+        const date = new Date(dateInput.$date);
+        if (isNaN(date.getTime())) {
+          return String(dateInput.$date);
+        }
+        return date.toLocaleDateString('hr-HR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          timeZone: 'Europe/Zagreb',
+        });
       }
+
       // Handle Date objects
-      else if (dateInput instanceof Date) {
-        date = dateInput;
+      if (dateInput instanceof Date) {
+        if (isNaN(dateInput.getTime())) {
+          return String(dateInput);
+        }
+        return dateInput.toLocaleDateString('hr-HR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          timeZone: 'Europe/Zagreb',
+        });
       }
+
       // Handle string inputs
-      else if (typeof dateInput === 'string') {
-        // If it's already a Croatian formatted date (DD.MM.YYYY or DD.M.YYYY or D.MM.YYYY), return as is
-        if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
-          return dateInput;
+      if (typeof dateInput === 'string') {
+        const dateStr = dateInput.trim();
+
+        // FIXED: Check for Croatian format with spaces and optional trailing period
+        // Matches: "04. 09. 2025." or "04. 09. 2025" or "4. 9. 2025." etc.
+        const croatianWithSpacesMatch = dateStr.match(
+          /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})\.?$/,
+        );
+        if (croatianWithSpacesMatch) {
+          const [, day, month, year] = croatianWithSpacesMatch;
+          // Return in standard Croatian format without spaces
+          return `${day.padStart(2, '0')}.${month.padStart(2, '0')}.${year}`;
+        }
+
+        // Check for standard Croatian format (DD.MM.YYYY without spaces)
+        const croatianStandardMatch = dateStr.match(
+          /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/,
+        );
+        if (croatianStandardMatch) {
+          const [, day, month, year] = croatianStandardMatch;
+          return `${day.padStart(2, '0')}.${month.padStart(2, '0')}.${year}`;
         }
 
         // For ISO strings or other date formats, parse them
-        date = new Date(dateInput);
-      }
-      // Handle any other type by converting to string and trying to parse
-      else {
-        date = new Date(String(dateInput));
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('hr-HR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            timeZone: 'Europe/Zagreb',
+          });
+        }
+
+        // If all parsing fails, return original string
+        console.warn('Could not parse date:', dateStr);
+        return dateStr;
       }
 
-      // Check if parsing was successful
-      if (isNaN(date.getTime())) {
-        console.warn('Failed to parse date:', dateInput);
-        return String(dateInput); // Return as string for debugging
+      // Handle any other type
+      const date = new Date(String(dateInput));
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('hr-HR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          timeZone: 'Europe/Zagreb',
+        });
       }
 
-      // Always format to Croatian format consistently
-      return date.toLocaleDateString('hr-HR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        timeZone: 'Europe/Zagreb',
-      });
+      console.warn('Failed to parse date input:', dateInput);
+      return String(dateInput);
     } catch (error) {
-      console.error('Error parsing date:', dateInput, error);
+      console.error('Error in safeParseDate:', error, 'Input:', dateInput);
       return String(dateInput);
     }
   };
@@ -391,7 +433,15 @@ const Dashboard: React.FC = () => {
   };
   const showRestrictedMessage =
     user?.role === 'admin' && user?.codes && user.codes.length > 0;
-
+  const debugDateFormatting = (item: Item, index: number) => {
+    console.log(`Item ${index} (${item.title}):`, {
+      creationDate: item.creationDate,
+      creationDateType: typeof item.creationDate,
+      creationTime: item.creationTime,
+      formatted: formatDateAndTime(item.creationDate, item.creationTime),
+      rawItem: item,
+    });
+  };
   // FIXED: Main fetch function with proper pagination logic
   const fetchItems = useCallback(
     async (
@@ -1060,219 +1110,225 @@ const Dashboard: React.FC = () => {
         <>
           {/* ORIGINAL ITEMS GRID LAYOUT */}
           <ItemsGrid>
-            {items.map(item => (
-              <ItemCard key={item._id}>
-                <ItemTitle>{item.title}</ItemTitle>
+            {items.map((item, index) => {
+              // DEBUG: Add this line to debug first 5 items
+              if (index < 5) debugDateFormatting(item, index);
 
-                {item.createdBy && (
-                  <ItemDetails>
-                    <strong>Dobavljač:</strong> {getDisplayNameForUser(item)}
-                  </ItemDetails>
-                )}
+              return (
+                <ItemCard key={item._id}>
+                  <ItemTitle>{item.title}</ItemTitle>
 
-                {user?.role === 'admin' ? (
-                  <AdminCodeEditor
-                    item={item}
-                    availableCodes={availableCodes}
-                    onCodeUpdate={handleCodeUpdate}
-                  />
-                ) : (
-                  <ItemDetails>
-                    <strong>RN:</strong> {getFormattedCode(item.code)}
-                  </ItemDetails>
-                )}
-
-                {/* Display prijevoznik if it exists */}
-                {item.prijevoznik && (
-                  <ItemDetails>
-                    <strong>Prijevoznik:</strong> {item.prijevoznik}
-                  </ItemDetails>
-                )}
-
-                {item.registracija && (
-                  <ItemDetails>
-                    <strong>Registracija:</strong> {item.registracija}
-                  </ItemDetails>
-                )}
-
-                {/* Display tezina in tons */}
-                {item.tezina !== undefined && (
-                  <ItemDetails>
-                    <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
-                  </ItemDetails>
-                )}
-
-                {item.neto !== undefined &&
-                  item.approvalStatus === 'odobreno' && (
+                  {item.createdBy && (
                     <ItemDetails>
-                      <strong>Razlika u vaganju:</strong>{' '}
-                      {item.neto > 1000 ? (
-                        <span>/</span>
-                      ) : (
-                        <span
-                          style={{
-                            color:
-                              item.neto < -5
-                                ? '#f44336'
-                                : item.neto > 5
-                                ? '#4caf50'
-                                : 'inherit',
-                            fontWeight:
-                              item.neto < -5 || item.neto > 5
-                                ? '600'
-                                : 'normal',
-                          }}>
-                          {item.neto}%
-                        </span>
+                      <strong>Dobavljač:</strong> {getDisplayNameForUser(item)}
+                    </ItemDetails>
+                  )}
+
+                  {user?.role === 'admin' ? (
+                    <AdminCodeEditor
+                      item={item}
+                      availableCodes={availableCodes}
+                      onCodeUpdate={handleCodeUpdate}
+                    />
+                  ) : (
+                    <ItemDetails>
+                      <strong>RN:</strong> {getFormattedCode(item.code)}
+                    </ItemDetails>
+                  )}
+
+                  {/* Display prijevoznik if it exists */}
+                  {item.prijevoznik && (
+                    <ItemDetails>
+                      <strong>Prijevoznik:</strong> {item.prijevoznik}
+                    </ItemDetails>
+                  )}
+
+                  {item.registracija && (
+                    <ItemDetails>
+                      <strong>Registracija:</strong> {item.registracija}
+                    </ItemDetails>
+                  )}
+
+                  {/* Display tezina in tons */}
+                  {item.tezina !== undefined && (
+                    <ItemDetails>
+                      <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)}{' '}
+                      t
+                    </ItemDetails>
+                  )}
+
+                  {item.neto !== undefined &&
+                    item.approvalStatus === 'odobreno' && (
+                      <ItemDetails>
+                        <strong>Razlika u vaganju:</strong>{' '}
+                        {item.neto > 1000 ? (
+                          <span>/</span>
+                        ) : (
+                          <span
+                            style={{
+                              color:
+                                item.neto < -5
+                                  ? '#f44336'
+                                  : item.neto > 5
+                                  ? '#4caf50'
+                                  : 'inherit',
+                              fontWeight:
+                                item.neto < -5 || item.neto > 5
+                                  ? '600'
+                                  : 'normal',
+                            }}>
+                            {item.neto}%
+                          </span>
+                        )}
+                      </ItemDetails>
+                    )}
+
+                  <ItemDetails>
+                    <strong>Datum i vrijeme:</strong>{' '}
+                    {formatDateAndTime(item.creationDate, item.creationTime)}
+                  </ItemDetails>
+
+                  <div>
+                    <StatusBadge status={item.approvalStatus}>
+                      {item.approvalStatus === 'odobreno'
+                        ? 'Odobreno'
+                        : item.approvalStatus === 'odbijen'
+                        ? 'Odbijeno'
+                        : 'Na čekanju'}
+                    </StatusBadge>
+
+                    {/* Show in transit badge */}
+                    {item.in_transit && (
+                      <TransitBadge>🚛 U tranzitu</TransitBadge>
+                    )}
+                  </div>
+
+                  {item.approvalStatus === 'odobreno' && item.approvedBy && (
+                    <ItemDetails>
+                      <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
+                      {item.approvedBy.lastName}
+                      {item.approvalDate && (
+                        <> ({safeParseDate(item.approvalDate)})</>
                       )}
                     </ItemDetails>
                   )}
 
-                <ItemDetails>
-                  <strong>Datum i vrijeme:</strong>{' '}
-                  {formatDateAndTime(item.creationDate, item.creationTime)}
-                </ItemDetails>
+                  {/* ORIGINAL BUTTON LAYOUT */}
+                  <ButtonGroup>
+                    <PhotoButtonsGroup>
+                      <PrintButton item={item} />
 
-                <div>
-                  <StatusBadge status={item.approvalStatus}>
-                    {item.approvalStatus === 'odobreno'
-                      ? 'Odobreno'
-                      : item.approvalStatus === 'odbijen'
-                      ? 'Odbijeno'
-                      : 'Na čekanju'}
-                  </StatusBadge>
-
-                  {/* Show in transit badge */}
-                  {item.in_transit && (
-                    <TransitBadge>🚛 U tranzitu</TransitBadge>
-                  )}
-                </div>
-
-                {item.approvalStatus === 'odobreno' && item.approvedBy && (
-                  <ItemDetails>
-                    <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
-                    {item.approvedBy.lastName}
-                    {item.approvalDate && (
-                      <> ({safeParseDate(item.approvalDate)})</>
-                    )}
-                  </ItemDetails>
-                )}
-
-                {/* ORIGINAL BUTTON LAYOUT */}
-                <ButtonGroup>
-                  <PhotoButtonsGroup>
-                    <PrintButton item={item} />
-
-                    {/* RESTORED: Original PDF button */}
-                    <ActionButton
-                      onClick={() => {
-                        try {
-                          window.open(item.pdfUrl, '_blank');
-                        } catch (error) {
-                          console.error('Error opening PDF:', error);
-                        }
-                      }}>
-                      PDF
-                    </ActionButton>
-
-                    {/* Show approval photos if they exist */}
-                    {item.approvalPhotoFront?.url && (
+                      {/* RESTORED: Original PDF button */}
                       <ActionButton
                         onClick={() => {
-                          const imageUrl = item.approvalPhotoFront?.url;
-                          if (imageUrl) {
-                            setSelectedImage(getImageUrl(imageUrl));
+                          try {
+                            window.open(item.pdfUrl, '_blank');
+                          } catch (error) {
+                            console.error('Error opening PDF:', error);
                           }
                         }}>
-                        Registracija
+                        PDF
+                      </ActionButton>
+
+                      {/* Show approval photos if they exist */}
+                      {item.approvalPhotoFront?.url && (
+                        <ActionButton
+                          onClick={() => {
+                            const imageUrl = item.approvalPhotoFront?.url;
+                            if (imageUrl) {
+                              setSelectedImage(getImageUrl(imageUrl));
+                            }
+                          }}>
+                          Registracija
+                        </ActionButton>
+                      )}
+
+                      {item.approvalPhotoBack?.url && (
+                        <ActionButton
+                          onClick={() => {
+                            const imageUrl = item.approvalPhotoBack?.url;
+                            if (imageUrl) {
+                              setSelectedImage(getImageUrl(imageUrl));
+                            }
+                          }}>
+                          materijal
+                        </ActionButton>
+                      )}
+                    </PhotoButtonsGroup>
+
+                    {/* RESTORED: PC User Approval PDF Document */}
+                    {item.approvalDocument?.url && (
+                      <ActionButton
+                        onClick={async () => {
+                          try {
+                            const pdfUrl = item.approvalDocument!.url!;
+
+                            // Extract filename from URL for download
+                            const urlParts = pdfUrl.split('/');
+                            const filename = `${
+                              urlParts[urlParts.length - 1]
+                            }.pdf`;
+
+                            // Try to download the PDF
+                            const response = await fetch(pdfUrl);
+                            const blob = await response.blob();
+
+                            const blobUrl = window.URL.createObjectURL(
+                              new Blob([blob], {type: 'application/pdf'}),
+                            );
+
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(blobUrl);
+                          } catch (error) {
+                            console.error('Error downloading PDF:', error);
+                            // Fallback to opening in new tab
+                            window.open(item.approvalDocument!.url!, '_blank');
+                          }
+                        }}>
+                        Dokumentacija PDF
                       </ActionButton>
                     )}
 
-                    {item.approvalPhotoBack?.url && (
-                      <ActionButton
-                        onClick={() => {
-                          const imageUrl = item.approvalPhotoBack?.url;
-                          if (imageUrl) {
-                            setSelectedImage(getImageUrl(imageUrl));
-                          }
-                        }}>
-                        materijal
+                    {/* Location button */}
+                    {item.approvalLocation && (
+                      <ActionButton onClick={() => setSelectedLocation(item)}>
+                        Lokacija odobrenja
                       </ActionButton>
                     )}
-                  </PhotoButtonsGroup>
 
-                  {/* RESTORED: PC User Approval PDF Document */}
-                  {item.approvalDocument?.url && (
-                    <ActionButton
-                      onClick={async () => {
-                        try {
-                          const pdfUrl = item.approvalDocument!.url!;
+                    {/* Approval buttons based on user role */}
+                    {user?.role === 'admin' &&
+                      item.approvalStatus === 'na čekanju' && (
+                        <ApproveButton
+                          item={item}
+                          onSuccess={handleApprovalSuccess}
+                        />
+                      )}
 
-                          // Extract filename from URL for download
-                          const urlParts = pdfUrl.split('/');
-                          const filename = `${
-                            urlParts[urlParts.length - 1]
-                          }.pdf`;
+                    {user?.role === 'pc-user' &&
+                      item.approvalStatus === 'na čekanju' && (
+                        <PCUserApproveButton
+                          item={item}
+                          onSuccess={handleApprovalSuccess}
+                        />
+                      )}
 
-                          // Try to download the PDF
-                          const response = await fetch(pdfUrl);
-                          const blob = await response.blob();
-
-                          const blobUrl = window.URL.createObjectURL(
-                            new Blob([blob], {type: 'application/pdf'}),
-                          );
-
-                          const a = document.createElement('a');
-                          a.href = blobUrl;
-                          a.download = filename;
-                          document.body.appendChild(a);
-                          a.click();
-
-                          document.body.removeChild(a);
-                          window.URL.revokeObjectURL(blobUrl);
-                        } catch (error) {
-                          console.error('Error downloading PDF:', error);
-                          // Fallback to opening in new tab
-                          window.open(item.approvalDocument!.url!, '_blank');
-                        }
-                      }}>
-                      Dokumentacija PDF
-                    </ActionButton>
-                  )}
-
-                  {/* Location button */}
-                  {item.approvalLocation && (
-                    <ActionButton onClick={() => setSelectedLocation(item)}>
-                      Lokacija odobrenja
-                    </ActionButton>
-                  )}
-
-                  {/* Approval buttons based on user role */}
-                  {user?.role === 'admin' &&
-                    item.approvalStatus === 'na čekanju' && (
-                      <ApproveButton
-                        item={item}
-                        onSuccess={handleApprovalSuccess}
-                      />
+                    {/* Delete button for admin */}
+                    {user?.role === 'admin' && (
+                      <DeleteButton onClick={() => handleDelete(item._id)}>
+                        Obriši
+                      </DeleteButton>
                     )}
-
-                  {user?.role === 'pc-user' &&
-                    item.approvalStatus === 'na čekanju' && (
-                      <PCUserApproveButton
-                        item={item}
-                        onSuccess={handleApprovalSuccess}
-                      />
-                    )}
-
-                  {/* Delete button for admin */}
-                  {user?.role === 'admin' && (
-                    <DeleteButton onClick={() => handleDelete(item._id)}>
-                      Obriši
-                    </DeleteButton>
-                  )}
-                </ButtonGroup>
-              </ItemCard>
-            ))}
+                  </ButtonGroup>
+                </ItemCard>
+              );
+            })}
           </ItemsGrid>
 
           {/* Load More Button */}
