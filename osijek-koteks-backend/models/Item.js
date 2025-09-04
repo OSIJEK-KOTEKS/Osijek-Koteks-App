@@ -152,19 +152,10 @@ ItemSchema.index({createdBy: 1}); // ADD: Index for user filtering
 
 // REMOVED: The problematic toJSON method that was causing inconsistent date formatting
 // This was the root cause of the MM/DD/YYYY vs DD/MM/YYYY issue
-/*
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();
 
-  if (obj.creationDate) {
-    obj.creationDate = obj.creationDate.toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      timeZone: 'Europe/Zagreb',
-    });
-  }
-
+  // ONLY ensure creationTime exists - don't format dates
   if (!obj.creationTime && obj.createdAt) {
     obj.creationTime = obj.createdAt.toLocaleTimeString('hr-HR', {
       hour: '2-digit',
@@ -173,21 +164,8 @@ ItemSchema.methods.toJSON = function () {
     });
   }
 
-  if (obj.approvalDate) {
-    // Format as "DD.MM.YYYY HH:MM"
-    obj.approvalDate = obj.approvalDate.toLocaleString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Zagreb',
-    });
-  }
-
   return obj;
 };
-*/
 
 // OPTIONAL: Add virtual fields for formatted dates (if needed for specific use cases)
 // These won't be included in JSON responses by default, but can be accessed when needed
