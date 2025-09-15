@@ -34,6 +34,7 @@ export const codeToTextMapping: Record<string, string> = {
   '24060': 'Našice - Rad. na san. kanalali.',
   '24065': 'REKON. DC ERDUT - GP DALJ',
   '24076': 'Dom za starije SB',
+  '25003': 'Pješačka staza, kružni tok - Osijek',
   '25006': 'Ricardo',
   '25007': 'Općina Darda - održ. nerazvr. cesta',
   '25008': 'San. kol. sus. koška, niza i ladim.',
