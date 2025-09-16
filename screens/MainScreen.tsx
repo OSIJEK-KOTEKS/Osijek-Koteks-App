@@ -563,7 +563,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
     handleRefresh,
     refreshing,
   ]);
-  // Continue from previous part...
 
   // Main Render
   return (
