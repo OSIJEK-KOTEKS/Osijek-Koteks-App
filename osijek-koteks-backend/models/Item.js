@@ -1,4 +1,3 @@
-// Item.js (MongoDB Schema) - Complete file with user filter support and FIXED date formatting
 const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
@@ -37,7 +36,7 @@ const ItemSchema = new mongoose.Schema(
         message: 'Code cannot be empty',
       },
     },
-    // ADD: createdBy field for user filtering
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -95,7 +94,6 @@ const ItemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // Updated to have two photos
     approvalPhotoFront: photoSchema,
     approvalPhotoBack: photoSchema,
     approvalLocation: {
@@ -148,7 +146,7 @@ ItemSchema.index({code: 1});
 ItemSchema.index({approvalStatus: 1});
 ItemSchema.index({creationDate: -1});
 ItemSchema.index({prijevoznik: 1});
-ItemSchema.index({createdBy: 1}); // ADD: Index for user filtering
+ItemSchema.index({createdBy: 1});
 
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();
@@ -187,7 +185,6 @@ ItemSchema.methods.toJSON = function () {
   return obj;
 };
 
-// OPTIONAL: Add virtual fields for formatted dates (if needed for specific use cases)
 // These won't be included in JSON responses by default, but can be accessed when needed
 ItemSchema.virtual('formattedCreationDate').get(function () {
   if (!this.creationDate) return null;
