@@ -155,30 +155,6 @@ export const UserManagementScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  // const handleDeleteUser = async (userId: string) => {
-  //   Alert.alert(
-  //     'Potvrda brisanja',
-  //     'Jeste li sigurni da želite izbrisati ovog korisnika?',
-  //     [
-  //       {text: 'Odustani', style: 'cancel'},
-  //       {
-  //         text: 'Izbriši',
-  //         style: 'destructive',
-  //         onPress: async () => {
-  //           try {
-  //             await apiService.deleteUser(userId);
-  //             await fetchUsers();
-  //             Alert.alert('Uspjeh', 'Korisnik uspješno izbrisan');
-  //           } catch (error) {
-  //             console.error('Error deleting user:', error);
-  //             Alert.alert('Greška', 'Greška pri brisanju korisnika');
-  //           }
-  //         },
-  //       },
-  //     ],
-  //   );
-  // };
-
   // Code Management Handlers
   const handleAddNewCode = () => {
     if (selectedCodes.includes(newCode)) {
@@ -325,30 +301,6 @@ export const UserManagementScreen: React.FC = () => {
       Alert.alert('Greška', 'Greška pri promjeni lozinke');
     }
   };
-
-  // const handleDataDeletion = async (userId: string) => {
-  //   Alert.alert(
-  //     'Brisanje podataka',
-  //     'Ova akcija će trajno izbrisati sve korisničke podatke. Želite li nastaviti?',
-  //     [
-  //       {text: 'Odustani', style: 'cancel'},
-  //       {
-  //         text: 'Izbriši',
-  //         style: 'destructive',
-  //         onPress: async () => {
-  //           try {
-  //             await apiService.deleteUser(userId);
-  //             await fetchUsers();
-  //             Alert.alert('Uspjeh', 'Korisnički podaci uspješno izbrisani');
-  //           } catch (error) {
-  //             console.error('Error deleting user:', error);
-  //             Alert.alert('Greška', 'Greška pri brisanju podataka');
-  //           }
-  //         },
-  //       },
-  //     ],
-  //   );
-  // };
 
   const showPrivacySettings = (user: User) => {
     setSelectedUser(user);
@@ -711,21 +663,6 @@ export const UserManagementScreen: React.FC = () => {
                     Izvezi sve podatke
                   </Text>
                 </TouchableOpacity>
-
-                {/* <TouchableOpacity
-                  style={[styles.privacyButton, styles.deleteButton]}
-                  onPress={() =>
-                    selectedUser && handleDataDeletion(selectedUser._id)
-                  }>
-                  <MaterialIcons
-                    name="delete-forever"
-                    size={24}
-                    color="#f44336"
-                  />
-                  <Text style={[styles.privacyButtonText, styles.deleteText]}>
-                    Izbriši sve podatke
-                  </Text>
-                </TouchableOpacity> */}
 
                 <View style={styles.privacyInfo}>
                   <Text style={styles.privacyInfoHeader}>
