@@ -1,4 +1,3 @@
-// src/styles/styled.d.ts
 import 'styled-components';
 
 declare module 'styled-components' {
@@ -12,8 +11,8 @@ declare module 'styled-components' {
       white: string;
       gray: string;
       disabled: string;
-      success: string; // Add this line
-      successDark: string; // Add this line
+      success: string;
+      successDark: string;
     };
   }
 }

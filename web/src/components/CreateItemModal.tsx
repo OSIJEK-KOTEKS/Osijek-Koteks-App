@@ -167,7 +167,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
     registracija: '',
     neto: undefined,
     tezina: undefined,
-    prijevoznik: '', // NEW: Add prijevoznik field
+    prijevoznik: '',
     pdfUrl: '',
   });
   const [loading, setLoading] = useState<boolean>(false);

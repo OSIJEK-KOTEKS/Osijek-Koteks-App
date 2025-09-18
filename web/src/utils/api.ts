@@ -9,7 +9,7 @@ import {
   ItemFilters,
   PaginatedResponse,
   ApiService,
-  ItemUser, // ← ADD THIS LINE to your existing imports
+  ItemUser,
 } from '../types';
 
 const API_URL =
@@ -499,7 +499,7 @@ export const apiService = {
     }
   },
 
-  // NEW: Get unique prijevoznik values for filtering
+  //  Get unique prijevoznik values for filtering
   getUniqueCarriers: async (): Promise<string[]> => {
     try {
       const response = await api.get<string[]>('/api/items/carriers');

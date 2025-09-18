@@ -1,4 +1,3 @@
-// src/components/PrintAllButton.tsx
 import React, {useCallback, useState} from 'react';
 import styled from 'styled-components';
 import ReactDOMServer from 'react-dom/server';
@@ -31,20 +30,19 @@ const PrintButton = styled.button`
 interface PrintAllButtonProps {
   items: Item[];
   totalItems: number;
-  totalWeight: number; // NEW: Add total weight prop
+  totalWeight: number;
   isLoading: boolean;
   onPrintAll: () => Promise<Item[]>;
 }
 
 const PrintAllButton: React.FC<PrintAllButtonProps> = ({
   totalItems,
-  totalWeight, // NEW: Destructure total weight
+  totalWeight,
   isLoading,
   onPrintAll,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // NEW: Format weight function
   const formatWeight = (weightInKg: number) => {
     const weightInTons = weightInKg / 1000;
     return weightInTons.toFixed(3);
@@ -227,7 +225,6 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
         })
         .join('');
 
-      // NEW: Generate total weight summary HTML
       const totalWeightSummaryHtml = `
         <div class="page-break"></div>
         <div class="total-weight-summary">

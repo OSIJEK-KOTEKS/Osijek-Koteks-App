@@ -1,5 +1,3 @@
-// osijek-koteks-web/src/components/ImageViewerModal.tsx
-
 import React, {useEffect, useState} from 'react';
 import styled from 'styled-components';
 

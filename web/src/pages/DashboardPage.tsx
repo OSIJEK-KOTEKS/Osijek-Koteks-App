@@ -19,7 +19,6 @@ import ExportExcelButton from '../components/ExportExcelButton';
 import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
 import AdminCodeEditor from '../components/AdminCodeEditor';
 
-// ORIGINAL STYLED COMPONENTS - Restored from project
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
@@ -151,7 +150,7 @@ const ButtonGroup = styled.div`
 `;
 const PhotoButtonsGroup = styled.div`
   display: flex;
-  flex-wrap: wrap; /* Add this to prevent overflow */
+  flex-wrap: wrap;
   gap: ${({theme}) => theme.spacing.small};
   width: 100%;
 `;
@@ -198,11 +197,10 @@ const HeaderActions = styled.div`
   display: flex;
   gap: ${({theme}) => theme.spacing.medium};
 
-  /* Target all buttons within HeaderActions and reduce their size by 15% */
   & > button,
   & button {
-    padding: 0.638rem 0.85rem !important; /* Original was ~0.75rem 1rem, reduced by 15% */
-    font-size: 0.935rem !important; /* Original was ~1.1rem, reduced by 15% */
+    padding: 0.638rem 0.85rem !important;
+    font-size: 0.935rem !important;
   }
 
   /* For buttons that specifically have the S.Button styling */
@@ -325,7 +323,7 @@ const Dashboard: React.FC = () => {
     return weightInTons.toFixed(3);
   };
 
-  // FIXED: Updated safeParseDate function to handle the backend's Croatian format with spaces
+  //Updated safeParseDate function to handle the backend's Croatian format with spaces
   const safeParseDate = (dateInput: any): string => {
     if (!dateInput) return 'N/A';
 
@@ -361,7 +359,7 @@ const Dashboard: React.FC = () => {
       if (typeof dateInput === 'string') {
         const dateStr = dateInput.trim();
 
-        // FIXED: Check for Croatian format with spaces and optional trailing period
+        // Check for Croatian format with spaces and optional trailing period
         // Matches: "04. 09. 2025." or "04. 09. 2025" or "4. 9. 2025." etc.
         const croatianWithSpacesMatch = dateStr.match(
           /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})\.?$/,
@@ -416,7 +414,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // FIXED: Consistent date and time formatting
+  //Consistent date and time formatting
   const formatDateAndTime = (
     creationDate: any,
     creationTime?: string,
@@ -442,7 +440,7 @@ const Dashboard: React.FC = () => {
       rawItem: item,
     });
   };
-  // FIXED: Main fetch function with proper pagination logic
+  //Main fetch function with proper pagination logic
   const fetchItems = useCallback(
     async (
       pageNumber: number = 1,
@@ -602,7 +600,7 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
-  // FIXED: Load more handler
+  // Load more handler
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading || isFetchingRef.current) {
       console.log('Skipping load more:', {
@@ -635,7 +633,7 @@ const Dashboard: React.FC = () => {
     totalItems,
   ]);
 
-  // FIXED: Filter change handler
+  // Filter change handler
   const handleFilterChange = useCallback(() => {
     // Cancel any ongoing request
     if (abortControllerRef.current) {
@@ -670,7 +668,7 @@ const Dashboard: React.FC = () => {
     // handleFilterChange will be triggered by the useEffect
   }, []);
 
-  // FIXED: Effects with proper dependencies
+  // Effects with proper dependencies
   useEffect(() => {
     if (!searchMode) {
       handleFilterChange();
@@ -764,7 +762,7 @@ const Dashboard: React.FC = () => {
     setInTransitOnly(false);
   }, []);
 
-  // FIXED: Refresh handler
+  // Refresh handler
   const handleRefresh = useCallback(async () => {
     console.log('Manual refresh triggered');
 
@@ -1111,7 +1109,6 @@ const Dashboard: React.FC = () => {
           {/* ORIGINAL ITEMS GRID LAYOUT */}
           <ItemsGrid>
             {items.map((item, index) => {
-              // DEBUG: Add this line to debug first 5 items
               if (index < 5) debugDateFormatting(item, index);
 
               return (

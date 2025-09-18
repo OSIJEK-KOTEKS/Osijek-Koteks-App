@@ -139,8 +139,8 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       const codeItems = itemsByCode[code];
       const codeData = codeItems.map((item, index) => ({
         'Redni broj': index + 1,
-        'Broj otpremnice': item.title, // CHANGED from 'Naziv'
-        'Radni nalog': getFormattedCode(item.code), // CHANGED from 'RN'
+        'Broj otpremnice': item.title,
+        'Radni nalog': getFormattedCode(item.code),
         Dobavljač: getDisplayNameForUser(item),
         Prijevoznik: item.prijevoznik || '-',
         Registracija: item.registracija || '-',
@@ -151,7 +151,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
               ? '/'
               : item.neto
             : null,
-        'Datum kreiranja otpremnice': item.creationTime // CHANGED from 'Datum kreiranja'
+        'Datum kreiranja otpremnice': item.creationTime
           ? `${item.creationDate} ${item.creationTime}`
           : item.creationDate,
         Status: item.approvalStatus,

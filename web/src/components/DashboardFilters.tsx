@@ -39,7 +39,6 @@ const deduplicateCarriers = (carriers: string[]): string[] => {
 
     const normalized = normalizeCarrierName(carrier);
 
-    // If we haven't seen this normalized name, or if current name is "better" (has accents, longer)
     if (
       !carrierMap.has(normalized) ||
       carrier.length > carrierMap.get(normalized)!.length
@@ -73,9 +72,7 @@ const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
   };
 
   // Define users to exclude from the filter list
-  const excludedUsers = [
-    'Marko Krajina', // ADD THIS - you can add more names here if needed
-  ];
+  const excludedUsers = ['Marko Krajina'];
 
   // Create grouped entries
   Object.entries(userGroupDefinitions).forEach(([groupName, emails]) => {

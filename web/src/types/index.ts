@@ -40,7 +40,7 @@ export interface Item {
     firstName: string;
     lastName: string;
   };
-  // ADD THIS FIELD
+
   createdBy?: {
     _id: string;
     firstName: string;
@@ -103,7 +103,7 @@ export interface CreateItemInput {
   code: string;
   registracija?: string;
   neto?: number;
-  tezina?: number; // NEW: Add tezina field
+  tezina?: number;
   prijevoznik?: string;
 
   pdfUrl: string;
@@ -120,9 +120,9 @@ export interface ItemFilters {
   searchTitle?: string;
   searchRegistration?: string;
   inTransitOnly?: boolean;
-  createdByUser?: string; // ADD THIS LINE
+  createdByUser?: string;
 }
-// You can also add a utility type for date range operations
+
 export interface DateRange {
   startDate: Date;
   endDate: Date;
@@ -150,7 +150,7 @@ export interface PaginationInfo {
 export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationInfo;
-  totalWeight?: number; // NEW: Add total weight to the response type
+  totalWeight?: number;
 }
 
 export interface ApiServiceResponse<T = any> {

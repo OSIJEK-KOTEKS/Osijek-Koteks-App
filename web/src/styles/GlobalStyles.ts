@@ -1,6 +1,5 @@
-// src/styles/GlobalStyles.ts
 import {createGlobalStyle} from 'styled-components';
-import 'react-datepicker/dist/react-datepicker.css'; // Import outside the template literal
+import 'react-datepicker/dist/react-datepicker.css';
 
 export const GlobalStyles = createGlobalStyle`
   * {

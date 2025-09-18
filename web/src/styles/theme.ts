@@ -10,7 +10,7 @@ export const theme: DefaultTheme = {
     white: '#ffffff',
     gray: '#e0e0e0',
     disabled: '#cccccc',
-    success: '#4CAF50', // Add this line
+    success: '#4CAF50',
     successDark: '#45a049',
   },
   spacing: {
