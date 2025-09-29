@@ -44,6 +44,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25015': 'Novska',
   '25016': 'Bizovac',
   '25019': 'Divaltova i Vukovarska',
+  '25021': 'Klisa-Vukovar rekonstrukcija DC2',
   '25023': 'Novokomerc',
   '25025': 'Autopraonica Belišće',
   '25026': 'Slobodna Vlast - Ratkov Dol',
