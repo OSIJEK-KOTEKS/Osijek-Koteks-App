@@ -63,6 +63,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25076':
     'Radovi na pripremi terena i izradi platoa za kontejnersko  naselje na projektu jabil',
   '25088': 'Tvornica mliječnih proizvoda Osijek ',
+  '25092': 'Gundulićeva ulica- Rekonstrukcija nogostupa ',
   '5014': 'Betonara',
 };
 
