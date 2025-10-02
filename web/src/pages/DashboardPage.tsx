@@ -298,26 +298,27 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
 
-  // Utility functions
   const getDisplayNameForUser = (item: Item): string => {
     if (!item.createdBy) return 'Nepoznato';
 
-    // Check if this user should be grouped
     if (
       item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
       item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
     ) {
-      return 'VELIČKI KAMEN d.o.o.';
+      return 'VEĆLIČKI KAMEN d.o.o.';
     }
 
     if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
       return 'KAMEN - PSUNJ d.o.o.';
     }
 
-    // For all other users, use existing logic
+    // ADD THIS NEW BLOCK
+    if (item.createdBy.email === 'vaga.molaris@osijek-koteks.hr') {
+      return 'MOLARIS d.o.o.';
+    }
+
     return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
   };
-
   const formatWeight = (weightInKg: number) => {
     const weightInTons = weightInKg / 1000;
     return weightInTons.toFixed(3);
@@ -882,6 +883,8 @@ const Dashboard: React.FC = () => {
               ].includes(u.email)
             : groupName === 'kamen_psunj'
             ? ['vaga.fukinac@kamen-psunj.hr'].includes(u.email)
+            : groupName === 'molaris'
+            ? ['vaga.molaris@osijek-koteks.hr'].includes(u.email)
             : false,
         );
 

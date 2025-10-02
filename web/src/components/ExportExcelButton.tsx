@@ -51,19 +51,21 @@ interface ExportExcelButtonProps {
 const getDisplayNameForUser = (item: Item): string => {
   if (!item.createdBy) return 'Nepoznato';
 
-  // Check if this user should be grouped
   if (
     item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
     item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
   ) {
-    return 'VELIČKI KAMEN d.o.o.';
+    return 'VEĆLIČKI KAMEN d.o.o.';
   }
 
   if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
     return 'KAMEN - PSUNJ d.o.o.';
   }
 
-  // For all other users, use existing logic
+  if (item.createdBy.email === 'vaga.molaris@osijek-koteks.hr') {
+    return 'MOLARIS d.o.o.';
+  }
+
   return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
 };
 

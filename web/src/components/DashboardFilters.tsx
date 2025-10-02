@@ -69,6 +69,7 @@ const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
       'velicki.vaga@velicki-kamen.hr',
     ],
     'KAMEN - PSUNJ d.o.o.': ['vaga.fukinac@kamen-psunj.hr'],
+    'MOLARIS d.o.o.': ['vaga.molaris@osijek-koteks.hr'],
   };
 
   // Define users to exclude from the filter list
