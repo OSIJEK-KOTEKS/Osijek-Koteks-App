@@ -34,14 +34,13 @@ const getDisplayNameForUser = (item: Item): string => {
     item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
     item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
   ) {
-    return 'VEĆLIČKI KAMEN d.o.o.';
+    return 'VELIČKI KAMEN d.o.o.';
   }
 
   if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
     return 'KAMEN - PSUNJ d.o.o.';
   }
 
-  // ADD THIS NEW BLOCK
   if (item.createdBy.email === 'vaga.molaris@osijek-koteks.hr') {
     return 'MOLARIS d.o.o.';
   }
