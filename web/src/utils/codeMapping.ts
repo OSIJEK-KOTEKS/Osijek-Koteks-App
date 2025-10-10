@@ -67,6 +67,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25088': 'Tvornica mliječnih proizvoda Osijek ',
   '25092': 'Gundulićeva ulica- Rekonstrukcija nogostupa ',
   '25095': 'Livana',
+  '25097': 'DARDA - Izra. Man. Pov.',
   '5014': 'Betonara',
 };
 
