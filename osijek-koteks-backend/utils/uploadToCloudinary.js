@@ -101,9 +101,7 @@ const uploadToCloudinary = async file => {
           'Compressed size:',
           processedImageBuffer.length,
           'Compression ratio:',
-          ((processedImageBuffer.length / file.buffer.length) * 100).toFixed(
-            2,
-          ) + '%',
+          ((processedImageBuffer.length / file.buffer.length) * 100).toFixed(2) + '%'
         );
 
         const b64 = processedImageBuffer.toString('base64');
@@ -116,7 +114,7 @@ const uploadToCloudinary = async file => {
 
       uploadOptions.resource_type = 'image';
       uploadOptions.quality_analysis = true;
-      uploadOptions.transformation = [{quality: 'auto:good'}];
+      uploadOptions.transformation = [{ quality: 'auto:good' }];
     }
 
     console.log('About to upload to Cloudinary with options:', uploadOptions);

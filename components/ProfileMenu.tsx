@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import {Text} from 'react-native-elements';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text } from 'react-native-elements';
 import Modal from 'react-native-modal';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },

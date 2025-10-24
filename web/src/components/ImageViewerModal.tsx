@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
 const ModalOverlay = styled.div`
@@ -18,7 +18,7 @@ const ModalContent = styled.div`
   position: relative;
   background-color: white;
   padding: 20px;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   max-width: 90vw;
   max-height: 90vh;
   overflow: hidden;
@@ -32,11 +32,11 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   z-index: 1;
 
   &:hover {
-    color: ${({theme}) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -51,11 +51,11 @@ const LoadingSpinner = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 200px;
-  color: ${({theme}) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const ErrorMessage = styled.div`
-  color: ${({theme}) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.error};
   text-align: center;
   padding: 20px;
 `;
@@ -68,11 +68,7 @@ interface ImageViewerModalProps {
 
 // osijek-koteks-web/src/components/ImageViewerModal.tsx
 
-const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
-  imageUrl,
-  onClose,
-  token,
-}) => {
+const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ imageUrl, onClose, token }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null);
@@ -116,10 +112,7 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
     // Cleanup function to revoke object URL only for non-Cloudinary URLs
     return () => {
-      if (
-        imageObjectUrl &&
-        !imageUrl.startsWith('https://res.cloudinary.com')
-      ) {
+      if (imageObjectUrl && !imageUrl.startsWith('https://res.cloudinary.com')) {
         URL.revokeObjectURL(imageObjectUrl);
       }
     };
@@ -137,9 +130,7 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         <CloseButton onClick={onClose}>&times;</CloseButton>
         {isLoading && <LoadingSpinner>Učitavanje...</LoadingSpinner>}
         {error && <ErrorMessage>{error}</ErrorMessage>}
-        {imageObjectUrl && !isLoading && !error && (
-          <Image src={imageObjectUrl} alt="Document" />
-        )}
+        {imageObjectUrl && !isLoading && !error && <Image src={imageObjectUrl} alt="Document" />}
       </ModalContent>
     </ModalOverlay>
   );

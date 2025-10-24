@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import {Item} from '../types';
+import { Item } from '../types';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -32,10 +32,10 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 
   &:hover {
-    color: ${({theme}) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -48,23 +48,23 @@ const InfoRow = styled.div`
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 8px;
-  background-color: ${({theme}) => theme.colors.background};
+  background-color: ${({ theme }) => theme.colors.background};
   border-radius: 4px;
 `;
 
 const Label = styled.span`
   font-weight: 500;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Value = styled.span`
-  color: ${({theme}) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   font-family: monospace;
 `;
 
 const Title = styled.h3`
   margin: 0 0 20px 0;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const MapLink = styled.a`
@@ -72,13 +72,13 @@ const MapLink = styled.a`
   text-align: center;
   margin-top: 20px;
   padding: 10px;
-  background-color: ${({theme}) => theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
   color: white;
   text-decoration: none;
   border-radius: 4px;
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 `;
 
@@ -100,7 +100,7 @@ const LocationViewerModal: React.FC<LocationViewerModalProps> = ({
   };
 
   const getMapUrl = () => {
-    const {latitude, longitude} = location.coordinates;
+    const { latitude, longitude } = location.coordinates;
     return `https://www.google.com/maps?q=${latitude},${longitude}`;
   };
 
@@ -136,9 +136,7 @@ const LocationViewerModal: React.FC<LocationViewerModalProps> = ({
           {location.timestamp && (
             <InfoRow>
               <Label>Vrijeme:</Label>
-              <Value>
-                {new Date(location.timestamp).toLocaleString('hr-HR')}
-              </Value>
+              <Value>{new Date(location.timestamp).toLocaleString('hr-HR')}</Value>
             </InfoRow>
           )}
         </LocationInfo>

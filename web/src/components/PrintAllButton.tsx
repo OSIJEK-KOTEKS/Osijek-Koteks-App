@@ -1,16 +1,16 @@
-import React, {useCallback, useState} from 'react';
+import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import ReactDOMServer from 'react-dom/server';
-import {Item} from '../types';
+import { Item } from '../types';
 import PrintableItem from './PrintableItem';
 
 const PrintButton = styled.button`
   width: 100%;
-  padding: ${({theme}) => theme.spacing.medium};
-  background-color: ${({theme}) => theme.colors.primary};
-  color: ${({theme}) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.medium};
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white};
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 1rem;
   transition: background-color 0.2s;
   display: flex;
@@ -18,11 +18,11 @@ const PrintButton = styled.button`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 
   &:disabled {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
     cursor: not-allowed;
   }
 `;
@@ -213,9 +213,7 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
       // Generate HTML for each PrintableItem component
       const itemsHtml = allItems
         .map((item, index) => {
-          const itemHtml = ReactDOMServer.renderToStaticMarkup(
-            <PrintableItem item={item} />,
-          );
+          const itemHtml = ReactDOMServer.renderToStaticMarkup(<PrintableItem item={item} />);
           return `
           ${index > 0 ? '<div class="page-break"></div>' : ''}
           <div id="item-${item._id}">
@@ -269,7 +267,7 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
 
       // Track loaded images
       const images = printWindow.document.getElementsByTagName('img');
-      const loadedImages = {current: 0};
+      const loadedImages = { current: 0 };
       const totalImages = images.length;
 
       const tryPrint = () => {
@@ -312,9 +310,7 @@ const PrintAllButton: React.FC<PrintAllButtonProps> = ({
   }, [onPrintAll, totalWeight, totalItems, formatWeight]);
 
   return (
-    <PrintButton
-      onClick={handlePrintAll}
-      disabled={isLoading || isPrinting || totalItems === 0}>
+    <PrintButton onClick={handlePrintAll} disabled={isLoading || isPrinting || totalItems === 0}>
       {isPrinting ? 'Priprema ispisa...' : `Ispiši sve (${totalItems})`}
     </PrintButton>
   );

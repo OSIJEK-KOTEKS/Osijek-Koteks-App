@@ -71,10 +71,7 @@ const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       return cb(null, true);
     }
-    return cb(
-      new Error('Samo PDF datoteke su dozvoljene za pdfDocument!'),
-      false,
-    );
+    return cb(new Error('Samo PDF datoteke su dozvoljene za pdfDocument!'), false);
   } else {
     // For photos (photoFront and photoBack fields)
     if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
@@ -100,14 +97,10 @@ router.get('/codes', auth, async (req, res) => {
 
     if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their codes
-      query.code = {$in: req.user.codes};
-    } else if (
-      req.user.role === 'admin' &&
-      req.user.codes &&
-      req.user.codes.length > 0
-    ) {
+      query.code = { $in: req.user.codes };
+    } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
       // Admin with codes assigned: filter by those codes
-      query.code = {$in: req.user.codes};
+      query.code = { $in: req.user.codes };
     }
     // If admin with no codes assigned (empty array or null), show all codes (no filtering)
 
@@ -119,7 +112,7 @@ router.get('/codes', auth, async (req, res) => {
     res.json(uniqueCodes.sort());
   } catch (err) {
     console.error('Error fetching unique codes:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 router.get('/users', auth, async (req, res) => {
@@ -132,23 +125,19 @@ router.get('/users', auth, async (req, res) => {
     if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their assigned codes
       if (req.user.codes && req.user.codes.length > 0) {
-        matchQuery.code = {$in: req.user.codes};
+        matchQuery.code = { $in: req.user.codes };
       } else {
         // User with no codes assigned should see nothing
         return res.json([]);
       }
-    } else if (
-      req.user.role === 'admin' &&
-      req.user.codes &&
-      req.user.codes.length > 0
-    ) {
+    } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
       // Admin with codes assigned: filter by those codes
-      matchQuery.code = {$in: req.user.codes};
+      matchQuery.code = { $in: req.user.codes };
     }
 
     // Aggregate to get unique users with their info
     const uniqueUsers = await Item.aggregate([
-      {$match: matchQuery},
+      { $match: matchQuery },
       {
         $group: {
           _id: '$createdBy',
@@ -177,7 +166,7 @@ router.get('/users', auth, async (req, res) => {
         },
       },
       {
-        $sort: {displayName: 1},
+        $sort: { displayName: 1 },
       },
     ]);
 
@@ -185,7 +174,7 @@ router.get('/users', auth, async (req, res) => {
     res.json(uniqueUsers);
   } catch (err) {
     console.error('Error fetching unique users:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 // Get unique carriers (prijevoznik values) - BEFORE /:id route
@@ -196,19 +185,15 @@ router.get('/carriers', auth, async (req, res) => {
 
     if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their codes
-      query.code = {$in: req.user.codes};
-    } else if (
-      req.user.role === 'admin' &&
-      req.user.codes &&
-      req.user.codes.length > 0
-    ) {
+      query.code = { $in: req.user.codes };
+    } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
       // Admin with codes assigned: filter by those codes
-      query.code = {$in: req.user.codes};
+      query.code = { $in: req.user.codes };
     }
     // If admin with no codes assigned (empty array or null), show all carriers (no filtering)
 
     // Only get items that have a prijevoznik field
-    query.prijevoznik = {$exists: true, $ne: null, $ne: ''};
+    query.prijevoznik = { $exists: true, $ne: null, $ne: '' };
 
     const uniqueCarriers = await Item.distinct('prijevoznik', query);
 
@@ -218,7 +203,7 @@ router.get('/carriers', auth, async (req, res) => {
     res.json(uniqueCarriers.sort());
   } catch (err) {
     console.error('Error fetching unique carriers:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 //get items
@@ -272,7 +257,7 @@ router.get('/', auth, async (req, res) => {
         if (code && req.user.codes.includes(code)) {
           query.code = code;
         } else if (!code) {
-          query.code = {$in: req.user.codes};
+          query.code = { $in: req.user.codes };
         } else {
           // User requested a code they don't have access to
           return res.json({
@@ -299,16 +284,12 @@ router.get('/', auth, async (req, res) => {
           totalWeight: 0,
         });
       }
-    } else if (
-      req.user.role === 'admin' &&
-      req.user.codes &&
-      req.user.codes.length > 0
-    ) {
+    } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
       // Admin with codes assigned: filter by those codes
       if (code && req.user.codes.includes(code)) {
         query.code = code;
       } else if (!code) {
-        query.code = {$in: req.user.codes};
+        query.code = { $in: req.user.codes };
       } else {
         // Admin requested a code they don't have access to
         return res.json({
@@ -336,11 +317,11 @@ router.get('/', auth, async (req, res) => {
 
     // Search filtering
     if (searchTitle) {
-      query.title = {$regex: searchTitle, $options: 'i'};
+      query.title = { $regex: searchTitle, $options: 'i' };
     }
 
     if (searchRegistration) {
-      query.registracija = {$regex: searchRegistration, $options: 'i'};
+      query.registracija = { $regex: searchRegistration, $options: 'i' };
     }
 
     // In transit filtering
@@ -353,7 +334,7 @@ router.get('/', auth, async (req, res) => {
       if (createdByUser.includes(',')) {
         // Multiple user IDs
         const userIds = createdByUser.split(',').filter(id => id.trim());
-        query.createdBy = {$in: userIds};
+        query.createdBy = { $in: userIds };
       } else {
         // Single user ID
         query.createdBy = createdByUser;
@@ -366,10 +347,10 @@ router.get('/', auth, async (req, res) => {
     let sort = {};
     switch (sortOrder) {
       case 'date-asc':
-        sort = {creationDate: 1};
+        sort = { creationDate: 1 };
         break;
       case 'date-desc':
-        sort = {creationDate: -1};
+        sort = { creationDate: -1 };
         break;
       case 'pending-first':
         sort = {
@@ -384,7 +365,7 @@ router.get('/', auth, async (req, res) => {
         };
         break;
       default:
-        sort = {creationDate: -1};
+        sort = { creationDate: -1 };
     }
 
     // Get paginated items
@@ -401,17 +382,16 @@ router.get('/', auth, async (req, res) => {
 
     // FIXED: Calculate total weight for ALL filtered items, not just paginated ones
     const totalWeightResult = await Item.aggregate([
-      {$match: query},
+      { $match: query },
       {
         $group: {
           _id: null,
-          totalWeight: {$sum: {$ifNull: ['$tezina', 0]}},
+          totalWeight: { $sum: { $ifNull: ['$tezina', 0] } },
         },
       },
     ]);
 
-    const totalWeight =
-      totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
+    const totalWeight = totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
 
     res.json({
       items,
@@ -425,25 +405,22 @@ router.get('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching items:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Get a specific item - AFTER all specific routes
 router.get('/:id', auth, async (req, res) => {
   try {
-    const item = await Item.findById(req.params.id).populate(
-      'approvedBy',
-      'firstName lastName',
-    );
+    const item = await Item.findById(req.params.id).populate('approvedBy', 'firstName lastName');
 
     if (!item) {
-      return res.status(404).json({message: 'Item not found'});
+      return res.status(404).json({ message: 'Item not found' });
     }
 
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Apply the same access control logic
@@ -463,13 +440,13 @@ router.get('/:id', auth, async (req, res) => {
       console.log('User codes:', user.codes);
       console.log('Item code:', item.code);
       console.log('User hasFullAccess:', user.hasFullAccess);
-      return res.status(403).json({message: 'Access denied'});
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     res.json(item);
   } catch (err) {
     console.error('Error fetching item:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -478,22 +455,11 @@ router.post('/', auth, async (req, res) => {
   try {
     // Only admin and bot users can create items
     if (req.user.role !== 'admin' && req.user.role !== 'bot') {
-      return res
-        .status(403)
-        .json({message: 'Access denied. Admin or Bot users only.'});
+      return res.status(403).json({ message: 'Access denied. Admin or Bot users only.' });
     }
 
     // Extract fields from request body including prijevoznik
-    const {
-      title,
-      code,
-      registracija,
-      neto,
-      tezina,
-      prijevoznik,
-      pdfUrl,
-      creationDate,
-    } = req.body;
+    const { title, code, registracija, neto, tezina, prijevoznik, pdfUrl, creationDate } = req.body;
 
     console.log('Creating item with data:', {
       title: title?.substring(0, 50) + '...',
@@ -514,7 +480,7 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Check if an item with the same title already exists
-    const existingItem = await Item.findOne({title: title.trim()});
+    const existingItem = await Item.findOne({ title: title.trim() });
 
     if (existingItem) {
       console.log('Found existing item with same title:', existingItem._id);
@@ -522,9 +488,7 @@ router.post('/', auth, async (req, res) => {
       // Delete the existing item (including any associated files)
       if (existingItem.approvalPhotoFront?.publicId) {
         try {
-          await cloudinary.uploader.destroy(
-            existingItem.approvalPhotoFront.publicId,
-          );
+          await cloudinary.uploader.destroy(existingItem.approvalPhotoFront.publicId);
           console.log('Deleted old front photo from Cloudinary');
         } catch (error) {
           console.error('Error deleting old front photo:', error);
@@ -533,9 +497,7 @@ router.post('/', auth, async (req, res) => {
 
       if (existingItem.approvalPhotoBack?.publicId) {
         try {
-          await cloudinary.uploader.destroy(
-            existingItem.approvalPhotoBack.publicId,
-          );
+          await cloudinary.uploader.destroy(existingItem.approvalPhotoBack.publicId);
           console.log('Deleted old back photo from Cloudinary');
         } catch (error) {
           console.error('Error deleting old back photo:', error);
@@ -544,9 +506,7 @@ router.post('/', auth, async (req, res) => {
 
       if (existingItem.approvalDocument?.publicId) {
         try {
-          await cloudinary.uploader.destroy(
-            existingItem.approvalDocument.publicId,
-          );
+          await cloudinary.uploader.destroy(existingItem.approvalDocument.publicId);
           console.log('Deleted old document from Cloudinary');
         } catch (error) {
           console.error('Error deleting old document:', error);
@@ -570,8 +530,7 @@ router.post('/', auth, async (req, res) => {
       title: title.trim(),
       code: code.trim(),
       registracija: registracija ? registracija.trim() : undefined,
-      prijevoznik:
-        prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
+      prijevoznik: prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
       pdfUrl: pdfUrl.trim(),
       createdBy: req.user._id, // ADD THIS LINE - Store who created the item
       creationDate: creationDate ? new Date(creationDate) : now,
@@ -585,9 +544,7 @@ router.post('/', auth, async (req, res) => {
       // New web app sends both neto and tezina
       const tezinaValue = parseFloat(tezina);
       const netoValue =
-        neto !== undefined && neto !== null && neto !== ''
-          ? parseFloat(neto)
-          : tezinaValue;
+        neto !== undefined && neto !== null && neto !== '' ? parseFloat(neto) : tezinaValue;
 
       if (!isNaN(tezinaValue)) {
         item.tezina = tezinaValue;
@@ -626,9 +583,9 @@ router.post('/', auth, async (req, res) => {
   } catch (err) {
     console.error('Error creating item:', err);
     if (err.name === 'ValidationError') {
-      return res.status(400).json({message: err.message});
+      return res.status(400).json({ message: err.message });
     }
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 // Update item code (admin only) - Allow duplicate codes
@@ -652,12 +609,12 @@ router.patch('/:id/code', auth, async (req, res) => {
 
     console.log('✅ Admin check passed');
 
-    const {code} = req.body;
+    const { code } = req.body;
     console.log('Extracted code from request:', code);
 
     // Validate the new code
     if (!code || typeof code !== 'string' || code.trim().length === 0) {
-      console.log('❌ Code validation failed:', {code, type: typeof code});
+      console.log('❌ Code validation failed:', { code, type: typeof code });
       return res.status(400).json({
         message: 'Code is required and cannot be empty',
         messageHr: 'Kod je obavezan i ne može biti prazan',
@@ -713,8 +670,7 @@ router.patch('/:id/code', auth, async (req, res) => {
       user.hasFullAccess; // User has full access flag
 
     console.log('🔐 Access control check:', {
-      isAdminWithNoCodes:
-        user.role === 'admin' && (!user.codes || user.codes.length === 0),
+      isAdminWithNoCodes: user.role === 'admin' && (!user.codes || user.codes.length === 0),
       hasSpecificCode: user.codes.includes(item.code),
       hasFullAccess: user.hasFullAccess,
       finalAccess: hasAccess,
@@ -839,7 +795,7 @@ router.post('/validate-code', auth, async (req, res) => {
       });
     }
 
-    const {code, itemId} = req.body;
+    const { code, itemId } = req.body;
 
     if (!code) {
       return res.status(400).json({
@@ -855,17 +811,16 @@ router.post('/validate-code', auth, async (req, res) => {
     if (!validateCodeFormat(trimmedCode)) {
       return res.status(400).json({
         valid: false,
-        message:
-          'Invalid code format. Use 3-20 alphanumeric characters, hyphens, or underscores.',
+        message: 'Invalid code format. Use 3-20 alphanumeric characters, hyphens, or underscores.',
         messageHr:
           'Neispravan format koda. Koristite 3-20 alfanumeričkih znakova, crtice ili podvlake.',
       });
     }
 
     // Check for duplicates
-    const query = {code: trimmedCode};
+    const query = { code: trimmedCode };
     if (itemId) {
-      query._id = {$ne: itemId};
+      query._id = { $ne: itemId };
     }
 
     const existingItem = await Item.findOne(query);
@@ -901,14 +856,14 @@ router.post('/validate-code', auth, async (req, res) => {
 router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
-    const {title, code, neto, tezina, pdfUrl, creationDate} = req.body;
+    const { title, code, neto, tezina, pdfUrl, creationDate } = req.body;
     const item = await Item.findById(req.params.id);
 
     if (!item) {
-      return res.status(404).json({message: 'Item not found'});
+      return res.status(404).json({ message: 'Item not found' });
     }
 
     // Update basic fields
@@ -972,9 +927,9 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
   } catch (err) {
     console.error('Error updating item:', err);
     if (err.name === 'ValidationError') {
-      return res.status(400).json({message: err.message});
+      return res.status(400).json({ message: err.message });
     }
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -983,16 +938,15 @@ router.patch(
   '/:id/approval',
   auth,
   upload.fields([
-    {name: 'photoFront', maxCount: 1},
-    {name: 'photoBack', maxCount: 1},
-    {name: 'pdfDocument', maxCount: 1},
+    { name: 'photoFront', maxCount: 1 },
+    { name: 'photoBack', maxCount: 1 },
+    { name: 'pdfDocument', maxCount: 1 },
   ]),
   async (req, res) => {
     try {
       // Enhanced logging to debug mobile app issues
       const userAgent = req.headers['user-agent'] || '';
-      const isMobileApp =
-        userAgent.includes('okhttp') || userAgent.includes('ReactNative');
+      const isMobileApp = userAgent.includes('okhttp') || userAgent.includes('ReactNative');
 
       console.log('=== APPROVAL REQUEST DEBUG ===');
       console.log('Is Mobile App:', isMobileApp);
@@ -1007,7 +961,7 @@ router.patch(
       const item = await Item.findById(req.params.id);
       if (!item) {
         console.error('Item not found:', req.params.id);
-        return res.status(404).json({message: 'Item not found'});
+        return res.status(404).json({ message: 'Item not found' });
       }
 
       console.log('Found item:', {
@@ -1019,16 +973,16 @@ router.patch(
       });
 
       // Extract and validate approval status
-      const {approvalStatus, locationData, inTransit, neto} = req.body;
+      const { approvalStatus, locationData, inTransit, neto } = req.body;
 
       if (!approvalStatus) {
         console.error('Missing approval status');
-        return res.status(400).json({message: 'Approval status is required'});
+        return res.status(400).json({ message: 'Approval status is required' });
       }
 
       if (!['odobreno', 'odbijen'].includes(approvalStatus)) {
         console.error('Invalid approval status:', approvalStatus);
-        return res.status(400).json({message: 'Invalid approval status'});
+        return res.status(400).json({ message: 'Invalid approval status' });
       }
 
       // Update basic approval fields
@@ -1054,13 +1008,7 @@ router.patch(
         } else {
           item.in_transit = false; // Safe default
         }
-        console.log(
-          'Set in_transit to:',
-          item.in_transit,
-          'from:',
-          inTransit,
-          typeof inTransit,
-        );
+        console.log('Set in_transit to:', item.in_transit, 'from:', inTransit, typeof inTransit);
       }
 
       // Handle neto field ONLY if it's provided and valid
@@ -1106,11 +1054,8 @@ router.patch(
                 latitude: location.coordinates.latitude,
                 longitude: location.coordinates.longitude,
               },
-              accuracy:
-                typeof location.accuracy === 'number' ? location.accuracy : 0,
-              timestamp: location.timestamp
-                ? new Date(location.timestamp)
-                : new Date(),
+              accuracy: typeof location.accuracy === 'number' ? location.accuracy : 0,
+              timestamp: location.timestamp ? new Date(location.timestamp) : new Date(),
             };
             console.log('Set approval location:', item.approvalLocation);
           } else {
@@ -1138,17 +1083,12 @@ router.patch(
             });
 
             const frontResponse = await uploadToCloudinary(frontFile);
-            console.log(
-              'Front photo uploaded successfully:',
-              frontResponse.publicId,
-            );
+            console.log('Front photo uploaded successfully:', frontResponse.publicId);
 
             // Delete old front photo if exists
             if (item.approvalPhotoFront && item.approvalPhotoFront.publicId) {
               try {
-                await cloudinary.uploader.destroy(
-                  item.approvalPhotoFront.publicId,
-                );
+                await cloudinary.uploader.destroy(item.approvalPhotoFront.publicId);
                 console.log('Deleted old front photo');
               } catch (deleteError) {
                 console.error('Error deleting old front photo:', deleteError);
@@ -1175,17 +1115,12 @@ router.patch(
             });
 
             const backResponse = await uploadToCloudinary(backFile);
-            console.log(
-              'Back photo uploaded successfully:',
-              backResponse.publicId,
-            );
+            console.log('Back photo uploaded successfully:', backResponse.publicId);
 
             // Delete old back photo if exists
             if (item.approvalPhotoBack && item.approvalPhotoBack.publicId) {
               try {
-                await cloudinary.uploader.destroy(
-                  item.approvalPhotoBack.publicId,
-                );
+                await cloudinary.uploader.destroy(item.approvalPhotoBack.publicId);
                 console.log('Deleted old back photo');
               } catch (deleteError) {
                 console.error('Error deleting old back photo:', deleteError);
@@ -1217,9 +1152,7 @@ router.patch(
             // Delete old document if exists
             if (item.approvalDocument && item.approvalDocument.publicId) {
               try {
-                await cloudinary.uploader.destroy(
-                  item.approvalDocument.publicId,
-                );
+                await cloudinary.uploader.destroy(item.approvalDocument.publicId);
                 console.log('Deleted old PDF document');
               } catch (deleteError) {
                 console.error('Error deleting old PDF:', deleteError);
@@ -1295,7 +1228,7 @@ router.patch(
         errorId: Math.random().toString(36).substring(7),
       });
     }
-  },
+  }
 );
 
 // Delete an item (admin only)
@@ -1305,13 +1238,13 @@ router.delete('/:id', auth, async (req, res) => {
 
     if (req.user.role !== 'admin') {
       console.log('Access denied - non-admin user attempted deletion');
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
     const item = await Item.findById(req.params.id);
     if (!item) {
       console.log('Item not found:', req.params.id);
-      return res.status(404).json({message: 'Item not found'});
+      return res.status(404).json({ message: 'Item not found' });
     }
 
     // Clean up associated files before deleting
@@ -1338,10 +1271,10 @@ router.delete('/:id', auth, async (req, res) => {
 
     await item.deleteOne();
     console.log('Item successfully deleted:', req.params.id);
-    res.json({message: 'Item deleted successfully'});
+    res.json({ message: 'Item deleted successfully' });
   } catch (err) {
     console.error('Error during item deletion:', err);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

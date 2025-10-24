@@ -1,13 +1,6 @@
-import React, {useState, useEffect} from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Platform,
-} from 'react-native';
-import {Text, CheckBox} from 'react-native-elements';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Text, CheckBox } from 'react-native-elements';
 import Modal from 'react-native-modal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -30,14 +23,13 @@ export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
   const [dataProcessingConsent, setDataProcessingConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
 
-  const allRequiredConsentsAccepted =
-    locationConsent && cameraConsent && dataProcessingConsent;
+  const allRequiredConsentsAccepted = locationConsent && cameraConsent && dataProcessingConsent;
 
   const handleAccept = async () => {
     if (!locationConsent || !cameraConsent || !dataProcessingConsent) {
       Alert.alert(
         'Potrebna suglasnost',
-        'Morate prihvatiti obavezne stavke za korištenje aplikacije.',
+        'Morate prihvatiti obavezne stavke za korištenje aplikacije.'
       );
       return;
     }
@@ -54,10 +46,7 @@ export const PrivacyConsentManager: React.FC<PrivacyConsentManagerProps> = ({
         },
       };
 
-      await AsyncStorage.setItem(
-        PRIVACY_CONSENT_KEY,
-        JSON.stringify(consentData),
-      );
+      await AsyncStorage.setItem(PRIVACY_CONSENT_KEY, JSON.stringify(consentData));
       onAccept();
     } catch (error) {
       console.error('Error saving privacy consent:', error);
@@ -116,7 +105,7 @@ Za sva pitanja o zaštiti podataka kontaktirajte nas na: it@osijek-koteks.hr
       style={styles.modal}
       backdropOpacity={0.5}
       backdropColor="black">
-      <View style={[styles.container, {backgroundColor: 'white'}]}>
+      <View style={[styles.container, { backgroundColor: 'white' }]}>
         <Text h4 style={styles.title}>
           Pravila privatnosti i suglasnosti
         </Text>
@@ -151,9 +140,7 @@ Za sva pitanja o zaštiti podataka kontaktirajte nas na: it@osijek-koteks.hr
         </ScrollView>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.declineButton]}
-            onPress={onClose}>
+          <TouchableOpacity style={[styles.button, styles.declineButton]} onPress={onClose}>
             <Text style={styles.buttonText}>Odbij</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -164,11 +151,7 @@ Za sva pitanja o zaštiti podataka kontaktirajte nas na: it@osijek-koteks.hr
             ]}
             onPress={handleAccept}
             disabled={!allRequiredConsentsAccepted}>
-            <Text
-              style={[
-                styles.buttonText,
-                !allRequiredConsentsAccepted && styles.disabledText,
-              ]}>
+            <Text style={[styles.buttonText, !allRequiredConsentsAccepted && styles.disabledText]}>
               Prihvati
             </Text>
           </TouchableOpacity>

@@ -1,8 +1,8 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import PCUserApprovalModal from './PCUserApprovalModal';
-import {Item} from '../types';
-import {Button} from './styled/Common';
+import { Item } from '../types';
+import { Button } from './styled/Common';
 
 const ApproveActionButton = styled(Button)`
   flex: 1;
@@ -22,10 +22,7 @@ interface PCUserApproveButtonProps {
   onSuccess: () => void;
 }
 
-const PCUserApproveButton: React.FC<PCUserApproveButtonProps> = ({
-  item,
-  onSuccess,
-}) => {
+const PCUserApproveButton: React.FC<PCUserApproveButtonProps> = ({ item, onSuccess }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (item.approvalStatus !== 'na čekanju') {

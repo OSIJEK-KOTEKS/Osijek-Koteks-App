@@ -1,8 +1,8 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
-import {useNavigate} from 'react-router-dom';
-import {useAuth} from '../contexts/AuthContext';
-import {apiService, getImageUrl} from '../utils/api';
-import {Item, ItemFilters, ItemUser} from '../types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { apiService, getImageUrl } from '../utils/api';
+import { Item, ItemFilters, ItemUser } from '../types';
 import styled from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
@@ -16,34 +16,34 @@ import PrintTableButton from 'src/components/PrintTableButton';
 import ApproveButton from '../components/ApproveButton';
 import PCUserApproveButton from '../components/PCUserApproveButton';
 import ExportExcelButton from '../components/ExportExcelButton';
-import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
+import { getFormattedCode, getCodeDescription } from '../utils/codeMapping';
 import AdminCodeEditor from '../components/AdminCodeEditor';
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${({theme}) => theme.spacing.large};
+  margin-bottom: ${({ theme }) => theme.spacing.large};
   width: 100%;
 `;
 
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({theme}) => theme.spacing.medium};
+  gap: ${({ theme }) => theme.spacing.medium};
 `;
 
 const ItemsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: ${({theme}) => theme.spacing.medium};
+  gap: ${({ theme }) => theme.spacing.medium};
 `;
 
 const ItemCard = styled.div`
-  background: ${({theme}) => theme.colors.white};
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
+  background: ${({ theme }) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
   transition: transform 0.2s ease-in-out;
 
   &:hover {
@@ -52,38 +52,30 @@ const ItemCard = styled.div`
 `;
 
 const RestrictedAccessMessage = styled.div`
-  background: ${({theme}) => theme.colors.primary}15;
-  border: 1px solid ${({theme}) => theme.colors.primary}40;
-  color: ${({theme}) => theme.colors.primary};
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
-  margin-bottom: ${({theme}) => theme.spacing.medium};
+  background: ${({ theme }) => theme.colors.primary}15;
+  border: 1px solid ${({ theme }) => theme.colors.primary}40;
+  color: ${({ theme }) => theme.colors.primary};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
   display: flex;
   align-items: center;
-  gap: ${({theme}) => theme.spacing.small};
+  gap: ${({ theme }) => theme.spacing.small};
 `;
 
 const RestrictedAccessIcon = styled.span`
   font-size: 1.2rem;
 `;
 
-const StatusBadge = styled.span<{status: Item['approvalStatus']}>`
+const StatusBadge = styled.span<{ status: Item['approvalStatus'] }>`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 0.875rem;
-  background-color: ${({status}) =>
-    status === 'odobreno'
-      ? '#e6f4ea'
-      : status === 'odbijen'
-      ? '#fce8e8'
-      : '#fff3e0'};
-  color: ${({status}) =>
-    status === 'odobreno'
-      ? '#34a853'
-      : status === 'odbijen'
-      ? '#ea4335'
-      : '#fbbc04'};
+  background-color: ${({ status }) =>
+    status === 'odobreno' ? '#e6f4ea' : status === 'odbijen' ? '#fce8e8' : '#fff3e0'};
+  color: ${({ status }) =>
+    status === 'odobreno' ? '#34a853' : status === 'odbijen' ? '#ea4335' : '#fbbc04'};
   margin-top: 8px;
 `;
 
@@ -99,34 +91,34 @@ const TransitBadge = styled.span`
 `;
 
 const UserInfo = styled.div`
-  margin-bottom: ${({theme}) => theme.spacing.medium};
-  color: ${({theme}) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 0.9rem;
 `;
 
 const ItemTitle = styled.h3`
   margin: 0 0 8px 0;
   font-size: 1.1rem;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-weight: 600;
 `;
 
 const ItemDetails = styled.p`
   margin: 4px 0;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 0.9rem;
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: ${({theme}) => theme.spacing.small};
-  margin-top: ${({theme}) => theme.spacing.medium};
+  gap: ${({ theme }) => theme.spacing.small};
+  margin-top: ${({ theme }) => theme.spacing.medium};
   flex-wrap: wrap;
   width: 100%;
 
   /* Make buttons smaller and more responsive */
   & > button {
-    flex: 1 1 calc(25% - ${({theme}) => theme.spacing.small}); /* 4 buttons per row max */
+    flex: 1 1 calc(25% - ${({ theme }) => theme.spacing.small}); /* 4 buttons per row max */
     min-width: 80px; /* Minimum button width */
     max-width: 120px; /* Maximum button width to prevent overflow */
     padding: 6px 8px !important; /* Smaller padding */
@@ -140,7 +132,7 @@ const ButtonGroup = styled.div`
   /* For narrow cards, allow 3 buttons per row */
   @media (max-width: 400px) {
     & > button {
-      flex: 1 1 calc(33.333% - ${({theme}) => theme.spacing.small});
+      flex: 1 1 calc(33.333% - ${({ theme }) => theme.spacing.small});
       min-width: 70px;
       max-width: 100px;
       padding: 5px 6px !important;
@@ -151,7 +143,7 @@ const ButtonGroup = styled.div`
 const PhotoButtonsGroup = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({theme}) => theme.spacing.small};
+  gap: ${({ theme }) => theme.spacing.small};
   width: 100%;
 `;
 
@@ -163,9 +155,9 @@ const ActionButton = styled(S.Button)`
 `;
 
 const DeleteButton = styled(ActionButton)`
-  background-color: ${({theme}) => theme.colors.error};
+  background-color: ${({ theme }) => theme.colors.error};
   &:hover {
-    background-color: ${({theme}) => theme.colors.error};
+    background-color: ${({ theme }) => theme.colors.error};
     opacity: 0.9;
   }
 `;
@@ -175,27 +167,27 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   height: 200px;
-  color: ${({theme}) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const EmptyMessage = styled.div`
   text-align: center;
-  padding: ${({theme}) => theme.spacing.large};
-  color: ${({theme}) => theme.colors.text};
-  background: ${({theme}) => theme.colors.white};
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
+  padding: ${({ theme }) => theme.spacing.large};
+  color: ${({ theme }) => theme.colors.text};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
 `;
 
 const DashboardContainer = styled.div`
-  background: ${({theme}) => theme.colors.white};
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
 `;
 
 const HeaderActions = styled.div`
   display: flex;
-  gap: ${({theme}) => theme.spacing.medium};
+  gap: ${({ theme }) => theme.spacing.medium};
 
   & > button,
   & button {
@@ -223,25 +215,25 @@ const LoadMoreButton = styled(S.Button)`
 
 // Styled component for total weight display
 const TotalWeightContainer = styled.div`
-  background: ${({theme}) => theme.colors.white};
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
-  margin-bottom: ${({theme}) => theme.spacing.medium};
+  background: ${({ theme }) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
   text-align: center;
-  border-left: 4px solid ${({theme}) => theme.colors.primary};
+  border-left: 4px solid ${({ theme }) => theme.colors.primary};
 `;
 
 const TotalWeightValue = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
-  color: ${({theme}) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   margin-bottom: 0.25rem;
 `;
 
 const TotalWeightLabel = styled.div`
   font-size: 0.9rem;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -278,13 +270,10 @@ const Dashboard: React.FC = () => {
   const [searchMode, setSearchMode] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [registrationSearchValue, setRegistrationSearchValue] = useState('');
-  const [searchType, setSearchType] = useState<'title' | 'registration'>(
-    'title',
-  );
+  const [searchType, setSearchType] = useState<'title' | 'registration'>('title');
 
   // Modal states
-  const [isCreateModalVisible, setCreateModalVisible] =
-    useState<boolean>(false);
+  const [isCreateModalVisible, setCreateModalVisible] = useState<boolean>(false);
 
   // Other states
   const [totalWeight, setTotalWeight] = useState(0);
@@ -294,7 +283,7 @@ const Dashboard: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Hooks
-  const {user, signOut} = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
 
@@ -361,9 +350,7 @@ const Dashboard: React.FC = () => {
 
         // Check for Croatian format with spaces and optional trailing period
         // Matches: "04. 09. 2025." or "04. 09. 2025" or "4. 9. 2025." etc.
-        const croatianWithSpacesMatch = dateStr.match(
-          /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})\.?$/,
-        );
+        const croatianWithSpacesMatch = dateStr.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})\.?$/);
         if (croatianWithSpacesMatch) {
           const [, day, month, year] = croatianWithSpacesMatch;
           // Return in standard Croatian format without spaces
@@ -371,9 +358,7 @@ const Dashboard: React.FC = () => {
         }
 
         // Check for standard Croatian format (DD.MM.YYYY without spaces)
-        const croatianStandardMatch = dateStr.match(
-          /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/,
-        );
+        const croatianStandardMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
         if (croatianStandardMatch) {
           const [, day, month, year] = croatianStandardMatch;
           return `${day.padStart(2, '0')}.${month.padStart(2, '0')}.${year}`;
@@ -415,10 +400,7 @@ const Dashboard: React.FC = () => {
   };
 
   //Consistent date and time formatting
-  const formatDateAndTime = (
-    creationDate: any,
-    creationTime?: string,
-  ): string => {
+  const formatDateAndTime = (creationDate: any, creationTime?: string): string => {
     const formattedDate = safeParseDate(creationDate);
 
     if (!formattedDate || formattedDate === 'N/A') {
@@ -429,8 +411,7 @@ const Dashboard: React.FC = () => {
 
     return creationTime ? `${formattedDate} ${creationTime}` : formattedDate;
   };
-  const showRestrictedMessage =
-    user?.role === 'admin' && user?.codes && user.codes.length > 0;
+  const showRestrictedMessage = user?.role === 'admin' && user?.codes && user.codes.length > 0;
   const debugDateFormatting = (item: Item, index: number) => {
     console.log(`Item ${index} (${item.title}):`, {
       creationDate: item.creationDate,
@@ -442,11 +423,7 @@ const Dashboard: React.FC = () => {
   };
   //Main fetch function with proper pagination logic
   const fetchItems = useCallback(
-    async (
-      pageNumber: number = 1,
-      append: boolean = false,
-      signal?: AbortSignal,
-    ) => {
+    async (pageNumber: number = 1, append: boolean = false, signal?: AbortSignal) => {
       // Prevent multiple simultaneous requests
       if (isFetchingRef.current && !signal) {
         console.log('Fetch already in progress, skipping...');
@@ -485,13 +462,13 @@ const Dashboard: React.FC = () => {
           filters = {
             startDate: startOfDay.toISOString(),
             endDate: endOfDay.toISOString(),
-            ...(selectedCode !== 'all' && {code: selectedCode}),
+            ...(selectedCode !== 'all' && { code: selectedCode }),
             ...(selectedPrijevoznik !== 'all' && {
               prijevoznik: selectedPrijevoznik,
             }),
-            ...(selectedUser !== 'all' && {createdByUser: selectedUser}),
+            ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
             sortOrder,
-            ...(inTransitOnly && {inTransitOnly: true}),
+            ...(inTransitOnly && { inTransitOnly: true }),
           };
         }
 
@@ -508,9 +485,7 @@ const Dashboard: React.FC = () => {
           setItems(prevItems => {
             // Prevent duplicates
             const existingIds = new Set(prevItems.map(item => item._id));
-            const newItems = response.items.filter(
-              item => !existingIds.has(item._id),
-            );
+            const newItems = response.items.filter(item => !existingIds.has(item._id));
             return [...prevItems, ...newItems];
           });
         } else {
@@ -547,7 +522,7 @@ const Dashboard: React.FC = () => {
       searchMode,
       searchValue,
       registrationSearchValue,
-    ],
+    ]
   );
 
   // Fetch functions for filter options
@@ -623,15 +598,7 @@ const Dashboard: React.FC = () => {
 
     setPage(nextPage);
     await fetchItems(nextPage, true); // append = true
-  }, [
-    hasMore,
-    loadingMore,
-    loading,
-    page,
-    fetchItems,
-    items.length,
-    totalItems,
-  ]);
+  }, [hasMore, loadingMore, loading, page, fetchItems, items.length, totalItems]);
 
   // Filter change handler
   const handleFilterChange = useCallback(() => {
@@ -652,14 +619,11 @@ const Dashboard: React.FC = () => {
   }, [fetchItems]);
 
   // Date range change handler
-  const handleDateRangeChange = useCallback(
-    (newStartDate: Date, newEndDate: Date) => {
-      setStartDate(newStartDate);
-      setEndDate(newEndDate);
-      // handleFilterChange will be triggered by the useEffect
-    },
-    [],
-  );
+  const handleDateRangeChange = useCallback((newStartDate: Date, newEndDate: Date) => {
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+    // handleFilterChange will be triggered by the useEffect
+  }, []);
 
   // User change handler
   const handleUserChange = useCallback((user: string) => {
@@ -693,11 +657,7 @@ const Dashboard: React.FC = () => {
         await fetchItems(1, false, abortControllerRef.current.signal);
 
         // Fetch filter options
-        await Promise.all([
-          fetchAvailableCodes(),
-          fetchAvailableCarriers(),
-          fetchAvailableUsers(),
-        ]);
+        await Promise.all([fetchAvailableCodes(), fetchAvailableCarriers(), fetchAvailableUsers()]);
       } catch (error) {
         console.error('Error initializing dashboard:', error);
       }
@@ -708,16 +668,10 @@ const Dashboard: React.FC = () => {
 
   // Search handlers
   const handleSearch = useCallback(() => {
-    const currentSearchValue =
-      searchType === 'title' ? searchValue : registrationSearchValue;
+    const currentSearchValue = searchType === 'title' ? searchValue : registrationSearchValue;
 
     if (currentSearchValue.trim()) {
-      console.log(
-        'Search triggered with:',
-        currentSearchValue,
-        'type:',
-        searchType,
-      );
+      console.log('Search triggered with:', currentSearchValue, 'type:', searchType);
 
       // Cancel any ongoing request
       if (abortControllerRef.current) {
@@ -791,19 +745,14 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleCodeUpdate = async (
-    itemId: string,
-    newCode: string,
-  ): Promise<boolean> => {
+  const handleCodeUpdate = async (itemId: string, newCode: string): Promise<boolean> => {
     try {
       const response = await apiService.updateItemCode(itemId, newCode);
 
       if (response) {
         // Update the item in your local state
         setItems(prevItems =>
-          prevItems.map(item =>
-            item._id === itemId ? {...item, code: newCode} : item,
-          ),
+          prevItems.map(item => (item._id === itemId ? { ...item, code: newCode } : item))
         );
         return true;
       }
@@ -837,7 +786,7 @@ const Dashboard: React.FC = () => {
     selectedCode: string,
     selectedPrijevoznik: string,
     selectedUser: string,
-    inTransitOnly: boolean,
+    inTransitOnly: boolean
   ) => {
     const isSameDay = startDate.toDateString() === endDate.toDateString();
 
@@ -875,24 +824,17 @@ const Dashboard: React.FC = () => {
         const groupName = selectedUser.replace('group_', '');
         const matchingUsers = availableUsers.filter(u =>
           groupName === 'velicki_kamen'
-            ? [
-                'vetovo.vaga@velicki-kamen.hr',
-                'velicki.vaga@velicki-kamen.hr',
-              ].includes(u.email)
+            ? ['vetovo.vaga@velicki-kamen.hr', 'velicki.vaga@velicki-kamen.hr'].includes(u.email)
             : groupName === 'kamen_psunj'
             ? ['vaga.fukinac@kamen-psunj.hr'].includes(u.email)
             : groupName === 'molaris'
             ? ['vaga.molaris@osijek-koteks.hr'].includes(u.email)
-            : false,
+            : false
         );
 
         if (matchingUsers.length === 1) {
           const user = matchingUsers[0];
-          filters.push(
-            `Dobavljač: ${
-              user.displayName || `${user.firstName} ${user.lastName}`
-            }`,
-          );
+          filters.push(`Dobavljač: ${user.displayName || `${user.firstName} ${user.lastName}`}`);
         } else {
           filters.push(`Dobavljač: Grupa (${matchingUsers.length} korisnika)`);
         }
@@ -900,11 +842,7 @@ const Dashboard: React.FC = () => {
         // Single user logic
         const user = availableUsers.find(u => u._id === selectedUser);
         if (user) {
-          filters.push(
-            `Dobavljač: ${
-              user.displayName || `${user.firstName} ${user.lastName}`
-            }`,
-          );
+          filters.push(`Dobavljač: ${user.displayName || `${user.firstName} ${user.lastName}`}`);
         }
       }
     }
@@ -913,9 +851,7 @@ const Dashboard: React.FC = () => {
       filters.push('Samo u tranzitu');
     }
 
-    return filters.length > 0
-      ? `${dateRangeText} (${filters.join(', ')})`
-      : dateRangeText;
+    return filters.length > 0 ? `${dateRangeText} (${filters.join(', ')})` : dateRangeText;
   };
 
   const fetchAllItemsForPrinting = async () => {
@@ -929,8 +865,8 @@ const Dashboard: React.FC = () => {
       if (searchMode && (searchValue || registrationSearchValue)) {
         filters =
           searchType === 'title'
-            ? {searchTitle: searchValue}
-            : {searchRegistration: registrationSearchValue};
+            ? { searchTitle: searchValue }
+            : { searchRegistration: registrationSearchValue };
       } else {
         const startOfDay = new Date(startDate);
         startOfDay.setHours(0, 0, 0, 0);
@@ -941,13 +877,13 @@ const Dashboard: React.FC = () => {
         filters = {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString(),
-          ...(selectedCode !== 'all' && {code: selectedCode}),
+          ...(selectedCode !== 'all' && { code: selectedCode }),
           ...(selectedPrijevoznik !== 'all' && {
             prijevoznik: selectedPrijevoznik,
           }),
-          ...(selectedUser !== 'all' && {createdByUser: selectedUser}),
+          ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
           sortOrder,
-          ...(inTransitOnly && {inTransitOnly: true}),
+          ...(inTransitOnly && { inTransitOnly: true }),
         };
       }
 
@@ -996,7 +932,7 @@ const Dashboard: React.FC = () => {
               selectedCode,
               selectedPrijevoznik,
               selectedUser,
-              inTransitOnly,
+              inTransitOnly
             )}
             selectedCode={selectedCode}
             inTransitOnly={inTransitOnly}
@@ -1014,23 +950,19 @@ const Dashboard: React.FC = () => {
               selectedCode,
               selectedPrijevoznik,
               selectedUser,
-              inTransitOnly,
+              inTransitOnly
             )}
           />
           {/* Document creation buttons */}
           {(user?.role === 'admin' || user?.role === 'bot') && (
-            <S.Button
-              id="create_item"
-              onClick={() => setCreateModalVisible(true)}>
+            <S.Button id="create_item" onClick={() => setCreateModalVisible(true)}>
               Dodaj novi dokument
             </S.Button>
           )}
 
           {/* User Management button - only for admins */}
           {user?.role === 'admin' && (
-            <S.Button onClick={() => navigate('/users')}>
-              Upravljanje korisnicima
-            </S.Button>
+            <S.Button onClick={() => navigate('/users')}>Upravljanje korisnicima</S.Button>
           )}
 
           <PrintAllButton
@@ -1049,8 +981,7 @@ const Dashboard: React.FC = () => {
       {showRestrictedMessage && (
         <RestrictedAccessMessage>
           <RestrictedAccessIcon>🔒</RestrictedAccessIcon>
-          Ograničen pristup: Možete vidjeti samo dokumente s šiframa{' '}
-          {user?.codes?.join(', ')}
+          Ograničen pristup: Možete vidjeti samo dokumente s šiframa {user?.codes?.join(', ')}
         </RestrictedAccessMessage>
       )}
 
@@ -1093,12 +1024,7 @@ const Dashboard: React.FC = () => {
           <TotalWeightValue>{formatWeight(totalWeight)} t</TotalWeightValue>
           <TotalWeightLabel>
             Ukupna težina ({totalItems}{' '}
-            {totalItems === 1
-              ? 'kamion'
-              : totalItems < 2
-              ? 'kamiona'
-              : 'kamiona'}
-            )
+            {totalItems === 1 ? 'kamion' : totalItems < 2 ? 'kamiona' : 'kamiona'})
           </TotalWeightLabel>
         </TotalWeightContainer>
       )}
@@ -1150,36 +1076,27 @@ const Dashboard: React.FC = () => {
                   {/* Display tezina in tons */}
                   {item.tezina !== undefined && (
                     <ItemDetails>
-                      <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)}{' '}
-                      t
+                      <strong>Težina:</strong> {(item.tezina / 1000).toFixed(3)} t
                     </ItemDetails>
                   )}
 
-                  {item.neto !== undefined &&
-                    item.approvalStatus === 'odobreno' && (
-                      <ItemDetails>
-                        <strong>Razlika u vaganju:</strong>{' '}
-                        {item.neto > 1000 ? (
-                          <span>/</span>
-                        ) : (
-                          <span
-                            style={{
-                              color:
-                                item.neto < -5
-                                  ? '#f44336'
-                                  : item.neto > 5
-                                  ? '#4caf50'
-                                  : 'inherit',
-                              fontWeight:
-                                item.neto < -5 || item.neto > 5
-                                  ? '600'
-                                  : 'normal',
-                            }}>
-                            {item.neto}%
-                          </span>
-                        )}
-                      </ItemDetails>
-                    )}
+                  {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
+                    <ItemDetails>
+                      <strong>Razlika u vaganju:</strong>{' '}
+                      {item.neto > 1000 ? (
+                        <span>/</span>
+                      ) : (
+                        <span
+                          style={{
+                            color:
+                              item.neto < -5 ? '#f44336' : item.neto > 5 ? '#4caf50' : 'inherit',
+                            fontWeight: item.neto < -5 || item.neto > 5 ? '600' : 'normal',
+                          }}>
+                          {item.neto}%
+                        </span>
+                      )}
+                    </ItemDetails>
+                  )}
 
                   <ItemDetails>
                     <strong>Datum i vrijeme:</strong>{' '}
@@ -1196,18 +1113,14 @@ const Dashboard: React.FC = () => {
                     </StatusBadge>
 
                     {/* Show in transit badge */}
-                    {item.in_transit && (
-                      <TransitBadge>🚛 U tranzitu</TransitBadge>
-                    )}
+                    {item.in_transit && <TransitBadge>🚛 U tranzitu</TransitBadge>}
                   </div>
 
                   {item.approvalStatus === 'odobreno' && item.approvedBy && (
                     <ItemDetails>
                       <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
                       {item.approvedBy.lastName}
-                      {item.approvalDate && (
-                        <> ({safeParseDate(item.approvalDate)})</>
-                      )}
+                      {item.approvalDate && <> ({safeParseDate(item.approvalDate)})</>}
                     </ItemDetails>
                   )}
 
@@ -1263,16 +1176,14 @@ const Dashboard: React.FC = () => {
 
                             // Extract filename from URL for download
                             const urlParts = pdfUrl.split('/');
-                            const filename = `${
-                              urlParts[urlParts.length - 1]
-                            }.pdf`;
+                            const filename = `${urlParts[urlParts.length - 1]}.pdf`;
 
                             // Try to download the PDF
                             const response = await fetch(pdfUrl);
                             const blob = await response.blob();
 
                             const blobUrl = window.URL.createObjectURL(
-                              new Blob([blob], {type: 'application/pdf'}),
+                              new Blob([blob], { type: 'application/pdf' })
                             );
 
                             const a = document.createElement('a');
@@ -1301,27 +1212,17 @@ const Dashboard: React.FC = () => {
                     )}
 
                     {/* Approval buttons based on user role */}
-                    {user?.role === 'admin' &&
-                      item.approvalStatus === 'na čekanju' && (
-                        <ApproveButton
-                          item={item}
-                          onSuccess={handleApprovalSuccess}
-                        />
-                      )}
+                    {user?.role === 'admin' && item.approvalStatus === 'na čekanju' && (
+                      <ApproveButton item={item} onSuccess={handleApprovalSuccess} />
+                    )}
 
-                    {user?.role === 'pc-user' &&
-                      item.approvalStatus === 'na čekanju' && (
-                        <PCUserApproveButton
-                          item={item}
-                          onSuccess={handleApprovalSuccess}
-                        />
-                      )}
+                    {user?.role === 'pc-user' && item.approvalStatus === 'na čekanju' && (
+                      <PCUserApproveButton item={item} onSuccess={handleApprovalSuccess} />
+                    )}
 
                     {/* Delete button for admin */}
                     {user?.role === 'admin' && (
-                      <DeleteButton onClick={() => handleDelete(item._id)}>
-                        Obriši
-                      </DeleteButton>
+                      <DeleteButton onClick={() => handleDelete(item._id)}>Obriši</DeleteButton>
                     )}
                   </ButtonGroup>
                 </ItemCard>
@@ -1344,14 +1245,14 @@ const Dashboard: React.FC = () => {
 
           {/* Loading indicator for load more */}
           {loadingMore && (
-            <div style={{textAlign: 'center', padding: '20px'}}>
+            <div style={{ textAlign: 'center', padding: '20px' }}>
               <LoadingContainer>Učitavanje dodatnih stavki...</LoadingContainer>
             </div>
           )}
 
           {/* No more items message */}
           {!hasMore && items.length > 0 && (
-            <div style={{textAlign: 'center', padding: '20px', color: '#666'}}>
+            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               Nema više stavki za učitavanje
             </div>
           )}
@@ -1359,9 +1260,7 @@ const Dashboard: React.FC = () => {
           {/* No items found message */}
           {!loading && items.length === 0 && !error && (
             <EmptyMessage>
-              {searchMode
-                ? 'Nema rezultata pretrage'
-                : 'Nema dokumenata za prikaz'}
+              {searchMode ? 'Nema rezultata pretrage' : 'Nema dokumenata za prikaz'}
             </EmptyMessage>
           )}
         </>

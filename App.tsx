@@ -1,18 +1,18 @@
-import React, {useEffect, useState, useMemo} from 'react';
-import {View, StyleSheet, ActivityIndicator} from 'react-native';
-import {NavigationContainer} from '@react-navigation/native';
-import {createStackNavigator} from '@react-navigation/stack';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {Icon} from 'react-native-elements';
-import {LoginScreen} from './screens/LoginScreen';
-import {MainScreen} from './screens/MainScreen';
-import {PDFViewer} from './screens/PDFViewer';
-import {PhotoViewer} from './screens/PhotoViewer';
-import {UserManagementScreen} from './screens/UserManagementScreen';
-import {RootStackParamList, AdminTabParamList} from './types';
-import {AuthContext} from './AuthContext';
-import {apiService} from './utils/api';
+import { Icon } from 'react-native-elements';
+import { LoginScreen } from './screens/LoginScreen';
+import { MainScreen } from './screens/MainScreen';
+import { PDFViewer } from './screens/PDFViewer';
+import { PhotoViewer } from './screens/PhotoViewer';
+import { UserManagementScreen } from './screens/UserManagementScreen';
+import { RootStackParamList, AdminTabParamList } from './types';
+import { AuthContext } from './AuthContext';
+import { apiService } from './utils/api';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<AdminTabParamList>();
@@ -28,7 +28,7 @@ const AdminTabs = () => (
       name="Dokumenti"
       component={MainScreen}
       options={{
-        tabBarIcon: ({color}) => (
+        tabBarIcon: ({ color }) => (
           <Icon name="description" type="material" size={24} color={color} />
         ),
         headerShown: false,
@@ -38,9 +38,7 @@ const AdminTabs = () => (
       name="Korisnici"
       component={UserManagementScreen}
       options={{
-        tabBarIcon: ({color}) => (
-          <Icon name="people" type="material" size={24} color={color} />
-        ),
+        tabBarIcon: ({ color }) => <Icon name="people" type="material" size={24} color={color} />,
       }}
     />
   </Tab.Navigator>
@@ -48,13 +46,9 @@ const AdminTabs = () => (
 
 // Define UserStack as a separate constant component
 const UserStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Main" component={MainScreen} />
-    <Stack.Screen
-      name="PDFViewer"
-      component={PDFViewer}
-      options={{headerShown: true}}
-    />
+    <Stack.Screen name="PDFViewer" component={PDFViewer} options={{ headerShown: true }} />
     <Stack.Screen
       name="PhotoViewer"
       component={PhotoViewer}
@@ -68,13 +62,9 @@ const UserStack = () => (
 
 // Define AdminStack as a separate constant component
 const AdminStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Main" component={AdminTabs} />
-    <Stack.Screen
-      name="PDFViewer"
-      component={PDFViewer}
-      options={{headerShown: true}}
-    />
+    <Stack.Screen name="PDFViewer" component={PDFViewer} options={{ headerShown: true }} />
     <Stack.Screen
       name="PhotoViewer"
       component={PhotoViewer}
@@ -122,7 +112,7 @@ const App = () => {
         }
       },
     }),
-    [],
+    []
   );
 
   useEffect(() => {
@@ -154,7 +144,7 @@ const App = () => {
   const renderNavigator = () => {
     if (!userToken) {
       return (
-        <Stack.Navigator screenOptions={{headerShown: false}}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
         </Stack.Navigator>
       );

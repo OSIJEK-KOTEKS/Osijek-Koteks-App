@@ -1,8 +1,8 @@
-import React, {useState, useEffect} from 'react';
-import {useNavigate} from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import {User} from '../types';
-import {apiService} from '../utils/api';
+import { User } from '../types';
+import { apiService } from '../utils/api';
 import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
 import EditUserModal from '../components/EditUserModal';
@@ -12,28 +12,28 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${({theme}) => theme.spacing.large};
+  margin-bottom: ${({ theme }) => theme.spacing.large};
   width: 100%;
 `;
 
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({theme}) => theme.spacing.medium};
+  gap: ${({ theme }) => theme.spacing.medium};
 `;
 
 const HeaderTitle = styled.h1`
   margin: 0;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.5rem;
 `;
 
 const UserCard = styled.div`
-  background: ${({theme}) => theme.colors.white};
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
-  margin-bottom: ${({theme}) => theme.spacing.medium};
+  background: ${({ theme }) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
   transition: transform 0.2s ease-in-out;
 
   &:hover {
@@ -45,31 +45,30 @@ const UserHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: start;
-  margin-bottom: ${({theme}) => theme.spacing.medium};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
 `;
 
 const UserDetails = styled.div`
   margin: 4px 0;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 0.9rem;
 `;
 
 const UserName = styled.h3`
   margin: 0;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.1rem;
   font-weight: 600;
 `;
 
-const Badge = styled.span<{role: User['role']}>`
+const Badge = styled.span<{ role: User['role'] }>`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 0.875rem;
-  background-color: ${({role}) =>
+  background-color: ${({ role }) =>
     role === 'admin' ? '#e8f5e9' : role === 'bot' ? '#e3f2fd' : '#f5f5f5'};
-  color: ${({role}) =>
-    role === 'admin' ? '#2e7d32' : role === 'bot' ? '#1565c0' : '#616161'};
+  color: ${({ role }) => (role === 'admin' ? '#2e7d32' : role === 'bot' ? '#1565c0' : '#616161')};
   margin-left: 8px;
 `;
 
@@ -81,7 +80,7 @@ const CodesContainer = styled.div`
 `;
 
 const CodeBadge = styled.span`
-  background-color: ${({theme}) => theme.colors.gray};
+  background-color: ${({ theme }) => theme.colors.gray};
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -94,17 +93,17 @@ const ButtonGroup = styled.div`
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: ${({theme}) => theme.spacing.large};
-  color: ${({theme}) => theme.colors.text};
-  background: ${({theme}) => theme.colors.white};
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
+  padding: ${({ theme }) => theme.spacing.large};
+  color: ${({ theme }) => theme.colors.text};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
-  padding: ${({theme}) => theme.spacing.large};
-  color: ${({theme}) => theme.colors.primary};
+  padding: ${({ theme }) => theme.spacing.large};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const PaginationContainer = styled.div`
@@ -114,20 +113,19 @@ const PaginationContainer = styled.div`
   margin-bottom: 20px;
 `;
 
-const PaginationButton = styled.button<{isActive?: boolean}>`
+const PaginationButton = styled.button<{ isActive?: boolean }>`
   padding: 8px 12px;
   margin: 0 5px;
   border-radius: 4px;
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  background-color: ${({theme, isActive}) =>
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  background-color: ${({ theme, isActive }) =>
     isActive ? theme.colors.primary : theme.colors.white};
-  color: ${({theme, isActive}) =>
-    isActive ? theme.colors.white : theme.colors.text};
+  color: ${({ theme, isActive }) => (isActive ? theme.colors.white : theme.colors.text)};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background-color: ${({theme, isActive}) =>
+    background-color: ${({ theme, isActive }) =>
       isActive ? theme.colors.primary : theme.colors.gray};
   }
 
@@ -146,8 +144,8 @@ const SortContainer = styled.div`
 const SortSelect = styled.select`
   padding: 8px 12px;
   border-radius: 4px;
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  background-color: ${({theme}) => theme.colors.white};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  background-color: ${({ theme }) => theme.colors.white};
   cursor: pointer;
 `;
 
@@ -178,13 +176,9 @@ const UserManagementPage: React.FC = () => {
       const sortedUsers = [...allUsers].sort((a, b) => {
         switch (sortOption) {
           case 'name-asc':
-            return `${a.firstName} ${a.lastName}`.localeCompare(
-              `${b.firstName} ${b.lastName}`,
-            );
+            return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
           case 'name-desc':
-            return `${b.firstName} ${b.lastName}`.localeCompare(
-              `${a.firstName} ${a.lastName}`,
-            );
+            return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
           case 'email-asc':
             return a.email.localeCompare(b.email);
           case 'email-desc':
@@ -220,7 +214,7 @@ const UserManagementPage: React.FC = () => {
 
     // Remove duplicates and sort
     const uniqueCodes = Array.from(new Set(allCodes)).sort((a, b) =>
-      a.localeCompare(b, undefined, {numeric: true}),
+      a.localeCompare(b, undefined, { numeric: true })
     );
 
     setAvailableCodes(uniqueCodes);
@@ -265,11 +259,7 @@ const UserManagementPage: React.FC = () => {
           'System configuration',
         ];
       case 'user':
-        return [
-          'Document viewing',
-          'Document approval',
-          'Personal data access',
-        ];
+        return ['Document viewing', 'Document approval', 'Personal data access'];
       case 'bot':
         return ['Automated document creation', 'System integration'];
       default:
@@ -377,7 +367,7 @@ const UserManagementPage: React.FC = () => {
         onClick={() => handlePageChange(currentPage - 1)}
         disabled={currentPage === 1}>
         &laquo;
-      </PaginationButton>,
+      </PaginationButton>
     );
 
     // Show maximum 5 page buttons
@@ -386,12 +376,9 @@ const UserManagementPage: React.FC = () => {
 
     for (let i = startPage; i <= endPage; i++) {
       pageButtons.push(
-        <PaginationButton
-          key={i}
-          isActive={i === currentPage}
-          onClick={() => handlePageChange(i)}>
+        <PaginationButton key={i} isActive={i === currentPage} onClick={() => handlePageChange(i)}>
           {i}
-        </PaginationButton>,
+        </PaginationButton>
       );
     }
 
@@ -402,7 +389,7 @@ const UserManagementPage: React.FC = () => {
         onClick={() => handlePageChange(currentPage + 1)}
         disabled={currentPage === totalPages}>
         &raquo;
-      </PaginationButton>,
+      </PaginationButton>
     );
 
     return pageButtons;
@@ -424,12 +411,8 @@ const UserManagementPage: React.FC = () => {
           <HeaderTitle>Upravljanje korisnicima</HeaderTitle>
         </HeaderLeft>
         <ButtonGroup>
-          <S.Button onClick={() => navigate('/dashboard')}>
-            Natrag na dokumente
-          </S.Button>
-          <S.Button
-            variant="primary"
-            onClick={() => setIsCreateModalOpen(true)}>
+          <S.Button onClick={() => navigate('/dashboard')}>Natrag na dokumente</S.Button>
+          <S.Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
             Dodaj korisnika
           </S.Button>
         </ButtonGroup>
@@ -466,9 +449,7 @@ const UserManagementPage: React.FC = () => {
               </UserDetails>
             </div>
             <ButtonGroup>
-              <S.Button
-                onClick={() => handleDataExport(user)}
-                variant="secondary">
+              <S.Button onClick={() => handleDataExport(user)} variant="secondary">
                 Izvoz podataka
               </S.Button>
               <S.Button onClick={() => handleEdit(user)}>Uredi</S.Button>
@@ -485,14 +466,10 @@ const UserManagementPage: React.FC = () => {
         </UserCard>
       ))}
 
-      {users.length === 0 && !loading && (
-        <EmptyState>Nema pronađenih korisnika</EmptyState>
-      )}
+      {users.length === 0 && !loading && <EmptyState>Nema pronađenih korisnika</EmptyState>}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <PaginationContainer>{renderPagination()}</PaginationContainer>
-      )}
+      {totalPages > 1 && <PaginationContainer>{renderPagination()}</PaginationContainer>}
 
       <EditUserModal
         user={selectedUser}

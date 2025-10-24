@@ -1,7 +1,7 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import {User} from '../types';
-import {apiService} from '../utils/api';
+import { User } from '../types';
+import { apiService } from '../utils/api';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -41,13 +41,13 @@ const FormGroup = styled.div`
 const PasswordSection = styled.div`
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid ${({theme}) => theme.colors.gray};
+  border-top: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const PasswordButton = styled.button`
   background: none;
   border: none;
-  color: ${({theme}) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   padding: 0.5rem 0;
   display: flex;
@@ -68,19 +68,19 @@ const PasswordInputGroup = styled.div`
 
 const Label = styled.label`
   font-weight: 500;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Input = styled.input`
   padding: 0.5rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
   border-radius: 4px;
   font-size: 1rem;
 `;
 
 const Select = styled.select`
   padding: 0.5rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
   border-radius: 4px;
   font-size: 1rem;
 `;
@@ -99,7 +99,7 @@ const CodesInputRow = styled.div`
 
 const CodesSelect = styled.select`
   padding: 0.5rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
   border-radius: 4px;
   font-size: 1rem;
   flex: 1;
@@ -113,7 +113,7 @@ const CodesList = styled.div`
 `;
 
 const CodeBadge = styled.div`
-  background: ${({theme}) => theme.colors.gray};
+  background: ${({ theme }) => theme.colors.gray};
   padding: 0.25rem 0.5rem;
   border-radius: 1rem;
   display: flex;
@@ -124,7 +124,7 @@ const CodeBadge = styled.div`
 const RemoveCodeButton = styled.button`
   background: none;
   border: none;
-  color: ${({theme}) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.error};
   cursor: pointer;
   padding: 0;
   font-size: 1.2rem;
@@ -140,15 +140,15 @@ const ButtonGroup = styled.div`
   margin-top: 2rem;
 `;
 
-const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
+const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   padding: 0.5rem 1rem;
   border-radius: 4px;
   border: none;
   cursor: pointer;
   font-weight: 500;
-  background: ${({theme, variant}) =>
+  background: ${({ theme, variant }) =>
     variant === 'primary' ? theme.colors.primary : theme.colors.gray};
-  color: ${({variant}) => (variant === 'primary' ? 'white' : 'black')};
+  color: ${({ variant }) => (variant === 'primary' ? 'white' : 'black')};
 
   &:hover {
     opacity: 0.9;
@@ -156,7 +156,7 @@ const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
 `;
 
 const ErrorMessage = styled.div`
-  color: ${({theme}) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 0.5rem;
   font-size: 0.875rem;
 `;
@@ -169,7 +169,7 @@ const CheckboxContainer = styled.div`
 `;
 
 const WarningText = styled.div`
-  color: ${({theme}) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 0.8rem;
   margin-top: 0.25rem;
   padding-left: 1.5rem;
@@ -303,7 +303,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Input
               type="email"
               value={formData.email || ''}
-              onChange={e => setFormData({...formData, email: e.target.value})}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
               disabled
             />
           </FormGroup>
@@ -313,9 +313,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Input
               type="text"
               value={formData.firstName || ''}
-              onChange={e =>
-                setFormData({...formData, firstName: e.target.value})
-              }
+              onChange={e => setFormData({ ...formData, firstName: e.target.value })}
               required
             />
           </FormGroup>
@@ -325,9 +323,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Input
               type="text"
               value={formData.lastName || ''}
-              onChange={e =>
-                setFormData({...formData, lastName: e.target.value})
-              }
+              onChange={e => setFormData({ ...formData, lastName: e.target.value })}
               required
             />
           </FormGroup>
@@ -337,9 +333,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Input
               type="text"
               value={formData.company || ''}
-              onChange={e =>
-                setFormData({...formData, company: e.target.value})
-              }
+              onChange={e => setFormData({ ...formData, company: e.target.value })}
               required
             />
           </FormGroup>
@@ -371,14 +365,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   onChange={e => handleFullAccessChange(e.target.checked)}
                   id="hasFullAccess"
                 />
-                <label htmlFor="hasFullAccess">
-                  Dozvoli pristup svim dokumentima
-                </label>
+                <label htmlFor="hasFullAccess">Dozvoli pristup svim dokumentima</label>
               </CheckboxContainer>
               {formData.hasFullAccess && (
                 <WarningText>
-                  Korisnik će imati pristup svim dokumentima bez obzira na
-                  dodijeljene radne naloge.
+                  Korisnik će imati pristup svim dokumentima bez obzira na dodijeljene radne naloge.
                 </WarningText>
               )}
             </FormGroup>
@@ -418,9 +409,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               {formData.codes?.map(code => (
                 <CodeBadge key={code}>
                   {code}
-                  <RemoveCodeButton
-                    type="button"
-                    onClick={() => handleRemoveCode(code)}>
+                  <RemoveCodeButton type="button" onClick={() => handleRemoveCode(code)}>
                     ×
                   </RemoveCodeButton>
                 </CodeBadge>
@@ -429,12 +418,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </FormGroup>
 
           <PasswordSection>
-            <PasswordButton
-              type="button"
-              onClick={() => setShowPasswordField(!showPasswordField)}>
-              {showPasswordField
-                ? '- Sakrij promjenu lozinke'
-                : '+ Promijeni lozinku'}
+            <PasswordButton type="button" onClick={() => setShowPasswordField(!showPasswordField)}>
+              {showPasswordField ? '- Sakrij promjenu lozinke' : '+ Promijeni lozinku'}
             </PasswordButton>
 
             {showPasswordField && (
@@ -458,10 +443,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                       }
                       setIsLoading(true);
                       try {
-                        await apiService.updateUserPassword(
-                          user._id,
-                          newPassword,
-                        );
+                        await apiService.updateUserPassword(user._id, newPassword);
                         setNewPassword('');
                         setShowPasswordField(false);
                         setError('');

@@ -1,8 +1,8 @@
 // Updated PrintableItem.tsx with consistent DD/MM/YYYY date formatting
 import React from 'react';
-import {Item} from '../types';
-import {getImageUrl} from '../utils/api';
-import {getFormattedCode, getCodeDescription} from '../utils/codeMapping';
+import { Item } from '../types';
+import { getImageUrl } from '../utils/api';
+import { getFormattedCode, getCodeDescription } from '../utils/codeMapping';
 
 interface PrintableItemProps {
   item: Item;
@@ -57,10 +57,7 @@ const safeParseDate = (dateInput: any): string => {
   }
 };
 
-const formatDateAndTime = (
-  creationDate: any,
-  creationTime?: string,
-): string => {
+const formatDateAndTime = (creationDate: any, creationTime?: string): string => {
   const formattedDate = safeParseDate(creationDate);
 
   if (!formattedDate || formattedDate === 'N/A') {
@@ -108,15 +105,11 @@ const formatApprovalDate = (approvalDate: any): string => {
   }
 };
 
-const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
+const PrintableItem: React.FC<PrintableItemProps> = ({ item }) => {
   return (
     <div className="print-container">
       <div className="print-header">
-        <img
-          src="/images/logo.png"
-          alt="Osijek-Koteks Logo"
-          className="print-logo"
-        />
+        <img src="/images/logo.png" alt="Osijek-Koteks Logo" className="print-logo" />
         <h1 className="print-title">Detalji dokumenta</h1>
       </div>
 
@@ -139,18 +132,14 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
             <div className="print-info-item">
               <span className="print-label">Razlika u vaganju:</span>
-              <span className="print-value">
-                {item.neto > 1000 ? '/' : `${item.neto}%`}
-              </span>
+              <span className="print-value">{item.neto > 1000 ? '/' : `${item.neto}%`}</span>
             </div>
           )}
           {/* Add tezina field to printout in tons */}
           {item.tezina !== undefined && (
             <div className="print-info-item">
               <span className="print-label">Težina:</span>
-              <span className="print-value">
-                {(item.tezina / 1000).toFixed(3)} t
-              </span>
+              <span className="print-value">{(item.tezina / 1000).toFixed(3)} t</span>
             </div>
           )}
           <div className="print-info-item">
@@ -228,9 +217,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({item}) => {
           )}
 
           {item.approvalLocation && (
-            <div className="print-location-section">
-              {/* Location display would go here */}
-            </div>
+            <div className="print-location-section">{/* Location display would go here */}</div>
           )}
         </>
       )}

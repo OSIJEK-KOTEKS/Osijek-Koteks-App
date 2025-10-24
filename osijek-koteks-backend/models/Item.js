@@ -138,15 +138,15 @@ const ItemSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 // Add indexes for better query performance
-ItemSchema.index({code: 1});
-ItemSchema.index({approvalStatus: 1});
-ItemSchema.index({creationDate: -1});
-ItemSchema.index({prijevoznik: 1});
-ItemSchema.index({createdBy: 1});
+ItemSchema.index({ code: 1 });
+ItemSchema.index({ approvalStatus: 1 });
+ItemSchema.index({ creationDate: -1 });
+ItemSchema.index({ prijevoznik: 1 });
+ItemSchema.index({ createdBy: 1 });
 
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();
@@ -220,6 +220,6 @@ ItemSchema.virtual('formattedCreationTime').get(function () {
 
 // Ensure virtual fields are NOT included in JSON by default
 // This prevents breaking changes and lets frontend handle formatting
-ItemSchema.set('toJSON', {virtuals: false});
+ItemSchema.set('toJSON', { virtuals: false });
 
 module.exports = mongoose.model('Item', ItemSchema);

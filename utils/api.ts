@@ -45,7 +45,7 @@ api.interceptors.request.use(
   error => {
     console.error('Request interceptor error:', error);
     return Promise.reject(error);
-  },
+  }
 );
 
 api.interceptors.response.use(
@@ -58,7 +58,7 @@ api.interceptors.response.use(
       config: error.config, // log the  request config
     });
     return Promise.reject(error);
-  },
+  }
 );
 
 // Interface for paginated responses
@@ -95,7 +95,7 @@ export const apiService = {
         userId: response.data.user._id,
       });
 
-      const {token, user} = response.data;
+      const { token, user } = response.data;
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
       await AsyncStorage.setItem(USER_ID_KEY, user._id);
       return response.data;
@@ -107,7 +107,7 @@ export const apiService = {
 
   updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
     try {
-      console.log('Updating item code:', {itemId, newCode});
+      console.log('Updating item code:', { itemId, newCode });
 
       const response = await api.patch(`/api/items/${itemId}/code`, {
         code: newCode,
@@ -127,17 +127,14 @@ export const apiService = {
         password: '[REDACTED]',
       });
 
-      const response = await api.post<LoginResponse>(
-        '/api/auth/register',
-        userData,
-      );
+      const response = await api.post<LoginResponse>('/api/auth/register', userData);
 
       console.log('Registration successful:', {
         userId: response.data.user._id,
         email: response.data.user.email,
       });
 
-      const {token, user} = response.data;
+      const { token, user } = response.data;
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
       await AsyncStorage.setItem(USER_ID_KEY, user._id);
       return user;
@@ -235,10 +232,7 @@ export const apiService = {
     }
   },
 
-  updateUser: async (
-    id: string,
-    userData: Partial<Omit<User, '_id'>>,
-  ): Promise<User> => {
+  updateUser: async (id: string, userData: Partial<Omit<User, '_id'>>): Promise<User> => {
     try {
       console.log('Updating user:', id, {
         ...userData,
@@ -265,7 +259,7 @@ export const apiService = {
   getItems: async (
     page: number = 1,
     limit: number = 10,
-    filters?: ItemFilters,
+    filters?: ItemFilters
   ): Promise<PaginatedResponse<Item>> => {
     try {
       console.log('Making API request for page:', page);
@@ -273,15 +267,13 @@ export const apiService = {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...(filters?.startDate && {startDate: filters.startDate}),
-        ...(filters?.endDate && {endDate: filters.endDate}),
-        ...(filters?.code && filters.code !== 'all' && {code: filters.code}),
-        ...(filters?.sortOrder && {sortOrder: filters.sortOrder}),
+        ...(filters?.startDate && { startDate: filters.startDate }),
+        ...(filters?.endDate && { endDate: filters.endDate }),
+        ...(filters?.code && filters.code !== 'all' && { code: filters.code }),
+        ...(filters?.sortOrder && { sortOrder: filters.sortOrder }),
       });
 
-      const response = await api.get<PaginatedResponse<Item>>(
-        `/api/items?${params}`,
-      );
+      const response = await api.get<PaginatedResponse<Item>>(`/api/items?${params}`);
 
       return response.data;
     } catch (error) {
@@ -310,9 +302,7 @@ export const apiService = {
 
   updateItem: async (
     id: string,
-    itemData: Partial<
-      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
-    >,
+    itemData: Partial<Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>>
   ): Promise<Item> => {
     try {
       const response = await api.patch<Item>(`/api/items/${id}`, itemData);
@@ -329,7 +319,7 @@ export const apiService = {
     photoUriFront?: string,
     photoUriBack?: string,
     locationData?: LocationData,
-    inTransit: boolean = false, // Add inTransit parameter with default value
+    inTransit: boolean = false // Add inTransit parameter with default value
   ): Promise<Item> => {
     try {
       const formData = new FormData();
@@ -365,18 +355,14 @@ export const apiService = {
         inTransit,
       });
 
-      const response = await api.patch<Item>(
-        `/api/items/${id}/approval`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          transformRequest: data => {
-            return data;
-          },
+      const response = await api.patch<Item>(`/api/items/${id}/approval`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
         },
-      );
+        transformRequest: data => {
+          return data;
+        },
+      });
 
       return response.data;
     } catch (error) {
@@ -384,10 +370,7 @@ export const apiService = {
       throw error;
     }
   },
-  updateUserPassword: async (
-    userId: string,
-    newPassword: string,
-  ): Promise<User> => {
+  updateUserPassword: async (userId: string, newPassword: string): Promise<User> => {
     try {
       console.log('Updating password for user:', userId);
       const response = await api.patch<User>(`/api/users/${userId}/password`, {

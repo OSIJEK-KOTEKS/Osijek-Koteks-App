@@ -6,7 +6,7 @@ const createApproval = async (req, res) => {
   try {
     // Assuming req.file contains the uploaded image from multer
     if (!req.file) {
-      return res.status(400).json({error: 'No image provided'});
+      return res.status(400).json({ error: 'No image provided' });
     }
 
     // Upload to Cloudinary
@@ -35,7 +35,7 @@ const createApproval = async (req, res) => {
     res.status(201).json(approval);
   } catch (error) {
     console.error('Error in createApproval:', error);
-    res.status(500).json({error: 'Error creating approval'});
+    res.status(500).json({ error: 'Error creating approval' });
   }
 };
 
@@ -43,7 +43,7 @@ const deleteApproval = async (req, res) => {
   try {
     const approval = await Approval.findById(req.params.id);
     if (!approval) {
-      return res.status(404).json({error: 'Approval not found'});
+      return res.status(404).json({ error: 'Approval not found' });
     }
 
     // Delete from Cloudinary if publicId exists
@@ -52,9 +52,9 @@ const deleteApproval = async (req, res) => {
     }
 
     await approval.remove();
-    res.json({message: 'Approval deleted successfully'});
+    res.json({ message: 'Approval deleted successfully' });
   } catch (error) {
     console.error('Error in deleteApproval:', error);
-    res.status(500).json({error: 'Error deleting approval'});
+    res.status(500).json({ error: 'Error deleting approval' });
   }
 };

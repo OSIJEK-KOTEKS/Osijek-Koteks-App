@@ -12,8 +12,7 @@ import {
   ItemUser,
 } from '../types';
 
-const API_URL =
-  process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
+const API_URL = process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
 
 export const getImageUrl = (path: string) => {
   if (path?.startsWith('http')) {
@@ -39,7 +38,7 @@ api.interceptors.request.use(
   error => {
     console.error('Request interceptor error:', error);
     return Promise.reject(error);
-  },
+  }
 );
 
 // Response interceptor for error handling
@@ -53,7 +52,7 @@ api.interceptors.response.use(
       data: error.response?.data,
     });
     return Promise.reject(error);
-  },
+  }
 );
 
 export const apiService = {
@@ -89,10 +88,7 @@ export const apiService = {
         password: '[REDACTED]',
       });
 
-      const response = await api.post<LoginResponse>(
-        '/api/auth/register',
-        userData,
-      );
+      const response = await api.post<LoginResponse>('/api/auth/register', userData);
 
       console.log('Registration successful:', {
         userId: response.data.user._id,
@@ -181,7 +177,7 @@ export const apiService = {
     page: number = 1,
     limit: number = 10,
     sortBy: string = 'firstName',
-    sortOrder: 'asc' | 'desc' = 'asc',
+    sortOrder: 'asc' | 'desc' = 'asc'
   ): Promise<PaginatedResponse<User>> => {
     try {
       const params = new URLSearchParams();
@@ -190,9 +186,7 @@ export const apiService = {
       params.append('sortBy', sortBy);
       params.append('sortOrder', sortOrder);
 
-      const response = await api.get<PaginatedResponse<User>>(
-        `/api/users?${params}`,
-      );
+      const response = await api.get<PaginatedResponse<User>>(`/api/users?${params}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching paginated users:', error);
@@ -225,10 +219,7 @@ export const apiService = {
     }
   },
 
-  updateUser: async (
-    id: string,
-    userData: Partial<Omit<User, '_id'>>,
-  ): Promise<User> => {
+  updateUser: async (id: string, userData: Partial<Omit<User, '_id'>>): Promise<User> => {
     try {
       console.log('Updating user:', id, {
         ...userData,
@@ -252,10 +243,7 @@ export const apiService = {
     }
   },
 
-  updateUserPassword: async (
-    userId: string,
-    newPassword: string,
-  ): Promise<User> => {
+  updateUserPassword: async (userId: string, newPassword: string): Promise<User> => {
     try {
       console.log('Updating password for user:', userId);
       const response = await api.patch<User>(`/api/users/${userId}/password`, {
@@ -270,7 +258,7 @@ export const apiService = {
 
   updateUserCodes: async (id: string, codes: string[]): Promise<User> => {
     try {
-      const response = await api.patch<User>(`/api/users/${id}/codes`, {codes});
+      const response = await api.patch<User>(`/api/users/${id}/codes`, { codes });
       return response.data;
     } catch (error) {
       console.error('Error updating user codes:', error);
@@ -279,10 +267,7 @@ export const apiService = {
   },
 
   // Toggle user's full access
-  toggleUserFullAccess: async (
-    id: string,
-    hasFullAccess: boolean,
-  ): Promise<User> => {
+  toggleUserFullAccess: async (id: string, hasFullAccess: boolean): Promise<User> => {
     try {
       console.log('Toggling full access for user:', id, hasFullAccess);
       const response = await api.patch<User>(`/api/users/${id}/access`, {
@@ -304,7 +289,7 @@ export const apiService = {
   getItems: async (
     page: number = 1,
     limit: number = 10,
-    filters?: ItemFilters,
+    filters?: ItemFilters
   ): Promise<PaginatedResponse<Item>> => {
     try {
       console.log('Making API request with filters:', filters);
@@ -316,11 +301,9 @@ export const apiService = {
       // YOUR EXISTING FILTER PARAMS (keep all of these as they are):
       if (filters?.startDate) params.append('startDate', filters.startDate);
       if (filters?.endDate) params.append('endDate', filters.endDate);
-      if (filters?.code && filters.code !== 'all')
-        params.append('code', filters.code);
+      if (filters?.code && filters.code !== 'all') params.append('code', filters.code);
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
-      if (filters?.searchTitle)
-        params.append('searchTitle', filters.searchTitle);
+      if (filters?.searchTitle) params.append('searchTitle', filters.searchTitle);
       if (filters?.searchRegistration)
         params.append('searchRegistration', filters.searchRegistration);
       if (filters?.inTransitOnly) params.append('inTransitOnly', 'true');
@@ -334,9 +317,7 @@ export const apiService = {
       // Keep the rest of your getItems method exactly as it is:
       console.log('Request URL params:', params.toString());
 
-      const response = await api.get<PaginatedResponse<Item>>(
-        `/api/items?${params}`,
-      );
+      const response = await api.get<PaginatedResponse<Item>>(`/api/items?${params}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -371,9 +352,7 @@ export const apiService = {
 
   updateItem: async (
     id: string,
-    itemData: Partial<
-      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
-    >,
+    itemData: Partial<Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>>
   ): Promise<Item> => {
     try {
       console.log('Updating item:', id, itemData);
@@ -397,7 +376,7 @@ export const apiService = {
 
   updateItemCode: async (itemId: string, newCode: string): Promise<any> => {
     try {
-      console.log('Updating item code:', {itemId, newCode});
+      console.log('Updating item code:', { itemId, newCode });
 
       const response = await api.patch(`/api/items/${itemId}/code`, {
         code: newCode,
@@ -417,7 +396,7 @@ export const apiService = {
     photoFront: File,
     photoBack: File,
     locationData: LocationData,
-    inTransit: boolean = false,
+    inTransit: boolean = false
   ): Promise<Item> => {
     try {
       const formData = new FormData();
@@ -427,15 +406,11 @@ export const apiService = {
       formData.append('locationData', JSON.stringify(locationData));
       formData.append('inTransit', inTransit.toString());
 
-      const response = await api.patch<Item>(
-        `/api/items/${id}/approval`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+      const response = await api.patch<Item>(`/api/items/${id}/approval`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
         },
-      );
+      });
 
       return response.data;
     } catch (error) {
@@ -449,7 +424,7 @@ export const apiService = {
     approvalStatus: Item['approvalStatus'],
     pdfDocument: File,
     inTransit: boolean = false,
-    neto?: number,
+    neto?: number
   ): Promise<Item> => {
     try {
       console.log('Sending PDF approval request:', {
@@ -471,15 +446,11 @@ export const apiService = {
         formData.append('neto', neto.toString());
       }
 
-      const response = await api.patch<Item>(
-        `/api/items/${id}/approval`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+      const response = await api.patch<Item>(`/api/items/${id}/approval`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
         },
-      );
+      });
 
       return response.data;
     } catch (error) {

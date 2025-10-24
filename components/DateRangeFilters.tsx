@@ -1,13 +1,7 @@
-import React, {useState} from 'react';
-import {
-  View,
-  StyleSheet,
-  Platform,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
-import {Text} from 'react-native-elements';
-import {Picker} from '@react-native-picker/picker';
+import React, { useState } from 'react';
+import { View, StyleSheet, Platform, TouchableOpacity, Dimensions } from 'react-native';
+import { Text } from 'react-native-elements';
+import { Picker } from '@react-native-picker/picker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Modal from 'react-native-modal';
 import CalendarPicker from 'react-native-calendar-picker';
@@ -29,15 +23,7 @@ const hrMonths = [
 ];
 
 // Croatian day names
-const hrDays = [
-  'Nedjelja',
-  'Ponedjeljak',
-  'Utorak',
-  'Srijeda',
-  'Četvrtak',
-  'Petak',
-  'Subota',
-];
+const hrDays = ['Nedjelja', 'Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota'];
 
 // Croatian short day names
 const hrShortDays = ['Ned', 'Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub'];
@@ -64,10 +50,10 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const sortOptions = [
-    {label: 'Na čekanju prvo', value: 'pending-first'},
-    {label: 'Najnoviji prvo', value: 'date-desc'},
-    {label: 'Najstariji prvo', value: 'date-asc'},
-    {label: 'Odobreni prvo', value: 'approved-first'},
+    { label: 'Na čekanju prvo', value: 'pending-first' },
+    { label: 'Najnoviji prvo', value: 'date-desc' },
+    { label: 'Najstariji prvo', value: 'date-asc' },
+    { label: 'Odobreni prvo', value: 'approved-first' },
   ];
 
   const handleDateChange = (date: Date) => {
@@ -93,9 +79,7 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
           <MaterialIcons name="date-range" size={20} color="#2196F3" />
           <Text style={styles.label}>Datum</Text>
         </View>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setShowDatePicker(true)}>
+        <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
           <Text style={styles.dateButtonText}>{formatDate(selectedDate)}</Text>
           <MaterialIcons name="calendar-today" size={20} color="#2196F3" />
         </TouchableOpacity>
@@ -116,7 +100,7 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
               selectedDayColor="#2196F3"
               selectedDayTextColor="#FFFFFF"
               todayBackgroundColor="#ececec"
-              todayTextStyle={{color: '#000000'}}
+              todayTextStyle={{ color: '#000000' }}
               maxDate={new Date()}
               initialDate={selectedDate}
               onDateChange={handleDateChange}
@@ -148,18 +132,9 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
               style={styles.androidPicker}
               dropdownIconColor="#2196F3"
               mode="dropdown">
-              <Picker.Item
-                label="Svi Radni Nalozi"
-                value="all"
-                style={styles.pickerItem}
-              />
+              <Picker.Item label="Svi Radni Nalozi" value="all" style={styles.pickerItem} />
               {availableCodes.map(code => (
-                <Picker.Item
-                  key={code}
-                  label={code}
-                  value={code}
-                  style={styles.pickerItem}
-                />
+                <Picker.Item key={code} label={code} value={code} style={styles.pickerItem} />
               ))}
             </Picker>
           </View>
@@ -171,18 +146,9 @@ const DateRangeFilters: React.FC<DateRangeFiltersProps> = ({
               style={styles.picker}
               dropdownIconColor="#2196F3"
               mode="dropdown">
-              <Picker.Item
-                label="Svi Radni Nalozi"
-                value="all"
-                color="#000000"
-              />
+              <Picker.Item label="Svi Radni Nalozi" value="all" color="#000000" />
               {availableCodes.map(code => (
-                <Picker.Item
-                  key={code}
-                  label={code}
-                  value={code}
-                  color="#000000"
-                />
+                <Picker.Item key={code} label={code} value={code} color="#000000" />
               ))}
             </Picker>
           </View>
@@ -307,7 +273,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 1},
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
       },

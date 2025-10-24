@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,29 +9,23 @@ import {
   StatusBar,
   Text,
 } from 'react-native';
-import {Image} from 'react-native-elements';
-import {RouteProp} from '@react-navigation/native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import { Image } from 'react-native-elements';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import {RootStackParamList} from '../types';
+import { RootStackParamList } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {getImageUrl} from '../utils/api';
+import { getImageUrl } from '../utils/api';
 type PhotoViewerRouteProp = RouteProp<RootStackParamList, 'PhotoViewer'>;
-type PhotoViewerNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'PhotoViewer'
->;
+type PhotoViewerNavigationProp = StackNavigationProp<RootStackParamList, 'PhotoViewer'>;
 
 interface PhotoViewerProps {
   route: PhotoViewerRouteProp;
   navigation: PhotoViewerNavigationProp;
 }
 
-export const PhotoViewer: React.FC<PhotoViewerProps> = ({
-  route,
-  navigation,
-}) => {
-  const {photoUrl} = route.params;
+export const PhotoViewer: React.FC<PhotoViewerProps> = ({ route, navigation }) => {
+  const { photoUrl } = route.params;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -62,9 +56,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => navigation.goBack()}>
+      <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
         <MaterialIcons name="close" size={28} color="white" />
       </TouchableOpacity>
 
@@ -84,9 +76,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
             onError={handleImageError}
-            PlaceholderContent={
-              <ActivityIndicator size="large" color="#2196F3" />
-            }
+            PlaceholderContent={<ActivityIndicator size="large" color="#2196F3" />}
           />
         ) : (
           <View style={styles.errorContainer}>

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,11 +8,11 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {Text, Input} from 'react-native-elements';
+import { Text, Input } from 'react-native-elements';
 import Modal from 'react-native-modal';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import {apiService} from '../utils/api';
-import {CreateItemInput} from '../types';
+import { apiService } from '../utils/api';
+import { CreateItemInput } from '../types';
 
 interface CreateItemModalProps {
   isVisible: boolean;
@@ -155,38 +155,30 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
               label="Naziv"
               placeholder="Unesite naziv dokumenta"
               value={formData.title}
-              onChangeText={text => setFormData({...formData, title: text})}
+              onChangeText={text => setFormData({ ...formData, title: text })}
               containerStyle={styles.inputContainer}
               disabled={loading}
-              leftIcon={
-                <MaterialIcons name="description" size={20} color="#666" />
-              }
+              leftIcon={<MaterialIcons name="description" size={20} color="#666" />}
             />
 
             <Input
               label="RN"
               placeholder="Unesite RN"
               value={formData.code}
-              onChangeText={text => setFormData({...formData, code: text})}
+              onChangeText={text => setFormData({ ...formData, code: text })}
               containerStyle={styles.inputContainer}
               disabled={loading}
-              leftIcon={
-                <MaterialIcons name="assignment" size={20} color="#666" />
-              }
+              leftIcon={<MaterialIcons name="assignment" size={20} color="#666" />}
             />
 
             <Input
               label="Registracija"
               placeholder="Unesite registraciju"
               value={formData.registracija}
-              onChangeText={text =>
-                setFormData({...formData, registracija: text})
-              }
+              onChangeText={text => setFormData({ ...formData, registracija: text })}
               containerStyle={styles.inputContainer}
               disabled={loading}
-              leftIcon={
-                <MaterialIcons name="directions-car" size={20} color="#666" />
-              }
+              leftIcon={<MaterialIcons name="directions-car" size={20} color="#666" />}
             />
 
             <View style={styles.netoContainer}>
@@ -211,13 +203,11 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
               label="PDF Link"
               placeholder="Unesite PDF link"
               value={formData.pdfUrl}
-              onChangeText={text => setFormData({...formData, pdfUrl: text})}
+              onChangeText={text => setFormData({ ...formData, pdfUrl: text })}
               containerStyle={styles.inputContainer}
               disabled={loading}
               autoCapitalize="none"
-              leftIcon={
-                <MaterialIcons name="picture-as-pdf" size={20} color="#666" />
-              }
+              leftIcon={<MaterialIcons name="picture-as-pdf" size={20} color="#666" />}
             />
           </ScrollView>
 
@@ -232,9 +222,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
               style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
               disabled={loading}>
-              <Text style={styles.buttonText}>
-                {loading ? 'Kreiranje...' : 'Kreiraj'}
-              </Text>
+              <Text style={styles.buttonText}>{loading ? 'Kreiranje...' : 'Kreiraj'}</Text>
             </TouchableOpacity>
           </View>
         </View>

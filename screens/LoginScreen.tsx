@@ -1,4 +1,4 @@
-import React, {useState, useContext, useEffect} from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,34 +9,31 @@ import {
   Keyboard,
   Alert,
 } from 'react-native';
-import {Input, Button, Text} from 'react-native-elements';
-import {StackNavigationProp} from '@react-navigation/stack';
+import { Input, Button, Text } from 'react-native-elements';
+import { StackNavigationProp } from '@react-navigation/stack';
 import axios from 'axios';
-import {RootStackParamList} from '../types';
-import {apiService} from '../utils/api';
+import { RootStackParamList } from '../types';
+import { apiService } from '../utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {AuthContext} from '../AuthContext';
+import { AuthContext } from '../AuthContext';
 import Logo from '../components/Logo';
-import {PrivacyConsentManager} from '../components/privacy/PrivacyConsentManager';
+import { PrivacyConsentManager } from '../components/privacy/PrivacyConsentManager';
 
 const PRIVACY_CONSENT_KEY = 'privacy_consent_status';
 
-type LoginScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'Login'
->;
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
 interface LoginScreenProps {
   navigation: LoginScreenNavigationProp;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isPrivacyModalVisible, setPrivacyModalVisible] = useState(false);
-  const {signIn} = useContext(AuthContext);
+  const { signIn } = useContext(AuthContext);
 
   useEffect(() => {
     checkPrivacyConsent();
@@ -70,7 +67,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             // Optionally navigate away or show additional message
           },
         },
-      ],
+      ]
     );
   };
 
@@ -99,7 +96,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
     setIsLoading(true);
     try {
-      console.log('Attempting login with:', {email});
+      console.log('Attempting login with:', { email });
       const loginResponse = await apiService.login(email, password);
       console.log('Login successful', loginResponse.user);
 
@@ -130,10 +127,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
   const handleForgotPassword = () => {
     // Implement forgot password functionality
-    Alert.alert(
-      'Zaboravljena lozinka',
-      'Kontaktirajte nas na: it@osijek-koteks.hr',
-    );
+    Alert.alert('Zaboravljena lozinka', 'Kontaktirajte nas na: it@osijek-koteks.hr');
   };
 
   return (
@@ -166,9 +160,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             autoComplete="password"
             textContentType="password"
           />
-          {errorMessage ? (
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          ) : null}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
           {isLoading ? (
             <ActivityIndicator size="large" color="#0000ff" />
@@ -181,16 +173,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                 containerStyle={styles.buttonContainer}
               />
               <TouchableWithoutFeedback onPress={handleForgotPassword}>
-                <Text style={styles.forgotPasswordText}>
-                  Zaboravili ste lozinku?
-                </Text>
+                <Text style={styles.forgotPasswordText}>Zaboravili ste lozinku?</Text>
               </TouchableWithoutFeedback>
             </>
           )}
 
           <Text style={styles.privacyNote}>
-            Prijavom potvrđujete da ste suglasni s našim pravilima privatnosti i
-            uvjetima korištenja.
+            Prijavom potvrđujete da ste suglasni s našim pravilima privatnosti i uvjetima
+            korištenja.
           </Text>
 
           <PrivacyConsentManager

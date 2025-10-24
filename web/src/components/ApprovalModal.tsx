@@ -1,9 +1,9 @@
-import React, {useState, useRef} from 'react';
+import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import styled from 'styled-components';
-import {Item} from '../types';
-import {apiService} from '../utils/api';
-import {Button} from './styled/Common';
+import { Item } from '../types';
+import { apiService } from '../utils/api';
+import { Button } from './styled/Common';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -20,15 +20,15 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({theme}) => theme.colors.white};
-  border-radius: ${({theme}) => theme.borderRadius};
-  padding: ${({theme}) => theme.spacing.large};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  padding: ${({ theme }) => theme.spacing.large};
   width: 90%;
   max-width: 800px; // Increased from 32rem
   min-height: 500px;
   max-height: 90vh;
   margin: auto;
-  box-shadow: ${({theme}) => theme.shadows.main};
+  box-shadow: ${({ theme }) => theme.shadows.main};
   display: flex;
   flex-direction: column;
   position: relative;
@@ -37,8 +37,8 @@ const ModalContent = styled.div`
 const Title = styled.h2`
   font-size: 1.75rem;
   font-weight: 600;
-  margin-bottom: ${({theme}) => theme.spacing.large};
-  color: ${({theme}) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing.large};
+  color: ${({ theme }) => theme.colors.text};
   text-align: center;
 `;
 
@@ -46,41 +46,41 @@ const ContentSection = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: ${({theme}) => theme.spacing.large};
+  gap: ${({ theme }) => theme.spacing.large};
   overflow-y: auto;
-  padding-right: ${({theme}) => theme.spacing.medium};
+  padding-right: ${({ theme }) => theme.spacing.medium};
 
   &::-webkit-scrollbar {
     width: 8px;
   }
 
   &::-webkit-scrollbar-track {
-    background: ${({theme}) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.background};
     border-radius: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({theme}) => theme.colors.gray};
+    background: ${({ theme }) => theme.colors.gray};
     border-radius: 4px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: ${({theme}) => theme.colors.disabled};
+    background: ${({ theme }) => theme.colors.disabled};
   }
 `;
 
 const FileInputSection = styled.div`
-  background: ${({theme}) => theme.colors.background};
-  padding: ${({theme}) => theme.spacing.large};
-  border-radius: ${({theme}) => theme.borderRadius};
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  background: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.spacing.large};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const Label = styled.label`
   display: block;
   font-weight: 600;
-  margin-bottom: ${({theme}) => theme.spacing.medium};
-  color: ${({theme}) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
 `;
 
@@ -90,16 +90,16 @@ const FileInputWrapper = styled.div`
 
 const FileInput = styled.input`
   width: 100%;
-  padding: ${({theme}) => theme.spacing.medium};
-  border: 2px dashed ${({theme}) => theme.colors.primary};
-  border-radius: ${({theme}) => theme.borderRadius};
-  background: ${({theme}) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border: 2px dashed ${({ theme }) => theme.colors.primary};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.white};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: ${({theme}) => theme.colors.primaryDark};
-    background: ${({theme}) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.primaryDark};
+    background: ${({ theme }) => theme.colors.background};
   }
 `;
 
@@ -107,8 +107,8 @@ const Alert = styled.div`
   background-color: #e3f2fd;
   border: 1px solid #90caf9;
   color: #1976d2;
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
   text-align: center;
   font-weight: 500;
 `;
@@ -116,38 +116,38 @@ const Alert = styled.div`
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: center;
-  gap: ${({theme}) => theme.spacing.medium};
-  margin-top: ${({theme}) => theme.spacing.large};
-  padding-top: ${({theme}) => theme.spacing.medium};
-  border-top: 1px solid ${({theme}) => theme.colors.gray};
+  gap: ${({ theme }) => theme.spacing.medium};
+  margin-top: ${({ theme }) => theme.spacing.large};
+  padding-top: ${({ theme }) => theme.spacing.medium};
+  border-top: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const CancelButton = styled(Button)`
   width: 200px;
-  background-color: ${({theme}) => theme.colors.gray};
-  color: ${({theme}) => theme.colors.text};
+  background-color: ${({ theme }) => theme.colors.gray};
+  color: ${({ theme }) => theme.colors.text};
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
   }
 `;
 
 const ConfirmButton = styled(Button)`
   width: 200px;
-  background-color: ${({theme}) => theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 
   &:disabled {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
     cursor: not-allowed;
   }
 `;
 
 const SuccessText = styled.div`
-  color: ${({theme}) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.success};
   font-size: 0.875rem;
   margin-top: 0.5rem;
   display: flex;
@@ -164,20 +164,20 @@ const SuccessText = styled.div`
 const CheckboxContainer = styled.div`
   display: flex;
   align-items: center;
-  margin-top: ${({theme}) => theme.spacing.medium};
-  background: ${({theme}) => theme.colors.background};
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  margin-top: ${({ theme }) => theme.spacing.medium};
+  background: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const Checkbox = styled.input`
-  margin-right: ${({theme}) => theme.spacing.small};
+  margin-right: ${({ theme }) => theme.spacing.small};
   cursor: pointer;
 `;
 
 const CheckboxLabel = styled.label`
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-weight: 500;
   cursor: pointer;
 `;
@@ -189,12 +189,7 @@ interface ApprovalModalProps {
   onSuccess: () => void;
 }
 
-const ApprovalModal: React.FC<ApprovalModalProps> = ({
-  isOpen,
-  onClose,
-  item,
-  onSuccess,
-}) => {
+const ApprovalModal: React.FC<ApprovalModalProps> = ({ isOpen, onClose, item, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [photoFront, setPhotoFront] = useState<File | null>(null);
   const [photoBack, setPhotoBack] = useState<File | null>(null);
@@ -205,7 +200,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    isBackPhoto: boolean = false,
+    isBackPhoto: boolean = false
   ) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
@@ -257,7 +252,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
         photoFront,
         photoBack,
         fixedLocation,
-        inTransit,
+        inTransit
       );
 
       onSuccess();
@@ -290,9 +285,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
                 onClick={e => e.stopPropagation()}
               />
             </FileInputWrapper>
-            {photoFront && (
-              <SuccessText>Fotografija uspješno odabrana</SuccessText>
-            )}
+            {photoFront && <SuccessText>Fotografija uspješno odabrana</SuccessText>}
           </FileInputSection>
 
           <FileInputSection>
@@ -306,9 +299,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
                 onClick={e => e.stopPropagation()}
               />
             </FileInputWrapper>
-            {photoBack && (
-              <SuccessText>Fotografija uspješno odabrana</SuccessText>
-            )}
+            {photoBack && <SuccessText>Fotografija uspješno odabrana</SuccessText>}
           </FileInputSection>
 
           {/* Add in_transit checkbox */}
@@ -345,7 +336,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
         </ButtonGroup>
       </ModalContent>
     </ModalOverlay>,
-    document.body,
+    document.body
   );
 };
 

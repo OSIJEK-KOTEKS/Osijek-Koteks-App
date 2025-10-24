@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useContext,
-  useCallback,
-  useRef,
-} from 'react';
+import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -17,17 +11,17 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import {Divider} from 'react-native-elements';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import { Divider } from 'react-native-elements';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import {StackNavigationProp} from '@react-navigation/stack';
-import {apiService, ItemFilters, PaginatedResponse} from '../utils/api';
-import {User, Item, LocationData, RootStackParamList} from '../types';
-import {AuthContext} from '../AuthContext';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { apiService, ItemFilters, PaginatedResponse } from '../utils/api';
+import { User, Item, LocationData, RootStackParamList } from '../types';
+import { AuthContext } from '../AuthContext';
 import ItemCard from '../components/ItemCard';
 import CustomAvatar from '../components/CustomAvatar';
 import PhotoCaptureModal from '../components/PhotoCaptureModal';
-import {CreateItemModal} from '../components/CreateItemModal';
+import { CreateItemModal } from '../components/CreateItemModal';
 import DateRangeFilters from '../components/DateRangeFilters';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProfileMenu from '../components/ProfileMenu';
@@ -39,14 +33,11 @@ interface MainScreenProps {
 }
 
 // Error Boundary Component
-class ErrorBoundary extends React.Component<
-  {children: React.ReactNode},
-  {hasError: boolean}
-> {
-  state = {hasError: false};
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
 
   static getDerivedStateFromError() {
-    return {hasError: true};
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error) {
@@ -60,7 +51,7 @@ class ErrorBoundary extends React.Component<
           <Text style={styles.errorText}>Something went wrong.</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => this.setState({hasError: false})}>
+            onPress={() => this.setState({ hasError: false })}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -71,7 +62,7 @@ class ErrorBoundary extends React.Component<
 }
 
 // Main Screen Component
-export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
+export const MainScreen: React.FC<MainScreenProps> = ({ navigation }) => {
   // State Management
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,9 +82,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const REFRESH_INTERVAL = 30000; // 30 seconds
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
-    null,
-  );
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   interface ItemChanges {
     newItems: boolean;
     updatedItems: boolean;
@@ -105,7 +94,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   const isLoadingRef = useRef(false);
 
   // Context
-  const {signOut} = useContext(AuthContext);
+  const { signOut } = useContext(AuthContext);
 
   const calculateItemHeight = (item?: Item) => {
     let height = 180; // Base height
@@ -177,7 +166,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
       const filters: ItemFilters = {
         startDate: startOfDay.toISOString(),
         endDate: endOfDay.toISOString(),
-        ...(selectedCode !== 'all' && {code: selectedCode}),
+        ...(selectedCode !== 'all' && { code: selectedCode }),
         sortOrder: sortOrder,
       };
 
@@ -240,16 +229,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         const filters: ItemFilters = {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString(),
-          ...(selectedCode !== 'all' && {code: selectedCode}),
+          ...(selectedCode !== 'all' && { code: selectedCode }),
           sortOrder: sortOrder,
         };
 
-        console.log(
-          'Fetching items with filters:',
-          filters,
-          'Page:',
-          currentPage,
-        );
+        console.log('Fetching items with filters:', filters, 'Page:', currentPage);
 
         const response = await apiService.getItems(currentPage, 10, filters);
 
@@ -261,9 +245,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         } else {
           setItems(prevItems => {
             const existingIds = new Set(prevItems.map(item => item._id));
-            const newItems = response.items.filter(
-              item => !existingIds.has(item._id),
-            );
+            const newItems = response.items.filter(item => !existingIds.has(item._id));
             return [...prevItems, ...newItems];
           });
         }
@@ -279,7 +261,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         console.error('Error fetching data:', error);
         Alert.alert(
           'Error',
-          'Učitavanje podataka nije uspjelo. Provjerite vezu i pokušajte ponovo.',
+          'Učitavanje podataka nije uspjelo. Provjerite vezu i pokušajte ponovo.'
         );
       } finally {
         setLoading(false);
@@ -287,7 +269,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         isLoadingRef.current = false;
       }
     },
-    [page, selectedDate, selectedCode, sortOrder],
+    [page, selectedDate, selectedCode, sortOrder]
   );
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || loading || isLoadingRef.current) {
@@ -352,7 +334,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
   }, [userProfile, items]);
   // Effect for filter changes
   useEffect(() => {
-    console.log('Filter changed:', {selectedDate, selectedCode, sortOrder});
+    console.log('Filter changed:', { selectedDate, selectedCode, sortOrder });
     setPage(1);
     setItems([]);
     fetchData(true);
@@ -385,39 +367,35 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
-      Alert.alert(
-        'Potvrda brisanja',
-        'Jeste li sigurni da želite obrisati ovaj dokument?',
-        [
-          {
-            text: 'Odustani',
-            style: 'cancel',
+      Alert.alert('Potvrda brisanja', 'Jeste li sigurni da želite obrisati ovaj dokument?', [
+        {
+          text: 'Odustani',
+          style: 'cancel',
+        },
+        {
+          text: 'Obriši',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deleteItem(itemId);
+              await fetchData(true);
+              Alert.alert('Uspjeh', 'Dokument je uspješno izbrisan');
+            } catch (error) {
+              console.error('Error deleting item:', error);
+              Alert.alert('Greška', 'Greška prilikom brisanja dokumenta');
+            }
           },
-          {
-            text: 'Obriši',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await apiService.deleteItem(itemId);
-                await fetchData(true);
-                Alert.alert('Uspjeh', 'Dokument je uspješno izbrisan');
-              } catch (error) {
-                console.error('Error deleting item:', error);
-                Alert.alert('Greška', 'Greška prilikom brisanja dokumenta');
-              }
-            },
-          },
-        ],
-      );
+        },
+      ]);
     },
-    [fetchData],
+    [fetchData]
   );
   const handleApproveItem = useCallback(
     async (
       photoUriFront: string,
       photoUriBack: string,
       locationData: LocationData,
-      inTransit: boolean, // Add inTransit parameter
+      inTransit: boolean // Add inTransit parameter
     ) => {
       if (!selectedItemId) return;
 
@@ -428,7 +406,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           photoUriFront,
           photoUriBack,
           locationData,
-          inTransit, // Pass inTransit flag to API
+          inTransit // Pass inTransit flag to API
         );
         await fetchData(true);
         Alert.alert('Uspjeh', 'Dokument uspješno odobren');
@@ -440,22 +418,18 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         setSelectedItemId(null);
       }
     },
-    [selectedItemId, fetchData],
+    [selectedItemId, fetchData]
   );
 
   const renderItem = useCallback(
-    ({item}: {item: Item}) => {
+    ({ item }: { item: Item }) => {
       return (
         <ItemCard
           item={item}
           userProfile={userProfile}
           userToken={userToken}
-          onPress={() =>
-            navigation.navigate('PDFViewer', {pdfUrl: item.pdfUrl})
-          }
-          onPhotoPress={(photoUrl, type) =>
-            navigation.navigate('PhotoViewer', {photoUrl})
-          }
+          onPress={() => navigation.navigate('PDFViewer', { pdfUrl: item.pdfUrl })}
+          onPhotoPress={(photoUrl, type) => navigation.navigate('PhotoViewer', { photoUrl })}
           onApprove={() => {
             setSelectedItemId(item._id);
             setPhotoModalVisible(true);
@@ -464,7 +438,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
         />
       );
     },
-    [navigation, userProfile, userToken, handleDeleteItem],
+    [navigation, userProfile, userToken, handleDeleteItem]
   );
 
   const ListHeaderComponent = useCallback(() => {
@@ -481,13 +455,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
             />
             <View style={styles.profileInfo}>
               <Text style={styles.name}>
-                {userProfile
-                  ? `${userProfile.firstName} ${userProfile.lastName}`
-                  : 'Loading...'}
+                {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Loading...'}
               </Text>
-              <Text style={styles.company}>
-                {userProfile?.company || 'Loading...'}
-              </Text>
+              <Text style={styles.company}>{userProfile?.company || 'Loading...'}</Text>
             </View>
             <MaterialIcons
               name="keyboard-arrow-down"
@@ -543,10 +513,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
                 name="refresh"
                 size={24}
                 color="#2196F3"
-                style={[
-                  styles.refreshIcon,
-                  refreshing && styles.refreshIconSpinning,
-                ]}
+                style={[styles.refreshIcon, refreshing && styles.refreshIconSpinning]}
               />
             </TouchableOpacity>
           </View>
@@ -586,16 +553,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
               </View>
             )
           }
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           ListFooterComponent={
             isLoadingMore ? (
               <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color="#2196F3" />
-                <Text style={styles.footerText}>
-                  Učitavam još dokumenata...
-                </Text>
+                <Text style={styles.footerText}>Učitavam još dokumenata...</Text>
               </View>
             ) : null
           }
@@ -651,11 +614,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({navigation}) => {
           isVisible={isProfileMenuVisible}
           onClose={() => setProfileMenuVisible(false)}
           onLogout={handleLogout}
-          userName={
-            userProfile
-              ? `${userProfile.firstName} ${userProfile.lastName}`
-              : ''
-          }
+          userName={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : ''}
           userEmail={userProfile?.email}
         />
       </View>
@@ -697,7 +656,7 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
@@ -709,7 +668,7 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
@@ -741,7 +700,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
@@ -792,10 +751,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   refreshIcon: {
-    transform: [{rotate: '0deg'}],
+    transform: [{ rotate: '0deg' }],
   },
   refreshIconSpinning: {
-    transform: [{rotate: '360deg'}],
+    transform: [{ rotate: '360deg' }],
     opacity: 0.5,
   },
   itemContainer: {

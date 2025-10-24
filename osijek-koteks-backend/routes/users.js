@@ -7,13 +7,13 @@ const auth = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -25,21 +25,13 @@ router.get('/:id', auth, async (req, res) => {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
       console.log('User not found:', req.params.id);
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Users can only access their own profile unless they're an admin
-    if (
-      req.user.role !== 'admin' &&
-      req.user._id.toString() !== req.params.id
-    ) {
-      console.log(
-        'Access denied for user:',
-        req.user._id,
-        'trying to access:',
-        req.params.id,
-      );
-      return res.status(403).json({message: 'Access denied'});
+    if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+      console.log('Access denied for user:', req.user._id, 'trying to access:', req.params.id);
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     console.log('User profile found:', {
@@ -52,9 +44,9 @@ router.get('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching user profile:', error);
     if (error.name === 'CastError') {
-      return res.status(400).json({message: 'Invalid user ID format'});
+      return res.status(400).json({ message: 'Invalid user ID format' });
     }
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -62,24 +54,22 @@ router.get('/:id', auth, async (req, res) => {
 router.patch('/:id/codes', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
-    const {codes} = req.body;
+    const { codes } = req.body;
     console.log('Updating codes for user:', req.params.id, 'New codes:', codes);
 
     if (!Array.isArray(codes)) {
-      return res.status(400).json({message: 'Codes must be an array'});
+      return res.status(400).json({ message: 'Codes must be an array' });
     }
 
     // Filter out empty strings and validate each code
-    const validCodes = codes
-      .filter(code => code.trim())
-      .map(code => code.trim());
+    const validCodes = codes.filter(code => code.trim()).map(code => code.trim());
 
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
 
     user.codes = [...new Set(validCodes)]; // Remove duplicates
@@ -94,47 +84,44 @@ router.patch('/:id/codes', auth, async (req, res) => {
   } catch (error) {
     console.error('Error updating user codes:', error);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({message: error.message});
+      return res.status(400).json({ message: error.message });
     }
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 router.patch('/:id/password', auth, async (req, res) => {
   try {
     // Only admins can change other users' passwords
     if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Update password
     user.password = req.body.password; // Password will be hashed by the pre-save middleware
     await user.save();
 
-    res.json({message: 'Password updated successfully'});
+    res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Error updating password:', error);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Update user profile
 router.patch('/:id', auth, async (req, res) => {
   try {
-    if (
-      req.user.role !== 'admin' &&
-      req.user._id.toString() !== req.params.id
-    ) {
-      return res.status(403).json({message: 'Access denied'});
+    if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const updatableFields = ['firstName', 'lastName', 'company', 'phoneNumber'];
@@ -154,14 +141,14 @@ router.patch('/:id', auth, async (req, res) => {
     res.json(updatedUser);
   } catch (error) {
     console.error('Error updating user:', error);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 router.post('/', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
     console.log('Creating new user:', {
@@ -169,13 +156,12 @@ router.post('/', auth, async (req, res) => {
       password: '[REDACTED]',
     });
 
-    const {firstName, lastName, company, email, password, codes, role} =
-      req.body;
+    const { firstName, lastName, company, email, password, codes, role } = req.body;
 
     // Check if user already exists
-    let existingUser = await User.findOne({email});
+    let existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({message: 'User already exists'});
+      return res.status(400).json({ message: 'User already exists' });
     }
 
     // Create new user
@@ -208,26 +194,26 @@ router.post('/', auth, async (req, res) => {
         details: error.message,
       });
     }
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 // Delete user (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({message: 'Access denied. Admin only.'});
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
 
     await user.deleteOne();
-    res.json({message: 'User deleted successfully'});
+    res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
-    res.status(500).json({message: 'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

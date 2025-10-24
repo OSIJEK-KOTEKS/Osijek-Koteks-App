@@ -8,10 +8,10 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import {Swipeable} from 'react-native-gesture-handler';
-import {Item, User} from '../types';
+import { Swipeable } from 'react-native-gesture-handler';
+import { Item, User } from '../types';
 import LocationDetailView from './LocationDetailView';
-import {getImageUrl} from '../utils/api';
+import { getImageUrl } from '../utils/api';
 
 interface ItemCardProps {
   item: Item;
@@ -24,23 +24,12 @@ interface ItemCardProps {
 }
 
 export const ItemCard = React.memo(
-  ({
-    item,
-    userProfile,
-    userToken,
-    onPress,
-    onPhotoPress,
-    onApprove,
-    onDelete,
-  }: ItemCardProps) => {
+  ({ item, userProfile, userToken, onPress, onPhotoPress, onApprove, onDelete }: ItemCardProps) => {
     const renderRightActions = () => {
       if (item.approvalStatus === 'odobreno' && item.approvalLocation) {
         return (
           <View style={styles.rightActionContainer}>
-            <LocationDetailView
-              location={item.approvalLocation}
-              approvalDate={item.approvalDate}
-            />
+            <LocationDetailView location={item.approvalLocation} approvalDate={item.approvalDate} />
           </View>
         );
       }
@@ -56,16 +45,14 @@ export const ItemCard = React.memo(
     };
 
     const handlePhotoPress = (type: 'front' | 'back') => {
-      const photo =
-        type === 'front' ? item.approvalPhotoFront : item.approvalPhotoBack;
+      const photo = type === 'front' ? item.approvalPhotoFront : item.approvalPhotoBack;
       if (photo?.url) {
         onPhotoPress(photo.url, type);
       }
     };
 
     const renderPhotoPreview = (type: 'front' | 'back') => {
-      const photo =
-        type === 'front' ? item.approvalPhotoFront : item.approvalPhotoBack;
+      const photo = type === 'front' ? item.approvalPhotoFront : item.approvalPhotoBack;
       const label = type === 'front' ? 'Registracija' : 'Materijal';
 
       if (photo?.url && userToken) {
@@ -96,10 +83,7 @@ export const ItemCard = React.memo(
     };
 
     return (
-      <Swipeable
-        renderRightActions={renderRightActions}
-        overshootRight={false}
-        rightThreshold={40}>
+      <Swipeable renderRightActions={renderRightActions} overshootRight={false} rightThreshold={40}>
         <TouchableOpacity onPress={onPress}>
           <View style={styles.itemContainer}>
             <View style={styles.itemContent}>
@@ -110,9 +94,7 @@ export const ItemCard = React.memo(
                 {item.registracija && (
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Registracija:</Text>
-                    <Text style={styles.detailValue}>
-                      {item.registracija || '-'}
-                    </Text>
+                    <Text style={styles.detailValue}>{item.registracija || '-'}</Text>
                   </View>
                 )}
 
@@ -135,16 +117,12 @@ export const ItemCard = React.memo(
                   <View
                     style={[
                       styles.statusBadge,
-                      item.approvalStatus === 'odobreno' &&
-                        styles.statusApproved,
-                      item.approvalStatus === 'odbijen' &&
-                        styles.statusRejected,
-                      item.approvalStatus === 'na čekanju' &&
-                        styles.statusPending,
+                      item.approvalStatus === 'odobreno' && styles.statusApproved,
+                      item.approvalStatus === 'odbijen' && styles.statusRejected,
+                      item.approvalStatus === 'na čekanju' && styles.statusPending,
                     ]}>
                     <Text style={styles.statusText}>
-                      {item.approvalStatus.charAt(0).toUpperCase() +
-                        item.approvalStatus.slice(1)}
+                      {item.approvalStatus.charAt(0).toUpperCase() + item.approvalStatus.slice(1)}
                     </Text>
                   </View>
                 </View>
@@ -171,9 +149,7 @@ export const ItemCard = React.memo(
                     {item.approvalDate && (
                       <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Datum:</Text>
-                        <Text style={styles.detailValue}>
-                          {item.approvalDate}
-                        </Text>
+                        <Text style={styles.detailValue}>{item.approvalDate}</Text>
                       </View>
                     )}
 
@@ -185,9 +161,7 @@ export const ItemCard = React.memo(
                 )}
 
                 {item.approvalStatus === 'na čekanju' && (
-                  <TouchableOpacity
-                    style={styles.approveButton}
-                    onPress={handleApprovePress}>
+                  <TouchableOpacity style={styles.approveButton} onPress={handleApprovePress}>
                     <Text style={styles.approveButtonText}>Odobri</Text>
                   </TouchableOpacity>
                 )}
@@ -214,7 +188,7 @@ export const ItemCard = React.memo(
       prevProps.userToken === nextProps.userToken &&
       prevProps.userProfile?.role === nextProps.userProfile?.role
     );
-  },
+  }
 );
 
 const styles = StyleSheet.create({
@@ -228,7 +202,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
       },

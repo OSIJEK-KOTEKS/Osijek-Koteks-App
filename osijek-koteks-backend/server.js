@@ -21,7 +21,7 @@ app.use(cors(corsOptions));
 
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 // Basic security headers
 app.use((req, res, next) => {
@@ -65,8 +65,8 @@ const dataRetentionMiddleware = async (req, res, next) => {
     // Clean up old items
     if (req.path.includes('/api/items')) {
       await Item.deleteMany({
-        creationDate: {$lt: cutoffDate},
-        approvalStatus: {$in: ['odobreno', 'odbijen']},
+        creationDate: { $lt: cutoffDate },
+        approvalStatus: { $in: ['odobreno', 'odbijen'] },
       });
     }
 

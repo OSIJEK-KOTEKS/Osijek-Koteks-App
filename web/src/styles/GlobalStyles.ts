@@ -1,4 +1,4 @@
-import {createGlobalStyle} from 'styled-components';
+import { createGlobalStyle } from 'styled-components';
 import 'react-datepicker/dist/react-datepicker.css';
 
 export const GlobalStyles = createGlobalStyle`
@@ -14,8 +14,8 @@ export const GlobalStyles = createGlobalStyle`
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: ${({theme}) => theme.colors.background};
-    color: ${({theme}) => theme.colors.text};
+    background-color: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text};
   }
 
   button {
@@ -41,12 +41,12 @@ export const GlobalStyles = createGlobalStyle`
 
   .react-datepicker {
     font-family: inherit;
-    border: 1px solid ${({theme}) => theme.colors.gray};
-    border-radius: ${({theme}) => theme.borderRadius};
+    border: 1px solid ${({ theme }) => theme.colors.gray};
+    border-radius: ${({ theme }) => theme.borderRadius};
   }
 
   .react-datepicker__header {
-    background-color: ${({theme}) => theme.colors.primary};
+    background-color: ${({ theme }) => theme.colors.primary};
     border-bottom: none;
   }
 
@@ -56,17 +56,17 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   .react-datepicker__day--selected {
-    background-color: ${({theme}) => theme.colors.primary};
+    background-color: ${({ theme }) => theme.colors.primary};
     &:hover {
-      background-color: ${({theme}) => theme.colors.primaryDark};
+      background-color: ${({ theme }) => theme.colors.primaryDark};
     }
   }
 
   .react-datepicker__day--keyboard-selected {
-    background-color: ${({theme}) => theme.colors.primary};
+    background-color: ${({ theme }) => theme.colors.primary};
     opacity: 0.8;
     &:hover {
-      background-color: ${({theme}) => theme.colors.primaryDark};
+      background-color: ${({ theme }) => theme.colors.primaryDark};
     }
   }
 `;

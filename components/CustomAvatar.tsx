@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 interface CustomAvatarProps {
   firstName?: string;
@@ -7,11 +7,7 @@ interface CustomAvatarProps {
   size?: number;
 }
 
-const CustomAvatar: React.FC<CustomAvatarProps> = ({
-  firstName,
-  lastName,
-  size = 50,
-}) => {
+const CustomAvatar: React.FC<CustomAvatarProps> = ({ firstName, lastName, size = 50 }) => {
   const getInitials = (first?: string, last?: string): string => {
     if (!first && !last) return '?';
     return `${first?.charAt(0) || ''}${last?.charAt(0) || ''}`.toUpperCase();

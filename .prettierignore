@@ -1,0 +1,24 @@
+**File: `.prettierignore`**
+```
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build outputs
+android/
+ios/
+build/
+dist/
+*.apk
+*.aab
+
+# Cache
+.gradle/
+.expo/
+.expo-shared/
+
+# Misc
+coverage/
+.DS_Store
+*.log

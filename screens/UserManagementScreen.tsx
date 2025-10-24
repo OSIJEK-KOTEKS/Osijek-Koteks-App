@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -11,13 +11,13 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import {Text, Input, ListItem, CheckBox} from 'react-native-elements';
+import { Text, Input, ListItem, CheckBox } from 'react-native-elements';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Modal from 'react-native-modal';
-import {Picker} from '@react-native-picker/picker';
+import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
-import {apiService} from '../utils/api';
-import {User, RegistrationData} from '../types';
+import { apiService } from '../utils/api';
+import { User, RegistrationData } from '../types';
 import CustomAvatar from '../components/CustomAvatar';
 
 interface UserFormData {
@@ -93,9 +93,7 @@ export const UserManagementScreen: React.FC = () => {
       setUsers(fetchedUsers);
 
       // Update available codes
-      const uniqueCodes = Array.from(
-        new Set(fetchedUsers.flatMap(user => user.codes)),
-      ).sort();
+      const uniqueCodes = Array.from(new Set(fetchedUsers.flatMap(user => user.codes))).sort();
       setAvailableCodes(uniqueCodes);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -167,7 +165,7 @@ export const UserManagementScreen: React.FC = () => {
     if (!availableCodes.includes(newCode)) {
       setAvailableCodes([...availableCodes, newCode].sort());
     }
-    setFormData({...formData, codes: updatedCodes});
+    setFormData({ ...formData, codes: updatedCodes });
     setNewCode('');
   };
 
@@ -177,7 +175,7 @@ export const UserManagementScreen: React.FC = () => {
       : [...selectedCodes, code].sort();
 
     setSelectedCodes(updatedCodes);
-    setFormData({...formData, codes: updatedCodes});
+    setFormData({ ...formData, codes: updatedCodes });
   };
 
   // Form Validation and Submission
@@ -217,7 +215,7 @@ export const UserManagementScreen: React.FC = () => {
 
         await apiService.createUser(registrationData);
       } else if (selectedUser?._id) {
-        const {password, newPassword, _id, ...updateData} = formData;
+        const { password, newPassword, _id, ...updateData } = formData;
         await apiService.updateUser(selectedUser._id, updateData);
 
         // Handle password update if new password is provided
@@ -228,10 +226,7 @@ export const UserManagementScreen: React.FC = () => {
 
       setModalVisible(false);
       await fetchUsers();
-      Alert.alert(
-        'Uspjeh',
-        `Korisnik uspješno ${modalMode === 'create' ? 'kreiran' : 'ažuriran'}`,
-      );
+      Alert.alert('Uspjeh', `Korisnik uspješno ${modalMode === 'create' ? 'kreiran' : 'ažuriran'}`);
     } catch (error) {
       console.error('Error submitting user:', error);
       let errorMessage = 'Došlo je do greške prilikom spremanja korisnika.';
@@ -289,12 +284,9 @@ export const UserManagementScreen: React.FC = () => {
     }
 
     try {
-      await apiService.updateUserPassword(
-        selectedUser._id,
-        formData.newPassword,
-      );
+      await apiService.updateUserPassword(selectedUser._id, formData.newPassword);
       Alert.alert('Uspjeh', 'Lozinka je uspješno promijenjena');
-      setFormData({...formData, newPassword: ''});
+      setFormData({ ...formData, newPassword: '' });
       setShowPasswordField(false);
     } catch (error) {
       console.error('Error updating password:', error);
@@ -308,13 +300,9 @@ export const UserManagementScreen: React.FC = () => {
   };
 
   // Render Methods
-  const renderItem = ({item}: {item: User}) => (
+  const renderItem = ({ item }: { item: User }) => (
     <ListItem bottomDivider>
-      <CustomAvatar
-        firstName={item.firstName}
-        lastName={item.lastName}
-        size={40}
-      />
+      <CustomAvatar firstName={item.firstName} lastName={item.lastName} size={40} />
       <ListItem.Content>
         <ListItem.Title>
           {item.firstName} {item.lastName}
@@ -325,15 +313,8 @@ export const UserManagementScreen: React.FC = () => {
           <Text>Uloga: {item.role}</Text>
           <Text>Radni nalozi: {item.codes.join(', ') || 'Nema'}</Text>
           {item.role !== 'admin' && (
-            <Text
-              style={
-                item.hasFullAccess
-                  ? styles.fullAccessEnabled
-                  : styles.fullAccessDisabled
-              }>
-              {item.hasFullAccess
-                ? 'Potpuni pristup dokumentima'
-                : 'Ograničen pristup dokumentima'}
+            <Text style={item.hasFullAccess ? styles.fullAccessEnabled : styles.fullAccessDisabled}>
+              {item.hasFullAccess ? 'Potpuni pristup dokumentima' : 'Ograničen pristup dokumentima'}
             </Text>
           )}
         </View>
@@ -370,9 +351,7 @@ export const UserManagementScreen: React.FC = () => {
             data={users}
             renderItem={renderItem}
             keyExtractor={item => item._id}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             contentContainerStyle={styles.listContainer}
             ListEmptyComponent={
               <View style={styles.centerContent}>
@@ -392,15 +371,13 @@ export const UserManagementScreen: React.FC = () => {
             style={styles.modal}>
             <View style={styles.modalContent}>
               <Text h4 style={styles.modalTitle}>
-                {modalMode === 'create'
-                  ? 'Kreiraj korisnika'
-                  : 'Uredi korisnika'}
+                {modalMode === 'create' ? 'Kreiraj korisnika' : 'Uredi korisnika'}
               </Text>
               <ScrollView style={styles.modalScrollView}>
                 <Input
                   placeholder="Email"
                   value={formData.email}
-                  onChangeText={text => setFormData({...formData, email: text})}
+                  onChangeText={text => setFormData({ ...formData, email: text })}
                   disabled={modalMode === 'edit'}
                   containerStyle={styles.inputContainer}
                   autoCapitalize="none"
@@ -410,9 +387,7 @@ export const UserManagementScreen: React.FC = () => {
                   <Input
                     placeholder="Lozinka"
                     value={formData.password}
-                    onChangeText={text =>
-                      setFormData({...formData, password: text})
-                    }
+                    onChangeText={text => setFormData({ ...formData, password: text })}
                     secureTextEntry
                     containerStyle={styles.inputContainer}
                   />
@@ -423,16 +398,12 @@ export const UserManagementScreen: React.FC = () => {
                       style={styles.passwordToggle}
                       onPress={() => setShowPasswordField(!showPasswordField)}>
                       <MaterialIcons
-                        name={
-                          showPasswordField ? 'visibility-off' : 'visibility'
-                        }
+                        name={showPasswordField ? 'visibility-off' : 'visibility'}
                         size={24}
                         color="#2196F3"
                       />
                       <Text style={styles.passwordToggleText}>
-                        {showPasswordField
-                          ? 'Sakrij promjenu lozinke'
-                          : 'Promijeni lozinku'}
+                        {showPasswordField ? 'Sakrij promjenu lozinke' : 'Promijeni lozinku'}
                       </Text>
                     </TouchableOpacity>
 
@@ -441,18 +412,14 @@ export const UserManagementScreen: React.FC = () => {
                         <Input
                           placeholder="Nova lozinka"
                           value={formData.newPassword}
-                          onChangeText={text =>
-                            setFormData({...formData, newPassword: text})
-                          }
+                          onChangeText={text => setFormData({ ...formData, newPassword: text })}
                           secureTextEntry
                           containerStyle={styles.inputContainer}
                           rightIcon={
                             <TouchableOpacity
                               onPress={handlePasswordUpdate}
                               style={styles.updatePasswordButton}>
-                              <Text style={styles.updatePasswordButtonText}>
-                                Spremi lozinku
-                              </Text>
+                              <Text style={styles.updatePasswordButtonText}>Spremi lozinku</Text>
                             </TouchableOpacity>
                           }
                         />
@@ -463,25 +430,19 @@ export const UserManagementScreen: React.FC = () => {
                 <Input
                   placeholder="Ime"
                   value={formData.firstName}
-                  onChangeText={text =>
-                    setFormData({...formData, firstName: text})
-                  }
+                  onChangeText={text => setFormData({ ...formData, firstName: text })}
                   containerStyle={styles.inputContainer}
                 />
                 <Input
                   placeholder="Prezime"
                   value={formData.lastName}
-                  onChangeText={text =>
-                    setFormData({...formData, lastName: text})
-                  }
+                  onChangeText={text => setFormData({ ...formData, lastName: text })}
                   containerStyle={styles.inputContainer}
                 />
                 <Input
                   placeholder="Firma"
                   value={formData.company}
-                  onChangeText={text =>
-                    setFormData({...formData, company: text})
-                  }
+                  onChangeText={text => setFormData({ ...formData, company: text })}
                   containerStyle={styles.inputContainer}
                 />
 
@@ -524,9 +485,7 @@ export const UserManagementScreen: React.FC = () => {
                 </View>
                 {formData.role !== 'admin' && (
                   <View style={styles.fullAccessContainer}>
-                    <Text style={styles.fullAccessLabel}>
-                      Pristup dokumentima
-                    </Text>
+                    <Text style={styles.fullAccessLabel}>Pristup dokumentima</Text>
                     <View style={styles.checkboxRow}>
                       <CheckBox
                         checked={formData.hasFullAccess || false}
@@ -538,14 +497,12 @@ export const UserManagementScreen: React.FC = () => {
                         }
                         containerStyle={styles.fullAccessCheckbox}
                       />
-                      <Text style={styles.fullAccessText}>
-                        Dozvoli pristup svim dokumentima
-                      </Text>
+                      <Text style={styles.fullAccessText}>Dozvoli pristup svim dokumentima</Text>
                     </View>
                     {formData.hasFullAccess && (
                       <Text style={styles.warningText}>
-                        Korisnik će imati pristup svim dokumentima bez obzira na
-                        dodijeljene radne naloge.
+                        Korisnik će imati pristup svim dokumentima bez obzira na dodijeljene radne
+                        naloge.
                       </Text>
                     )}
                   </View>
@@ -553,9 +510,7 @@ export const UserManagementScreen: React.FC = () => {
                 <TouchableOpacity
                   style={styles.codesButton}
                   onPress={() => setCodesModalVisible(true)}>
-                  <Text style={styles.codesButtonText}>
-                    Odabir RN ({formData.codes.length})
-                  </Text>
+                  <Text style={styles.codesButtonText}>Odabir RN ({formData.codes.length})</Text>
                   <Text style={styles.codesPreview}>
                     {formData.codes.join(', ') || 'Nije odabran RN'}
                   </Text>
@@ -603,22 +558,18 @@ export const UserManagementScreen: React.FC = () => {
                 />
               </View>
               <ScrollView style={styles.codesScrollView}>
-                {[...new Set([...availableCodes, ...selectedCodes])]
-                  .sort()
-                  .map(code => (
-                    <CheckBox
-                      key={code}
-                      title={code}
-                      checked={selectedCodes.includes(code)}
-                      onPress={() => toggleCodeSelection(code)}
-                      containerStyle={styles.checkboxContainer}
-                      textStyle={styles.checkboxText}
-                    />
-                  ))}
+                {[...new Set([...availableCodes, ...selectedCodes])].sort().map(code => (
+                  <CheckBox
+                    key={code}
+                    title={code}
+                    checked={selectedCodes.includes(code)}
+                    onPress={() => toggleCodeSelection(code)}
+                    containerStyle={styles.checkboxContainer}
+                    textStyle={styles.checkboxText}
+                  />
+                ))}
                 {availableCodes.length === 0 && (
-                  <Text style={styles.noCodesText}>
-                    Nema dostupnih radnih naloga
-                  </Text>
+                  <Text style={styles.noCodesText}>Nema dostupnih radnih naloga</Text>
                 )}
               </ScrollView>
               <View style={styles.modalButtons}>
@@ -630,7 +581,7 @@ export const UserManagementScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[styles.modalButton, styles.submitButton]}
                   onPress={() => {
-                    setFormData({...formData, codes: selectedCodes});
+                    setFormData({ ...formData, codes: selectedCodes });
                     setCodesModalVisible(false);
                   }}>
                   <Text style={styles.buttonText}>Primjeni</Text>
@@ -649,30 +600,22 @@ export const UserManagementScreen: React.FC = () => {
                 Postavke privatnosti
               </Text>
               <Text style={styles.privacyHeader}>
-                Upravljanje podacima korisnika: {selectedUser?.firstName}{' '}
-                {selectedUser?.lastName}
+                Upravljanje podacima korisnika: {selectedUser?.firstName} {selectedUser?.lastName}
               </Text>
               <ScrollView style={styles.privacyScrollView}>
                 <TouchableOpacity
                   style={styles.privacyButton}
-                  onPress={() =>
-                    selectedUser && handleDataExport(selectedUser)
-                  }>
+                  onPress={() => selectedUser && handleDataExport(selectedUser)}>
                   <MaterialIcons name="download" size={24} color="#2196F3" />
-                  <Text style={styles.privacyButtonText}>
-                    Izvezi sve podatke
-                  </Text>
+                  <Text style={styles.privacyButtonText}>Izvezi sve podatke</Text>
                 </TouchableOpacity>
 
                 <View style={styles.privacyInfo}>
-                  <Text style={styles.privacyInfoHeader}>
-                    Informacije o pravima:
-                  </Text>
+                  <Text style={styles.privacyInfoHeader}>Informacije o pravima:</Text>
                   <Text style={styles.privacyInfoText}>
-                    • Pravo na pristup podacima{'\n'}• Pravo na brisanje
-                    podataka
-                    {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak
-                    podataka{'\n'}• Pravo na ograničenje obrade
+                    • Pravo na pristup podacima{'\n'}• Pravo na brisanje podataka
+                    {'\n'}• Pravo na prijenos podataka{'\n'}• Pravo na ispravak podataka{'\n'}•
+                    Pravo na ograničenje obrade
                   </Text>
                 </View>
               </ScrollView>
@@ -707,7 +650,7 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },

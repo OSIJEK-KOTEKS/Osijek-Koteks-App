@@ -1,11 +1,11 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import DatePicker, {registerLocale} from 'react-datepicker';
-import {hr} from 'date-fns/locale/hr';
-import type {Locale} from 'date-fns';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { hr } from 'date-fns/locale/hr';
+import type { Locale } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
-import {getFormattedCode} from '../utils/codeMapping';
-import {ItemUser} from '../types';
+import { getFormattedCode } from '../utils/codeMapping';
+import { ItemUser } from '../types';
 
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
@@ -39,10 +39,7 @@ const deduplicateCarriers = (carriers: string[]): string[] => {
 
     const normalized = normalizeCarrierName(carrier);
 
-    if (
-      !carrierMap.has(normalized) ||
-      carrier.length > carrierMap.get(normalized)!.length
-    ) {
+    if (!carrierMap.has(normalized) || carrier.length > carrierMap.get(normalized)!.length) {
       carrierMap.set(normalized, carrier);
     }
   });
@@ -64,10 +61,7 @@ const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
 
   // Define user groups
   const userGroupDefinitions = {
-    'VELIČKI KAMEN d.o.o.': [
-      'vetovo.vaga@velicki-kamen.hr',
-      'velicki.vaga@velicki-kamen.hr',
-    ],
+    'VELIČKI KAMEN d.o.o.': ['vetovo.vaga@velicki-kamen.hr', 'velicki.vaga@velicki-kamen.hr'],
     'KAMEN - PSUNJ d.o.o.': ['vaga.fukinac@kamen-psunj.hr'],
     'MOLARIS d.o.o.': ['vaga.molaris@osijek-koteks.hr'],
   };
@@ -91,8 +85,7 @@ const createUserGroups = (users: ItemUser[]): GroupedUser[] => {
   // Add individual users that aren't in groups AND aren't excluded
   users.forEach(user => {
     if (!processedUserIds.has(user._id)) {
-      const displayName =
-        user.displayName || `${user.firstName} ${user.lastName}`;
+      const displayName = user.displayName || `${user.firstName} ${user.lastName}`;
 
       // EXCLUDE specified users from the filter list
       if (!excludedUsers.includes(displayName)) {
@@ -186,7 +179,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   console.log('DashboardFilters - Filtered codes:', filteredCodes);
 
   const allCodesOptions = [
-    {value: 'all', label: 'Svi Radni Nalozi'},
+    { value: 'all', label: 'Svi Radni Nalozi' },
     ...filteredCodes.map(code => ({
       value: code,
       label: getFormattedCode(code),
@@ -201,7 +194,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
   // Prepare carriers options
   const allCarriersOptions = [
-    {value: 'all', label: 'Svi Prijevoznici'},
+    { value: 'all', label: 'Svi Prijevoznici' },
     ...uniqueCarriers.map(carrier => ({
       value: carrier,
       label: carrier,
@@ -210,10 +203,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
   // Create grouped users
   const userGroups = createUserGroups(availableUsers);
-  const allUsersOptions = [
-    {value: 'all', label: 'Svi Dobavljači'},
-    ...userGroups,
-  ];
+  const allUsersOptions = [{ value: 'all', label: 'Svi Dobavljači' }, ...userGroups];
 
   const formatDateRange = (start: Date, end: Date) => {
     const isSameDay = start.toDateString() === end.toDateString();
@@ -227,9 +217,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return `${startStr} - ${endStr} (${diffDays} ${
-      diffDays === 1 ? 'dan' : 'dana'
-    })`;
+    return `${startStr} - ${endStr} (${diffDays} ${diffDays === 1 ? 'dan' : 'dana'})`;
   };
 
   // Date preset functions
@@ -286,9 +274,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   ? 'Pretraži po nazivu dokumenta...'
                   : 'Pretraži po registraciji...'
               }
-              value={
-                searchType === 'title' ? searchValue : registrationSearchValue
-              }
+              value={searchType === 'title' ? searchValue : registrationSearchValue}
               onChange={e => {
                 if (searchType === 'title') {
                   onSearchValueChange(e.target.value);
@@ -303,9 +289,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               <SearchButton
                 onClick={onSearch}
                 disabled={
-                  searchType === 'title'
-                    ? !searchValue.trim()
-                    : !registrationSearchValue.trim()
+                  searchType === 'title' ? !searchValue.trim() : !registrationSearchValue.trim()
                 }
                 type="button"
                 id="find-it-button">
@@ -359,9 +343,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                       onChange={(date: Date | null) => {
                         if (date) {
                           const newEndDate =
-                            endDate > getMaxEndDate(date)
-                              ? getMaxEndDate(date)
-                              : endDate;
+                            endDate > getMaxEndDate(date) ? getMaxEndDate(date) : endDate;
                           onDateRangeChange(date, newEndDate);
                         }
                       }}
@@ -382,9 +364,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                       onChange={(date: Date | null) => {
                         if (date) {
                           const newStartDate =
-                            startDate < getMinStartDate(date)
-                              ? getMinStartDate(date)
-                              : startDate;
+                            startDate < getMinStartDate(date) ? getMinStartDate(date) : startDate;
                           onDateRangeChange(newStartDate, date);
                         }
                       }}
@@ -392,10 +372,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                       locale="hr"
                       minDate={getMinStartDate(endDate)}
                       maxDate={
-                        Math.min(
-                          getMaxEndDate(startDate).getTime(),
-                          maxDate.getTime(),
-                        ) === maxDate.getTime()
+                        Math.min(getMaxEndDate(startDate).getTime(), maxDate.getTime()) ===
+                        maxDate.getTime()
                           ? maxDate
                           : getMaxEndDate(startDate)
                       }
@@ -529,8 +507,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 const FiltersContainer = styled.div`
   background: white;
   padding: 1.5rem;
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
   margin-bottom: 2rem;
 `;
 
@@ -552,15 +530,15 @@ const SearchBar = styled.div`
 const SearchInput = styled.input`
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 1rem;
   transition: all 0.2s ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({theme}) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({theme}) => theme.colors.primary}20;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}20;
   }
 
   &::placeholder {
@@ -571,7 +549,7 @@ const SearchInput = styled.input`
 const BaseButton = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -587,20 +565,20 @@ const BaseButton = styled.button`
 `;
 
 const SearchButton = styled(BaseButton)`
-  background-color: ${({theme}) => theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
   color: white;
 
   &:hover:not(:disabled) {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 `;
 
 const ClearButton = styled(BaseButton)`
-  background-color: ${({theme}) => theme.colors.gray};
-  color: ${({theme}) => theme.colors.text};
+  background-color: ${({ theme }) => theme.colors.gray};
+  color: ${({ theme }) => theme.colors.text};
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
   }
 `;
 
@@ -616,12 +594,11 @@ const FilterSection = styled.div`
   height: 100%;
 `;
 
-const FilterLabel = styled.label<{$disabled?: boolean}>`
+const FilterLabel = styled.label<{ $disabled?: boolean }>`
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: ${({theme, $disabled}) =>
-    $disabled ? theme.colors.disabled : theme.colors.text};
+  color: ${({ theme, $disabled }) => ($disabled ? theme.colors.disabled : theme.colors.text)};
   height: 1.5rem;
   line-height: 1.5rem;
 `;
@@ -632,25 +609,23 @@ const FilterInputContainer = styled.div`
   flex-direction: column;
 `;
 
-const Select = styled.select<{$disabled?: boolean}>`
+const Select = styled.select<{ $disabled?: boolean }>`
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid
-    ${({theme, $disabled}) =>
-      $disabled ? theme.colors.disabled : theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
-  background-color: ${({$disabled}) => ($disabled ? '#f5f5f5' : 'white')};
+    ${({ theme, $disabled }) => ($disabled ? theme.colors.disabled : theme.colors.gray)};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background-color: ${({ $disabled }) => ($disabled ? '#f5f5f5' : 'white')};
   font-size: 1rem;
-  color: ${({theme, $disabled}) =>
-    $disabled ? theme.colors.disabled : theme.colors.text};
-  cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
+  color: ${({ theme, $disabled }) => ($disabled ? theme.colors.disabled : theme.colors.text)};
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   height: 3rem;
 
   &:focus {
     outline: none;
-    border-color: ${({theme, $disabled}) =>
+    border-color: ${({ theme, $disabled }) =>
       $disabled ? theme.colors.disabled : theme.colors.primary};
-    box-shadow: ${({theme, $disabled}) =>
+    box-shadow: ${({ theme, $disabled }) =>
       $disabled ? 'none' : `0 0 0 2px ${theme.colors.primary}20`};
   }
 `;
@@ -664,30 +639,27 @@ const DatePresets = styled.div`
 
 const PresetButton = styled.button`
   padding: 0.5rem 0.75rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
   background: white;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.primary};
+    background-color: ${({ theme }) => theme.colors.primary};
     color: white;
-    border-color: ${({theme}) => theme.colors.primary};
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
-const TransitPresetButton = styled.button<{$active: boolean}>`
+const TransitPresetButton = styled.button<{ $active: boolean }>`
   padding: 0.5rem 0.75rem;
-  border: 1px solid
-    ${({theme, $active}) =>
-      $active ? theme.colors.primary : theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
-  background: ${({theme, $active}) =>
-    $active ? theme.colors.primary : 'white'};
-  color: ${({theme, $active}) => ($active ? 'white' : theme.colors.text)};
+  border: 1px solid ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.gray)};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme, $active }) => ($active ? theme.colors.primary : 'white')};
+  color: ${({ theme, $active }) => ($active ? 'white' : theme.colors.text)};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
@@ -696,28 +668,28 @@ const TransitPresetButton = styled.button<{$active: boolean}>`
   gap: 0.25rem;
 
   &:hover {
-    background-color: ${({theme, $active}) =>
+    background-color: ${({ theme, $active }) =>
       $active ? theme.colors.primaryDark : theme.colors.primary};
     color: white;
-    border-color: ${({theme}) => theme.colors.primary};
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
 const DateRangeDisplay = styled.div`
   margin-top: 0.75rem;
   padding: 0.5rem 0.75rem;
-  background-color: ${({theme}) => theme.colors.background};
-  border-radius: ${({theme}) => theme.borderRadius};
+  background-color: ${({ theme }) => theme.colors.background};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 0.875rem;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   text-align: center;
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const RangeLimitInfo = styled.div`
   margin-top: 0.5rem;
   font-size: 0.75rem;
-  color: ${({theme}) => theme.colors.disabled};
+  color: ${({ theme }) => theme.colors.disabled};
   text-align: center;
   font-style: italic;
 `;
@@ -762,7 +734,7 @@ const DatePickerRow = styled.div`
 const DatePickerLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 600;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   min-width: 30px;
   flex-shrink: 0;
 
@@ -771,7 +743,7 @@ const DatePickerLabel = styled.label`
   }
 `;
 
-const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
+const DatePickerWrapper = styled.div<{ $disabled?: boolean }>`
   flex: 1;
 
   .react-datepicker-wrapper {
@@ -782,22 +754,20 @@ const DatePickerWrapper = styled.div<{$disabled?: boolean}>`
     width: 100%;
     padding: 0.75rem 1rem;
     border: 1px solid
-      ${({theme, $disabled}) =>
-        $disabled ? theme.colors.disabled : theme.colors.gray};
-    border-radius: ${({theme}) => theme.borderRadius};
+      ${({ theme, $disabled }) => ($disabled ? theme.colors.disabled : theme.colors.gray)};
+    border-radius: ${({ theme }) => theme.borderRadius};
     font-size: 1rem;
-    color: ${({theme, $disabled}) =>
-      $disabled ? theme.colors.disabled : theme.colors.text};
-    background-color: ${({$disabled}) => ($disabled ? '#f5f5f5' : 'white')};
-    cursor: ${({$disabled}) => ($disabled ? 'not-allowed' : 'pointer')};
+    color: ${({ theme, $disabled }) => ($disabled ? theme.colors.disabled : theme.colors.text)};
+    background-color: ${({ $disabled }) => ($disabled ? '#f5f5f5' : 'white')};
+    cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
     height: 3rem;
     box-sizing: border-box;
 
     &:focus {
       outline: none;
-      border-color: ${({theme, $disabled}) =>
+      border-color: ${({ theme, $disabled }) =>
         $disabled ? theme.colors.disabled : theme.colors.primary};
-      box-shadow: ${({theme, $disabled}) =>
+      box-shadow: ${({ theme, $disabled }) =>
         $disabled ? 'none' : `0 0 0 2px ${theme.colors.primary}20`};
     }
   }

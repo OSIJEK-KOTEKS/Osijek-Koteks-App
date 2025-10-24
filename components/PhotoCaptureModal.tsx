@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,16 +12,12 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import {Text, CheckBox} from '@rneui/themed'; // Import CheckBox component
+import { Text, CheckBox } from '@rneui/themed'; // Import CheckBox component
 import Modal from 'react-native-modal';
-import {
-  launchCamera,
-  CameraOptions,
-  PhotoQuality,
-} from 'react-native-image-picker';
+import { launchCamera, CameraOptions, PhotoQuality } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import {LocationData} from '../types';
+import { LocationData } from '../types';
 
 const LOCATION_TIMEOUT = 15000;
 const QUICK_LOCATION_TIMEOUT = 5000;
@@ -36,22 +32,18 @@ interface PhotoCaptureModalProps {
     photoUriFront: string,
     photoUriBack: string,
     location: LocationData,
-    inTransit: boolean, // Add inTransit parameter
+    inTransit: boolean // Add inTransit parameter
   ) => Promise<void>;
 }
 
-const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
-  isVisible,
-  onClose,
-  onConfirm,
-}) => {
+const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({ isVisible, onClose, onConfirm }) => {
   const [photoFront, setPhotoFront] = useState<string | null>(null);
   const [photoBack, setPhotoBack] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<LocationData | null>(null);
-  const [locationStatus, setLocationStatus] = useState<
-    'idle' | 'searching' | 'found' | 'error'
-  >('idle');
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'searching' | 'found' | 'error'>(
+    'idle'
+  );
   const [retryCount, setRetryCount] = useState(0);
   const [accuracyReading, setAccuracyReading] = useState<number | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
@@ -72,7 +64,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
             Geolocation.getCurrentPosition(
               () => resolve(true),
               () => resolve(false),
-              {timeout: QUICK_LOCATION_TIMEOUT},
+              { timeout: QUICK_LOCATION_TIMEOUT }
             );
           });
         });
@@ -90,7 +82,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
             buttonNeutral: 'Pitaj me kasnije',
             buttonNegative: 'Odbij',
             buttonPositive: 'OK',
-          },
+          }
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       } catch (error) {
@@ -131,7 +123,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           enableHighAccuracy: false,
           timeout: QUICK_LOCATION_TIMEOUT,
           maximumAge: 10000,
-        },
+        }
       );
 
       const watchId = Geolocation.watchPosition(
@@ -170,7 +162,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           maximumAge: 0,
           distanceFilter: 0,
           interval: LOCATION_UPDATE_INTERVAL,
-        },
+        }
       );
 
       setWatchId(watchId);
@@ -231,7 +223,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
             onClose();
           },
         },
-      ],
+      ]
     );
   };
 
@@ -252,10 +244,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
 
   const handleTakePhoto = async (isBackPhoto: boolean = false) => {
     if (locationStatus !== 'found') {
-      Alert.alert(
-        'Lokacija',
-        'Molimo pričekajte dok se ne dobije točna lokacija.',
-      );
+      Alert.alert('Lokacija', 'Molimo pričekajte dok se ne dobije točna lokacija.');
       return;
     }
 
@@ -275,7 +264,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       if (response.errorCode === 'camera_unavailable') {
         Alert.alert(
           'Kamera nije dostupna',
-          'Molimo provjerite postavke kamere i pokušajte ponovno.',
+          'Molimo provjerite postavke kamere i pokušajte ponovno.'
         );
         return;
       }
@@ -285,9 +274,9 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           'Potrebna dozvola',
           'Za fotografiranje je potrebna dozvola za pristup kameri. Molimo omogućite pristup kameri u postavkama.',
           [
-            {text: 'Odustani', style: 'cancel'},
-            {text: 'Otvori postavke', onPress: () => Linking.openSettings()},
-          ],
+            { text: 'Odustani', style: 'cancel' },
+            { text: 'Otvori postavke', onPress: () => Linking.openSettings() },
+          ]
         );
         return;
       }
@@ -309,7 +298,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       console.error('Camera error:', error);
       Alert.alert(
         'Greška',
-        'Došlo je do greške prilikom fotografiranja. Molimo pokušajte ponovno.',
+        'Došlo je do greške prilikom fotografiranja. Molimo pokušajte ponovno.'
       );
     }
   };
@@ -335,7 +324,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
       console.error('Error approving item:', error);
       Alert.alert(
         'Greška',
-        'Došlo je do greške prilikom odobravanja dokumenta. Molimo pokušajte ponovno.',
+        'Došlo je do greške prilikom odobravanja dokumenta. Molimo pokušajte ponovno.'
       );
     } finally {
       setLoading(false);
@@ -368,12 +357,10 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
   const renderPhotoSection = (
     type: 'front' | 'back',
     photo: string | null,
-    setPhoto: (uri: string | null) => void,
+    setPhoto: (uri: string | null) => void
   ) => (
     <View style={styles.photoSection}>
-      <Text style={styles.photoLabel}>
-        {type === 'front' ? 'Registracija' : 'Materijal'}
-      </Text>
+      <Text style={styles.photoLabel}>{type === 'front' ? 'Registracija' : 'Materijal'}</Text>
       {!photo ? (
         <TouchableOpacity
           style={[
@@ -389,7 +376,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
         </TouchableOpacity>
       ) : (
         <View style={styles.photoPreview}>
-          <Image source={{uri: photo}} style={styles.previewImage} />
+          <Image source={{ uri: photo }} style={styles.previewImage} />
           <TouchableOpacity
             style={styles.retakeButton}
             onPress={() => setPhoto(null)}
@@ -413,9 +400,7 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
           <ActivityIndicator size="small" color="#2196F3" />
           <Text style={styles.locationStatusText}>
             Dohvaćam lokaciju...
-            {accuracyReading
-              ? ` (Točnost: ${Math.round(accuracyReading)}m)`
-              : ''}
+            {accuracyReading ? ` (Točnost: ${Math.round(accuracyReading)}m)` : ''}
           </Text>
         </>
       )}
@@ -472,14 +457,11 @@ const PhotoCaptureModal: React.FC<PhotoCaptureModalProps> = ({
               style={[
                 styles.button,
                 styles.confirmButton,
-                (!photoFront || !photoBack || !location) &&
-                  styles.buttonDisabled,
+                (!photoFront || !photoBack || !location) && styles.buttonDisabled,
               ]}
               onPress={handleConfirm}
               disabled={!photoFront || !photoBack || !location || loading}>
-              <Text style={styles.buttonText}>
-                {loading ? 'Učitavanje...' : 'Potvrdi'}
-              </Text>
+              <Text style={styles.buttonText}>{loading ? 'Učitavanje...' : 'Potvrdi'}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

@@ -1,7 +1,7 @@
 // Complete updated PrintButton.tsx
-import React, {useRef, useCallback} from 'react';
+import React, { useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import {Item} from '../types';
+import { Item } from '../types';
 import PrintableItem from './PrintableItem';
 
 interface PrintButtonProps {
@@ -17,15 +17,15 @@ const PrintIconButton = styled.button`
   min-width: auto;
   padding: 8px 16px;
   font-size: 0.9rem;
-  background-color: ${({theme}) => theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
   color: white;
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   cursor: pointer;
   transition: background-color 0.2s ease-in-out;
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
     opacity: 0.9;
   }
 
@@ -35,7 +35,7 @@ const PrintIconButton = styled.button`
   }
 `;
 
-const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
+const PrintButton: React.FC<PrintButtonProps> = ({ item }) => {
   const printContainerRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useCallback(() => {
@@ -157,7 +157,7 @@ const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
 
     // Track loaded images
     const images = printWindow.document.getElementsByTagName('img');
-    const loadedImages = {current: 0};
+    const loadedImages = { current: 0 };
     const totalImages = images.length;
 
     const tryPrint = () => {
@@ -211,7 +211,7 @@ const PrintButton: React.FC<PrintButtonProps> = ({item}) => {
         Ispiši
       </PrintIconButton>
 
-      <div style={{display: 'none'}} ref={printContainerRef}>
+      <div style={{ display: 'none' }} ref={printContainerRef}>
         <PrintableItem item={item} />
       </div>
     </>

@@ -1,24 +1,21 @@
 import React from 'react';
-import {View, Text, StyleSheet, Linking, Platform} from 'react-native';
-import {Button} from 'react-native-elements';
+import { View, Text, StyleSheet, Linking, Platform } from 'react-native';
+import { Button } from 'react-native-elements';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import {Item} from '../types';
+import { Item } from '../types';
 
 interface LocationDetailViewProps {
   location: NonNullable<Item['approvalLocation']>;
   approvalDate?: string;
 }
 
-const LocationDetailView: React.FC<LocationDetailViewProps> = ({
-  location,
-  approvalDate,
-}) => {
+const LocationDetailView: React.FC<LocationDetailViewProps> = ({ location, approvalDate }) => {
   const openInMaps = () => {
     if (!location?.coordinates?.latitude || !location?.coordinates?.longitude) {
       return;
     }
 
-    const {latitude, longitude} = location.coordinates;
+    const { latitude, longitude } = location.coordinates;
     const scheme = Platform.select({
       ios: 'maps:0,0?q=',
       android: 'geo:0,0?q=',
@@ -71,8 +68,7 @@ const LocationDetailView: React.FC<LocationDetailViewProps> = ({
         </View>
         <View style={styles.accuracyContainer}>
           <Text style={styles.accuracyText}>
-            Preciznost:{' '}
-            {location.accuracy ? `${Math.round(location.accuracy)}m` : 'N/A'}
+            Preciznost: {location.accuracy ? `${Math.round(location.accuracy)}m` : 'N/A'}
           </Text>
         </View>
       </View>
@@ -81,14 +77,7 @@ const LocationDetailView: React.FC<LocationDetailViewProps> = ({
         <Button
           title="Otvori u kartama"
           onPress={openInMaps}
-          icon={
-            <MaterialIcons
-              name="map"
-              size={20}
-              color="white"
-              style={styles.buttonIcon}
-            />
-          }
+          icon={<MaterialIcons name="map" size={20} color="white" style={styles.buttonIcon} />}
           buttonStyle={styles.mapButton}
           titleStyle={styles.buttonTitle}
         />

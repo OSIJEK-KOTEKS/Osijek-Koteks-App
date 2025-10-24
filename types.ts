@@ -1,14 +1,14 @@
-import {StackNavigationProp} from '@react-navigation/stack';
-import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
-import {CompositeNavigationProp} from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
 
 // Navigation Types
 export type RootStackParamList = {
   Login: undefined;
   AuthenticatedStack: undefined;
   Main: undefined;
-  PDFViewer: {pdfUrl: string};
-  PhotoViewer: {photoUrl: string};
+  PDFViewer: { pdfUrl: string };
+  PhotoViewer: { photoUrl: string };
 };
 
 export type AdminTabParamList = {

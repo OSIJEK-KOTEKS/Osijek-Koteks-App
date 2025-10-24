@@ -1,16 +1,16 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import styled from 'styled-components';
-import {Item} from '../types';
-import {getFormattedCode} from '../utils/codeMapping';
+import { Item } from '../types';
+import { getFormattedCode } from '../utils/codeMapping';
 
 const PrintButton = styled.button`
   width: 100%;
-  padding: ${({theme}) => theme.spacing.medium};
-  background-color: ${({theme}) => theme.colors.primary};
-  color: ${({theme}) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.medium};
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white};
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 1rem;
   transition: background-color 0.2s;
   display: flex;
@@ -18,11 +18,11 @@ const PrintButton = styled.button`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 
   &:disabled {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
     cursor: not-allowed;
   }
 `;
@@ -97,10 +97,7 @@ const safeParseDate = (dateInput: any): string => {
   }
 };
 
-const formatDateAndTime = (
-  creationDate: any,
-  creationTime?: string,
-): string => {
+const formatDateAndTime = (creationDate: any, creationTime?: string): string => {
   const formattedDate = safeParseDate(creationDate);
 
   if (!formattedDate || formattedDate === 'N/A') {
@@ -149,21 +146,11 @@ const formatApprovalDate = (approvalDate: any): string => {
 };
 
 // PrintableTable component with fixed date formatting
-const PrintableTable = ({
-  items,
-  dateRange,
-}: {
-  items: Item[];
-  dateRange?: string;
-}) => {
+const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: string }) => {
   return (
     <div className="print-container">
       <div className="print-header">
-        <img
-          src="/images/logo.png"
-          alt="Osijek-Koteks Logo"
-          className="print-logo"
-        />
+        <img src="/images/logo.png" alt="Osijek-Koteks Logo" className="print-logo" />
         <div className="company-info">
           <p>Osijek-Koteks d.d.</p>
           <p>Šamaćka 11, 31000 Osijek, Hrvatska</p>
@@ -207,11 +194,7 @@ const PrintableTable = ({
               <td>{getDisplayNameForUser(item)}</td>
               <td>{item.prijevoznik || '-'}</td>
               <td>{item.registracija || '-'}</td>
-              <td>
-                {item.tezina !== undefined
-                  ? (item.tezina / 1000).toFixed(3)
-                  : '-'}
-              </td>
+              <td>{item.tezina !== undefined ? (item.tezina / 1000).toFixed(3) : '-'}</td>
               <td>
                 {item.approvalStatus === 'odobreno' && item.neto !== undefined
                   ? item.neto > 1000
@@ -225,9 +208,7 @@ const PrintableTable = ({
               </td>
               <td>{item.approvalStatus}</td>
               <td>
-                {item.approvedBy
-                  ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}`
-                  : '-'}
+                {item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-'}
               </td>
               <td>
                 {/* FIXED: Use consistent approval date formatting */}
@@ -412,7 +393,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
 
       // Generate the printable table HTML
       const printableTableHtml = ReactDOMServer.renderToString(
-        <PrintableTable items={allItems} dateRange={dateRange} />,
+        <PrintableTable items={allItems} dateRange={dateRange} />
       );
 
       // Generate total weight summary if available
@@ -439,11 +420,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
             color: #666;
           ">
             Ukupno ${allItems.length} ${
-            allItems.length === 1
-              ? 'kamion'
-              : allItems.length < 5
-              ? 'kamiona'
-              : 'kamiona'
+            allItems.length === 1 ? 'kamion' : allItems.length < 5 ? 'kamiona' : 'kamiona'
           }
           </div>
           <div style="
@@ -488,7 +465,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
 
       // Track loaded images
       const images = printWindow.document.getElementsByTagName('img');
-      const loadedImages = {current: 0};
+      const loadedImages = { current: 0 };
       const totalImages = images.length;
 
       const tryPrint = () => {
@@ -528,15 +505,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
     } finally {
       setIsPrinting(false);
     }
-  }, [
-    item,
-    items,
-    itemsToDisplay,
-    onPrintAll,
-    totalWeight,
-    dateRange,
-    totalItems,
-  ]);
+  }, [item, items, itemsToDisplay, onPrintAll, totalWeight, dateRange, totalItems]);
 
   return (
     <>
@@ -546,7 +515,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
         {isPrinting ? 'Priprema ispisa...' : 'Ispiši tablicu'}
       </PrintButton>
 
-      <div style={{display: 'none'}} ref={printContainerRef}>
+      <div style={{ display: 'none' }} ref={printContainerRef}>
         <PrintableTable items={itemsToDisplay} dateRange={dateRange} />
       </div>
     </>

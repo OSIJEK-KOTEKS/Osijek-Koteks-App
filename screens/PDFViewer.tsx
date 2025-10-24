@@ -1,8 +1,8 @@
-import React, {useState} from 'react';
-import {View, StyleSheet, ActivityIndicator} from 'react-native';
-import {WebView} from 'react-native-webview';
-import {RouteProp} from '@react-navigation/native';
-import {RootStackParamList} from '../types';
+import React, { useState } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../types';
 
 type PDFViewerRouteProp = RouteProp<RootStackParamList, 'PDFViewer'>;
 
@@ -10,8 +10,8 @@ interface PDFViewerProps {
   route: PDFViewerRouteProp;
 }
 
-export const PDFViewer: React.FC<PDFViewerProps> = ({route}) => {
-  const {pdfUrl} = route.params;
+export const PDFViewer: React.FC<PDFViewerProps> = ({ route }) => {
+  const { pdfUrl } = route.params;
   const [loading, setLoading] = useState(true);
 
   return (
@@ -22,7 +22,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({route}) => {
         </View>
       )}
       <WebView
-        source={{uri: pdfUrl}}
+        source={{ uri: pdfUrl }}
         style={styles.webview}
         onLoadEnd={() => setLoading(false)}
       />

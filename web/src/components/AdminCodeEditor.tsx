@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 
 interface Item {
@@ -25,17 +25,17 @@ const Container = styled.div`
   position: relative;
 `;
 
-const CodeDisplay = styled.div<{success: boolean; error: boolean}>`
+const CodeDisplay = styled.div<{ success: boolean; error: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${({theme}) => theme?.spacing?.small || '8px'};
-  border-radius: ${({theme}) => theme?.borderRadius || '8px'};
+  padding: ${({ theme }) => theme?.spacing?.small || '8px'};
+  border-radius: ${({ theme }) => theme?.borderRadius || '8px'};
   border: 1px solid;
   transition: all 0.2s ease;
   cursor: default;
 
-  ${({success, error, theme}) => {
+  ${({ success, error, theme }) => {
     if (success) {
       return `
         background-color: #f0f9ff;
@@ -69,7 +69,7 @@ const CodeText = styled.span`
   font-weight: 500;
 `;
 
-const DropdownButton = styled.button<{isOpen: boolean; visible: boolean}>`
+const DropdownButton = styled.button<{ isOpen: boolean; visible: boolean }>`
   padding: 4px;
   border: none;
   background: none;
@@ -77,8 +77,8 @@ const DropdownButton = styled.button<{isOpen: boolean; visible: boolean}>`
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  opacity: ${({visible}) => (visible ? 1 : 0)};
-  transform: ${({isOpen}) => (isOpen ? 'rotate(180deg)' : 'rotate(0deg)')};
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  transform: ${({ isOpen }) => (isOpen ? 'rotate(180deg)' : 'rotate(0deg)')};
 
   &:hover {
     background-color: #dbeafe;
@@ -136,8 +136,7 @@ const DropdownMenu = styled.div`
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 50;
   max-height: 240px;
   overflow-y: auto;
@@ -195,10 +194,7 @@ const AdminCodeEditor: React.FC<AdminCodeEditorProps> = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
     };
@@ -258,7 +254,7 @@ const AdminCodeEditor: React.FC<AdminCodeEditorProps> = ({
 
       // Check for duplicates in original array
       const duplicates = availableCodes.filter(
-        (code, index) => availableCodes.indexOf(code) !== index,
+        (code, index) => availableCodes.indexOf(code) !== index
       );
       if (duplicates.length > 0) {
         console.warn('FOUND DUPLICATES in availableCodes:', duplicates);
@@ -273,7 +269,7 @@ const AdminCodeEditor: React.FC<AdminCodeEditorProps> = ({
           <strong>RN:</strong> {item.code}
         </CodeText>
 
-        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {isLoading && <LoadingSpinner />}
           {success && <SuccessIcon>✓</SuccessIcon>}
 

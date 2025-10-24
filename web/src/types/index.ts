@@ -170,31 +170,26 @@ export interface ApiService {
   getUserProfile: () => Promise<User>;
   getUniqueCodes: () => Promise<string[]>;
   createUser: (userData: RegistrationData) => Promise<User>;
-  updateUser: (
-    id: string,
-    userData: Partial<Omit<User, '_id'>>,
-  ) => Promise<User>;
+  updateUser: (id: string, userData: Partial<Omit<User, '_id'>>) => Promise<User>;
   updateUserPassword: (userId: string, newPassword: string) => Promise<User>;
 
   // Item methods
   getItems: (
     page?: number,
     limit?: number,
-    filters?: ItemFilters,
+    filters?: ItemFilters
   ) => Promise<PaginatedResponse<Item>>;
   createItem: (itemData: CreateItemInput) => Promise<Item>;
   updateItem: (
     id: string,
-    itemData: Partial<
-      Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>
-    >,
+    itemData: Partial<Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>>
   ) => Promise<Item>;
   updateItemApproval: (
     id: string,
     approvalStatus: Item['approvalStatus'],
     photoFront: File,
     photoBack: File,
-    locationData: LocationData,
+    locationData: LocationData
   ) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
   updateItemApprovalWithPdf: (
@@ -202,6 +197,6 @@ export interface ApiService {
     approvalStatus: Item['approvalStatus'],
     pdfDocument: File,
     inTransit: boolean,
-    neto?: number,
+    neto?: number
   ) => Promise<Item>;
 }

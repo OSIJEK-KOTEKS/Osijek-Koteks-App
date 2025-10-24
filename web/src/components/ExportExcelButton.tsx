@@ -1,8 +1,8 @@
-import React, {useState, useCallback} from 'react';
+import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import * as XLSX from 'xlsx';
-import {Item} from '../types';
-import {getFormattedCode} from '../utils/codeMapping';
+import { Item } from '../types';
+import { getFormattedCode } from '../utils/codeMapping';
 
 const ExportButton = styled.button`
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
@@ -103,9 +103,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
     let fileName = `dokumenti_${timestamp}`;
 
     if (dateRange) {
-      const cleanDateRange = dateRange
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '_');
+      const cleanDateRange = dateRange.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
       fileName = `dokumenti_${cleanDateRange}`;
     }
 
@@ -133,7 +131,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
 
     // Sort codes for consistent ordering
     const sortedCodes = Object.keys(itemsByCode).sort((a, b) =>
-      a.localeCompare(b, undefined, {numeric: true}),
+      a.localeCompare(b, undefined, { numeric: true })
     );
 
     // Prepare data for each code sheet
@@ -158,14 +156,10 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
           : item.creationDate,
         Status: item.approvalStatus,
         'U tranzitu': item.in_transit ? 'Da' : 'Ne',
-        Odobrio: item.approvedBy
-          ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}`
-          : '-',
+        Odobrio: item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-',
         'Datum odobrenja': item.approvalDate || '-',
-        'Lokacija - Širina':
-          item.approvalLocation?.coordinates?.latitude || null,
-        'Lokacija - Dužina':
-          item.approvalLocation?.coordinates?.longitude || null,
+        'Lokacija - Širina': item.approvalLocation?.coordinates?.latitude || null,
+        'Lokacija - Dužina': item.approvalLocation?.coordinates?.longitude || null,
         'Lokacija - Točnost': item.approvalLocation?.accuracy || null,
       }));
 
@@ -174,14 +168,11 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         count: codeItems.length,
         weight: formatNumber(
           codeItems.reduce((sum, item) => sum + (item.tezina || 0), 0) / 1000,
-          3,
+          3
         ),
-        pending: codeItems.filter(item => item.approvalStatus === 'na čekanju')
-          .length,
-        approved: codeItems.filter(item => item.approvalStatus === 'odobreno')
-          .length,
-        rejected: codeItems.filter(item => item.approvalStatus === 'odbijen')
-          .length,
+        pending: codeItems.filter(item => item.approvalStatus === 'na čekanju').length,
+        approved: codeItems.filter(item => item.approvalStatus === 'odobreno').length,
+        rejected: codeItems.filter(item => item.approvalStatus === 'odbijen').length,
         inTransit: codeItems.filter(item => item.in_transit).length,
       };
 
@@ -203,39 +194,20 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         totalWeight
           ? formatNumber(totalWeight / 1000, 3)
           : formatNumber(
-              itemsToExport.reduce((sum, item) => sum + (item.tezina || 0), 0) /
-                1000,
-              3,
+              itemsToExport.reduce((sum, item) => sum + (item.tezina || 0), 0) / 1000,
+              3
             ),
       ],
       ['Broj različitih RN:', sortedCodes.length],
       ['', ''],
       ['UKUPNE STATISTIKE PO STATUSU', ''],
-      [
-        'Na čekanju:',
-        itemsToExport.filter(item => item.approvalStatus === 'na čekanju')
-          .length,
-      ],
-      [
-        'Odobreno:',
-        itemsToExport.filter(item => item.approvalStatus === 'odobreno').length,
-      ],
-      [
-        'Odbijeno:',
-        itemsToExport.filter(item => item.approvalStatus === 'odbijen').length,
-      ],
+      ['Na čekanju:', itemsToExport.filter(item => item.approvalStatus === 'na čekanju').length],
+      ['Odobreno:', itemsToExport.filter(item => item.approvalStatus === 'odobreno').length],
+      ['Odbijeno:', itemsToExport.filter(item => item.approvalStatus === 'odbijen').length],
       ['U tranzitu:', itemsToExport.filter(item => item.in_transit).length],
       ['', ''],
       ['SAŽETAK PO RADNIM NALOZIMA', ''],
-      [
-        'RN',
-        'Broj dokumenata',
-        'Težina (t)',
-        'Na čekanju',
-        'Odobreno',
-        'Odbijeno',
-        'U tranzitu',
-      ],
+      ['RN', 'Broj dokumenata', 'Težina (t)', 'Na čekanju', 'Odobreno', 'Odbijeno', 'U tranzitu'],
       ...codeSheets.map(sheet => [
         getFormattedCode(sheet.code),
         sheet.totals.count,
@@ -259,14 +231,12 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       ['Filter - Period:', dateRange || 'Svi dokumenti'],
       [
         'Filter - RN:',
-        selectedCode === 'all'
-          ? 'Svi radni nalozi'
-          : selectedCode || 'Svi radni nalozi',
+        selectedCode === 'all' ? 'Svi radni nalozi' : selectedCode || 'Svi radni nalozi',
       ],
       ['Filter - U tranzitu:', inTransitOnly ? 'Da' : 'Ne'],
     ];
 
-    return {codeSheets, summaryData};
+    return { codeSheets, summaryData };
   };
 
   const handleExport = useCallback(async () => {
@@ -292,7 +262,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         return;
       }
 
-      const {codeSheets, summaryData} = prepareExcelData(itemsToExport);
+      const { codeSheets, summaryData } = prepareExcelData(itemsToExport);
 
       // Create workbook
       const workbook = XLSX.utils.book_new();
@@ -303,37 +273,31 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
 
         for (let row = 1; row <= range.e.r; row++) {
           // Format Težina (t) column (now column G, index 6)
-          const weightCell = XLSX.utils.encode_cell({r: row, c: 6});
-          if (
-            worksheet[weightCell] &&
-            typeof worksheet[weightCell].v === 'number'
-          ) {
+          const weightCell = XLSX.utils.encode_cell({ r: row, c: 6 });
+          if (worksheet[weightCell] && typeof worksheet[weightCell].v === 'number') {
             worksheet[weightCell].z = '#,##0.000';
           }
 
           // Format Razlika u vaganju column (now column H, index 7)
-          const percentCell = XLSX.utils.encode_cell({r: row, c: 7});
-          if (
-            worksheet[percentCell] &&
-            typeof worksheet[percentCell].v === 'number'
-          ) {
+          const percentCell = XLSX.utils.encode_cell({ r: row, c: 7 });
+          if (worksheet[percentCell] && typeof worksheet[percentCell].v === 'number') {
             worksheet[percentCell].z = '#,##0.00';
           }
 
           // Format Lokacija - Širina column (now column N, index 13)
-          const latCell = XLSX.utils.encode_cell({r: row, c: 13});
+          const latCell = XLSX.utils.encode_cell({ r: row, c: 13 });
           if (worksheet[latCell] && typeof worksheet[latCell].v === 'number') {
             worksheet[latCell].z = '#,##0.000000';
           }
 
           // Format Lokacija - Dužina column (now column O, index 14)
-          const lngCell = XLSX.utils.encode_cell({r: row, c: 14});
+          const lngCell = XLSX.utils.encode_cell({ r: row, c: 14 });
           if (worksheet[lngCell] && typeof worksheet[lngCell].v === 'number') {
             worksheet[lngCell].z = '#,##0.000000';
           }
 
           // Format Lokacija - Točnost column (now column P, index 15)
-          const accCell = XLSX.utils.encode_cell({r: row, c: 15});
+          const accCell = XLSX.utils.encode_cell({ r: row, c: 15 });
           if (worksheet[accCell] && typeof worksheet[accCell].v === 'number') {
             worksheet[accCell].z = '#,##0';
           }
@@ -342,33 +306,33 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
 
       // Set standard column widths for data sheets (updated with Prijevoznik column)
       const standardColWidths = [
-        {wch: 8}, // Redni broj
-        {wch: 10}, // Naziv
-        {wch: 25}, // RN
-        {wch: 15}, // Dobavljač (NEW COLUMN)
-        {wch: 30}, // Prijevoznik
-        {wch: 15}, // Registracija
-        {wch: 12}, // Težina
-        {wch: 18}, // Razlika u vaganju
-        {wch: 20}, // Datum kreiranja
-        {wch: 12}, // Status
-        {wch: 12}, // U tranzitu
-        {wch: 20}, // Odobrio
-        {wch: 15}, // Datum odobrenja
-        {wch: 15}, // Lokacija - Širina
-        {wch: 15}, // Lokacija - Dužina
-        {wch: 15}, // Lokacija - Točnost
+        { wch: 8 }, // Redni broj
+        { wch: 10 }, // Naziv
+        { wch: 25 }, // RN
+        { wch: 15 }, // Dobavljač (NEW COLUMN)
+        { wch: 30 }, // Prijevoznik
+        { wch: 15 }, // Registracija
+        { wch: 12 }, // Težina
+        { wch: 18 }, // Razlika u vaganju
+        { wch: 20 }, // Datum kreiranja
+        { wch: 12 }, // Status
+        { wch: 12 }, // U tranzitu
+        { wch: 20 }, // Odobrio
+        { wch: 15 }, // Datum odobrenja
+        { wch: 15 }, // Lokacija - Širina
+        { wch: 15 }, // Lokacija - Dužina
+        { wch: 15 }, // Lokacija - Točnost
       ];
       // Create summary worksheet first
       const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
       summaryWorksheet['!cols'] = [
-        {wch: 25},
-        {wch: 20},
-        {wch: 15},
-        {wch: 12},
-        {wch: 12},
-        {wch: 12},
-        {wch: 12},
+        { wch: 25 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
       ];
       XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Sažetak');
 
@@ -406,15 +370,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
     } finally {
       setIsExporting(false);
     }
-  }, [
-    item,
-    items,
-    onExportAll,
-    totalWeight,
-    dateRange,
-    selectedCode,
-    inTransitOnly,
-  ]);
+  }, [item, items, onExportAll, totalWeight, dateRange, selectedCode, inTransitOnly]);
 
   return (
     <ExportButton

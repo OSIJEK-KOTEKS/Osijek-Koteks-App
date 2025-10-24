@@ -1,8 +1,8 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import ReactDOM from 'react-dom';
-import {Item} from '../types';
-import {apiService} from '../utils/api';
+import { Item } from '../types';
+import { apiService } from '../utils/api';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -19,14 +19,14 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({theme}) => theme.colors.white};
-  border-radius: ${({theme}) => theme.borderRadius};
-  padding: ${({theme}) => theme.spacing.medium};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  padding: ${({ theme }) => theme.spacing.medium};
   width: 90%;
   max-width: 600px;
   max-height: 70vh;
   margin: auto;
-  box-shadow: ${({theme}) => theme.shadows.main};
+  box-shadow: ${({ theme }) => theme.shadows.main};
   display: flex;
   flex-direction: column;
   position: relative;
@@ -36,8 +36,8 @@ const ModalContent = styled.div`
 const Title = styled.h2`
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: ${({theme}) => theme.spacing.medium};
-  color: ${({theme}) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing.medium};
+  color: ${({ theme }) => theme.colors.text};
   text-align: center;
 `;
 
@@ -45,24 +45,24 @@ const ContentSection = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: ${({theme}) => theme.spacing.medium};
+  gap: ${({ theme }) => theme.spacing.medium};
   overflow-y: auto;
-  padding-right: ${({theme}) => theme.spacing.small};
+  padding-right: ${({ theme }) => theme.spacing.small};
   min-height: 0;
 `;
 
 const FileInputSection = styled.div`
-  background: ${({theme}) => theme.colors.background};
-  padding: ${({theme}) => theme.spacing.medium};
-  border-radius: ${({theme}) => theme.borderRadius};
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  background: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.spacing.medium};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const Label = styled.label`
   display: block;
   font-weight: 600;
-  margin-bottom: ${({theme}) => theme.spacing.small};
-  color: ${({theme}) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing.small};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 0.9rem;
 `;
 
@@ -72,32 +72,32 @@ const FileInputWrapper = styled.div`
 
 const FileInput = styled.input`
   width: 100%;
-  padding: ${({theme}) => theme.spacing.small};
-  border: 2px dashed ${({theme}) => theme.colors.primary};
-  border-radius: ${({theme}) => theme.borderRadius};
-  background: ${({theme}) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.small};
+  border: 2px dashed ${({ theme }) => theme.colors.primary};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.white};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: ${({theme}) => theme.colors.primaryDark};
-    background: ${({theme}) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.primaryDark};
+    background: ${({ theme }) => theme.colors.background};
   }
 `;
 
 const NumberInput = styled.input`
   width: 100%;
-  padding: ${({theme}) => theme.spacing.small};
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
-  background: ${({theme}) => theme.colors.white};
+  padding: ${({ theme }) => theme.spacing.small};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.white};
   font-size: 0.9rem;
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${({theme}) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({theme}) => theme.colors.primary}20;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}20;
   }
 
   &::placeholder {
@@ -109,8 +109,8 @@ const Alert = styled.div`
   background-color: #e3f2fd;
   border: 1px solid #90caf9;
   color: #1976d2;
-  padding: ${({theme}) => theme.spacing.small};
-  border-radius: ${({theme}) => theme.borderRadius};
+  padding: ${({ theme }) => theme.spacing.small};
+  border-radius: ${({ theme }) => theme.borderRadius};
   text-align: center;
   font-weight: 500;
   font-size: 0.85rem;
@@ -119,52 +119,52 @@ const Alert = styled.div`
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: center;
-  gap: ${({theme}) => theme.spacing.small};
-  margin-top: ${({theme}) => theme.spacing.medium};
-  padding-top: ${({theme}) => theme.spacing.small};
-  border-top: 1px solid ${({theme}) => theme.colors.gray};
+  gap: ${({ theme }) => theme.spacing.small};
+  margin-top: ${({ theme }) => theme.spacing.medium};
+  padding-top: ${({ theme }) => theme.spacing.small};
+  border-top: 1px solid ${({ theme }) => theme.colors.gray};
   flex-shrink: 0;
 `;
 
 const CancelButton = styled.button`
   width: 150px;
-  background-color: ${({theme}) => theme.colors.gray};
-  color: ${({theme}) => theme.colors.text};
-  padding: ${({theme}) => theme.spacing.small};
+  background-color: ${({ theme }) => theme.colors.gray};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing.small};
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   cursor: pointer;
   font-weight: 500;
   font-size: 0.9rem;
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
   }
 `;
 
 const ConfirmButton = styled.button`
   width: 150px;
-  background-color: ${({theme}) => theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
   color: white;
-  padding: ${({theme}) => theme.spacing.small};
+  padding: ${({ theme }) => theme.spacing.small};
   border: none;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   cursor: pointer;
   font-weight: 500;
   font-size: 0.9rem;
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 
   &:disabled {
-    background-color: ${({theme}) => theme.colors.disabled};
+    background-color: ${({ theme }) => theme.colors.disabled};
     cursor: not-allowed;
   }
 `;
 
 const SuccessText = styled.div`
-  color: ${({theme}) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.success};
   font-size: 0.875rem;
   margin-top: 0.5rem;
   display: flex;
@@ -180,20 +180,20 @@ const SuccessText = styled.div`
 const CheckboxContainer = styled.div`
   display: flex;
   align-items: center;
-  margin-top: ${({theme}) => theme.spacing.small};
-  background: ${({theme}) => theme.colors.background};
-  padding: ${({theme}) => theme.spacing.small};
-  border-radius: ${({theme}) => theme.borderRadius};
-  border: 1px solid ${({theme}) => theme.colors.gray};
+  margin-top: ${({ theme }) => theme.spacing.small};
+  background: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.spacing.small};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
 `;
 
 const Checkbox = styled.input`
-  margin-right: ${({theme}) => theme.spacing.small};
+  margin-right: ${({ theme }) => theme.spacing.small};
   cursor: pointer;
 `;
 
 const CheckboxLabel = styled.label`
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-weight: 500;
   cursor: pointer;
 `;
@@ -215,9 +215,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
   const [pdfDocument, setPdfDocument] = useState<File | null>(null);
   const [inTransit, setInTransit] = useState(false);
   const [netoSecond, setNetoSecond] = useState<string>(''); // Second neto input
-  const [calculatedPercentage, setCalculatedPercentage] = useState<
-    number | null
-  >(null);
+  const [calculatedPercentage, setCalculatedPercentage] = useState<number | null>(null);
 
   // Get first neto from the item (created during item creation)
   const netoFirst = item.neto;
@@ -281,9 +279,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
 
     // Check if first neto exists when second neto is provided
     if (netoSecond && !netoFirst) {
-      alert(
-        'Ne mogu izračunati postotak jer prvi neto nije definiran u dokumentu',
-      );
+      alert('Ne mogu izračunati postotak jer prvi neto nije definiran u dokumentu');
       return;
     }
 
@@ -308,9 +304,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
         'odobreno',
         pdfDocument,
         inTransit,
-        calculatedPercentage !== null
-          ? Math.round(calculatedPercentage * 100) / 100
-          : undefined, // Pass rounded percentage
+        calculatedPercentage !== null ? Math.round(calculatedPercentage * 100) / 100 : undefined // Pass rounded percentage
       );
 
       onSuccess();
@@ -345,9 +339,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
               />
             </FileInputWrapper>
             {pdfDocument && (
-              <SuccessText>
-                PDF dokument uspješno odabran: {pdfDocument.name}
-              </SuccessText>
+              <SuccessText>PDF dokument uspješno odabran: {pdfDocument.name}</SuccessText>
             )}
           </FileInputSection>
 
@@ -434,10 +426,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
                         color: '#388e3c',
                         marginTop: '0.25rem',
                       }}>
-                      Razlika:{' '}
-                      {netoSecond
-                        ? (parseFloat(netoSecond) - netoFirst).toFixed(2)
-                        : '0'}
+                      Razlika: {netoSecond ? (parseFloat(netoSecond) - netoFirst).toFixed(2) : '0'}
                     </div>
                   </div>
                 )}
@@ -486,9 +475,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
             <CheckboxLabel htmlFor="inTransit">U tranzitu</CheckboxLabel>
           </CheckboxContainer>
 
-          <Alert>
-            Sustav će automatski zabilježiti lokaciju ureda prilikom odobrenja.
-          </Alert>
+          <Alert>Sustav će automatski zabilježiti lokaciju ureda prilikom odobrenja.</Alert>
         </ContentSection>
 
         <ButtonGroup>
@@ -512,7 +499,7 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
         </ButtonGroup>
       </ModalContent>
     </ModalOverlay>,
-    document.body,
+    document.body
   );
 };
 

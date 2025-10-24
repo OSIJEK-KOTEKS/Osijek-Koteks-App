@@ -1,7 +1,7 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import {apiService} from '../utils/api';
-import {CreateItemInput} from '../types';
+import { apiService } from '../utils/api';
+import { CreateItemInput } from '../types';
 
 // Styled Components
 const ModalOverlay = styled.div`
@@ -34,8 +34,8 @@ const ModalContent = styled.div`
   max-height: 60vh;
   background: white;
   padding: 1.5rem;
-  border-radius: ${({theme}) => theme.borderRadius};
-  box-shadow: ${({theme}) => theme.shadows.main};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
   overflow-y: auto;
 
   &::-webkit-scrollbar {
@@ -61,13 +61,13 @@ const Title = styled.h2`
   margin-bottom: 1.5rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const ErrorMessage = styled.div`
   margin-bottom: 1rem;
   padding: 0.75rem;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   background-color: #fee2e2;
   color: #dc2626;
   font-size: 0.875rem;
@@ -82,21 +82,21 @@ const Label = styled.label`
   margin-bottom: 0.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid ${({theme}) => theme.colors.gray};
-  border-radius: ${({theme}) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 1rem;
   transition: all 0.2s;
 
   &:focus {
     outline: none;
-    border-color: ${({theme}) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({theme}) => theme.colors.primary}20;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}20;
   }
 
   &::placeholder {
@@ -110,15 +110,15 @@ const ButtonContainer = styled.div`
   gap: 0.75rem;
 `;
 
-const Button = styled.button<{variant?: 'primary' | 'secondary'}>`
+const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   padding: 0.5rem 1rem;
-  border-radius: ${({theme}) => theme.borderRadius};
+  border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 
-  ${({variant, theme}) =>
+  ${({ variant, theme }) =>
     variant === 'primary'
       ? `
     background-color: ${theme.colors.primary};
@@ -156,11 +156,7 @@ interface CreateItemModalProps {
   onSuccess: () => void;
 }
 
-const CreateItemModal: React.FC<CreateItemModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-}) => {
+const CreateItemModal: React.FC<CreateItemModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState<CreateItemInput>({
     title: '',
     code: '',
@@ -271,9 +267,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 data-testid="title-input"
                 type="text"
                 value={formData.title}
-                onChange={e =>
-                  setFormData({...formData, title: e.target.value})
-                }
+                onChange={e => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Unesite naziv dokumenta"
                 id="item_name"
               />
@@ -284,7 +278,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
               <Input
                 type="text"
                 value={formData.code}
-                onChange={e => setFormData({...formData, code: e.target.value})}
+                onChange={e => setFormData({ ...formData, code: e.target.value })}
                 placeholder="Unesite RN"
                 id="radni_nalog"
               />
@@ -295,9 +289,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
               <Input
                 type="text"
                 value={formData.registracija}
-                onChange={e =>
-                  setFormData({...formData, registracija: e.target.value})
-                }
+                onChange={e => setFormData({ ...formData, registracija: e.target.value })}
                 placeholder="Unesite registraciju"
                 id="registracija"
               />
@@ -326,15 +318,11 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
               <Input
                 type="text"
                 value={formData.prijevoznik}
-                onChange={e =>
-                  setFormData({...formData, prijevoznik: e.target.value})
-                }
+                onChange={e => setFormData({ ...formData, prijevoznik: e.target.value })}
                 placeholder="Unesite prijevoznika (opcionalno)"
                 id="prijevoznik"
               />
-              <OptionalFieldNote>
-                Opcionalno polje za unos prijevoznika
-              </OptionalFieldNote>
+              <OptionalFieldNote>Opcionalno polje za unos prijevoznika</OptionalFieldNote>
             </FormGroup>
 
             <FormGroup>
@@ -342,27 +330,17 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({
               <Input
                 type="text"
                 value={formData.pdfUrl}
-                onChange={e =>
-                  setFormData({...formData, pdfUrl: e.target.value})
-                }
+                onChange={e => setFormData({ ...formData, pdfUrl: e.target.value })}
                 placeholder="Unesite PDF link"
                 id="pdf_link"
               />
             </FormGroup>
 
             <ButtonContainer>
-              <Button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                variant="secondary">
+              <Button type="button" onClick={onClose} disabled={loading} variant="secondary">
                 Odustani
               </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                variant="primary"
-                id="finish_item">
+              <Button type="submit" disabled={loading} variant="primary" id="finish_item">
                 {loading ? 'Kreiranje...' : 'Kreiraj'}
               </Button>
             </ButtonContainer>

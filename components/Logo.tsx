@@ -1,14 +1,10 @@
 import React from 'react';
-import {View, Image, StyleSheet} from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 
 const Logo = () => {
   return (
     <View style={styles.logoContainer}>
-      <Image
-        source={require('../assets/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+      <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
     </View>
   );
 };

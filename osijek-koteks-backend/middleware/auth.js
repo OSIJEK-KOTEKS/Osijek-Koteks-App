@@ -7,7 +7,7 @@ const auth = async (req, res, next) => {
     const authHeader = req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log('No valid auth header found:', authHeader);
-      return res.status(401).json({message: 'No token, authorization denied'});
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
     // Get the token without 'Bearer '
@@ -20,7 +20,7 @@ const auth = async (req, res, next) => {
     // Find user and attach to request
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(401).json({message: 'User not found'});
+      return res.status(401).json({ message: 'User not found' });
     }
 
     // Add user to  request
@@ -34,7 +34,7 @@ const auth = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('Token verification failed:', err);
-    res.status(401).json({message: 'Token is not valid'});
+    res.status(401).json({ message: 'Token is not valid' });
   }
 };
 
