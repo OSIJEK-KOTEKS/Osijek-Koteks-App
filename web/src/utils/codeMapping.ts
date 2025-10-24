@@ -53,6 +53,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25032': 'Pripremni radovi - NCI prostora Čepin',
   '25033': 'PS Beli Manastir',
   '25034': 'PS Đakovo',
+  '25040': 'Beli Manastir rek. DC7 ',
   '25051': 'Osatina Viškovci',
   '25052': 'izgradnje manipulativnih površina oko MSH Slašćak u Viškovcima',
   '25054': 'Nexe cementara',
