@@ -70,6 +70,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25095': 'Livana',
   '25097': 'Darda - Izra. Man. Pov.',
   '25099': 'Farma Belje Popovac',
+  '25100': 'Eurospin Retfala',
   '5014': 'Betonara',
 };
 
