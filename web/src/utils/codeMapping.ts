@@ -56,7 +56,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25040': 'Beli Manastir rek. DC7 ',
   '25051': 'Osatina Viškovci',
   '25052': 'izgradnje manipulativnih površina oko MSH Slašćak u Viškovcima',
-  '25053 -A': 'Vijenac Josipa Kozarca - REKONSTRUKCIJA I IZGRADNJA VODOOPSKRBNE MREŽE'
+  '25053 -A': 'Vijenac Josipa Kozarca - REKONSTRUKCIJA I IZGRADNJA VODOOPSKRBNE MREŽE',
   '25054': 'Nexe cementara',
   '25057': 'Bistrička Ulica',
   '25062': 'Pevex Đakovo',
