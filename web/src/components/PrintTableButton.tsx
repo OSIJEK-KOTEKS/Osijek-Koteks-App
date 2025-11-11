@@ -34,7 +34,7 @@ const getDisplayNameForUser = (item: Item): string => {
     item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
     item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
   ) {
-    return 'VELIČKI KAMEN d.o.o.';
+    return 'VELIÄŒKI KAMEN d.o.o.';
   }
 
   if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
@@ -48,7 +48,7 @@ const getDisplayNameForUser = (item: Item): string => {
   return `${item.createdBy.firstName} ${item.createdBy.lastName}`;
 };
 
-// FIXED: Date formatting functions for consistent DD/MM/YYYY display
+// FIXED: Date formatting functions for print - MM/DD/YYYY format
 const safeParseDate = (dateInput: any): string => {
   if (!dateInput) return 'N/A';
 
@@ -65,8 +65,8 @@ const safeParseDate = (dateInput: any): string => {
     }
     // Handle string inputs
     else if (typeof dateInput === 'string') {
-      // If it's already a Croatian formatted date (DD.MM.YYYY or DD.M.YYYY or D.MM.YYYY), return as is
-      if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+      // If it's already a US formatted date (MM/DD/YYYY), return as is
+      if (dateInput.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
         return dateInput;
       }
 
@@ -84,8 +84,8 @@ const safeParseDate = (dateInput: any): string => {
       return String(dateInput); // Return as string for debugging
     }
 
-    // Always format to Croatian format consistently
-    return date.toLocaleDateString('hr-HR', {
+    // Format to US format for print: MM/DD/YYYY
+    return date.toLocaleDateString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -118,8 +118,8 @@ const formatApprovalDate = (approvalDate: any): string => {
     if (typeof approvalDate === 'object' && approvalDate.$date) {
       date = new Date(approvalDate.$date);
     } else if (typeof approvalDate === 'string') {
-      // If it's already formatted Croatian datetime (DD.MM.YYYY HH:MM), return as is
-      if (approvalDate.match(/^\d{1,2}\.\d{1,2}\.\d{4} \d{1,2}:\d{2}$/)) {
+      // If it's already formatted US datetime (MM/DD/YYYY HH:MM), return as is
+      if (approvalDate.match(/^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}$/)) {
         return approvalDate;
       }
       date = new Date(approvalDate);
@@ -131,7 +131,7 @@ const formatApprovalDate = (approvalDate: any): string => {
       return String(approvalDate);
     }
 
-    return date.toLocaleString('hr-HR', {
+    return date.toLocaleString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -153,7 +153,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
         <img src="/images/logo.png" alt="Osijek-Koteks Logo" className="print-logo" />
         <div className="company-info">
           <p>Osijek-Koteks d.d.</p>
-          <p>Šamaćka 11, 31000 Osijek, Hrvatska</p>
+          <p>Å amaÄ‡ka 11, 31000 Osijek, Hrvatska</p>
           <p>Tel: +385 31 227 700 | Fax: +385 31 227 777</p>
           <p>Email: info@osijek-koteks.hr | Web: www.osijek-koteks.hr</p>
         </div>
@@ -161,7 +161,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
         {dateRange && <p className="print-date-range">Period: {dateRange}</p>}
         <p className="print-date">
           Datum ispisa:{' '}
-          {new Date().toLocaleDateString('hr-HR', {
+          {new Date().toLocaleDateString('en-US', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -175,10 +175,10 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
           <tr>
             <th>Broj otpremnice</th>
             <th>Radni nalog</th>
-            <th>Dobavljač</th>
+            <th>DobavljaÄ</th>
             <th>Prijevoznik</th>
             <th>Registracija</th>
-            <th>Težina (t)</th>
+            <th>TeÅ¾ina (t)</th>
             <th>Razlika u vaganju (%)</th>
             <th>Datum kreiranja</th>
             <th>Status</th>
@@ -220,7 +220,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
       </table>
 
       <div className="print-footer">
-        <p>© Osijek-Koteks d.d. Sva prava pridržana.</p>
+        <p>Â© Osijek-Koteks d.d. Sva prava pridrÅ¾ana.</p>
       </div>
 
       <style>
@@ -304,13 +304,13 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
             .print-table th:nth-child(2),
             .print-table td:nth-child(2) { width: 9%; }  /* Radni nalog */
             .print-table th:nth-child(3),
-            .print-table td:nth-child(3) { width: 12%; } /* Dobavljač */
+            .print-table td:nth-child(3) { width: 12%; } /* DobavljaÄ */
             .print-table th:nth-child(4),
             .print-table td:nth-child(4) { width: 10%; } /* Prijevoznik */
             .print-table th:nth-child(5),
             .print-table td:nth-child(5) { width: 9%; }  /* Registracija */
             .print-table th:nth-child(6),
-            .print-table td:nth-child(6) { width: 7%; }  /* Težina */
+            .print-table td:nth-child(6) { width: 7%; }  /* TeÅ¾ina */
             .print-table th:nth-child(7),
             .print-table td:nth-child(7) { width: 8%; }  /* Razlika u vaganju */
             .print-table th:nth-child(8),
@@ -428,7 +428,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
             color: #666;
             margin-top: 5px;
           ">
-            Datum ispisa: ${new Date().toLocaleDateString('hr-HR', {
+            Datum ispisa: ${new Date().toLocaleDateString('en-US', {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
@@ -512,7 +512,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
       <PrintButton
         onClick={handlePrint}
         disabled={isLoading || isPrinting || (!item && totalItems === 0)}>
-        {isPrinting ? 'Priprema ispisa...' : 'Ispiši tablicu'}
+          {isPrinting ? 'Priprema ispisa...' : 'Ispiši tablicu'}
       </PrintButton>
 
       <div style={{ display: 'none' }} ref={printContainerRef}>

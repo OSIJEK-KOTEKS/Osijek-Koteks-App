@@ -1,4 +1,4 @@
-// Updated PrintableItem.tsx with consistent DD/MM/YYYY date formatting
+// Updated PrintableItem.tsx with MM/DD/YYYY date formatting for print
 import React from 'react';
 import { Item } from '../types';
 import { getImageUrl } from '../utils/api';
@@ -25,8 +25,8 @@ const safeParseDate = (dateInput: any): string => {
     }
     // Handle string inputs
     else if (typeof dateInput === 'string') {
-      // If it's already a Croatian formatted date (DD.MM.YYYY or DD.M.YYYY or D.MM.YYYY), return as is
-      if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+      // If it's already a US formatted date (MM/DD/YYYY), return as is
+      if (dateInput.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
         return dateInput;
       }
 
@@ -44,8 +44,8 @@ const safeParseDate = (dateInput: any): string => {
       return String(dateInput); // Return as string for debugging
     }
 
-    // Always format to Croatian format consistently
-    return date.toLocaleDateString('hr-HR', {
+    // Format to US format for print: MM/DD/YYYY
+    return date.toLocaleDateString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -78,8 +78,8 @@ const formatApprovalDate = (approvalDate: any): string => {
     if (typeof approvalDate === 'object' && approvalDate.$date) {
       date = new Date(approvalDate.$date);
     } else if (typeof approvalDate === 'string') {
-      // If it's already formatted Croatian datetime (DD.MM.YYYY HH:MM), return as is
-      if (approvalDate.match(/^\d{1,2}\.\d{1,2}\.\d{4} \d{1,2}:\d{2}$/)) {
+      // If it's already formatted US datetime (MM/DD/YYYY HH:MM), return as is
+      if (approvalDate.match(/^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}$/)) {
         return approvalDate;
       }
       date = new Date(approvalDate);
@@ -91,7 +91,7 @@ const formatApprovalDate = (approvalDate: any): string => {
       return String(approvalDate);
     }
 
-    return date.toLocaleString('hr-HR', {
+    return date.toLocaleString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -138,7 +138,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({ item }) => {
           {/* Add tezina field to printout in tons */}
           {item.tezina !== undefined && (
             <div className="print-info-item">
-              <span className="print-label">Težina:</span>
+              <span className="print-label">TeÅ¾ina:</span>
               <span className="print-value">{(item.tezina / 1000).toFixed(3)} t</span>
             </div>
           )}
@@ -225,7 +225,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({ item }) => {
       <div className="print-footer">
         <p>
           Ispisano:{' '}
-          {new Date().toLocaleString('hr-HR', {
+          {new Date().toLocaleString('en-US', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -234,7 +234,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({ item }) => {
             timeZone: 'Europe/Zagreb',
           })}
         </p>
-        <p>© Osijek-Koteks d.d. Sva prava pridržana.</p>
+        <p>Â© Osijek-Koteks d.d. Sva prava pridrÅ¾ana.</p>
       </div>
     </div>
   );
