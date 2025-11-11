@@ -9,6 +9,31 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
+// Function to extract RN code from filename with special pattern handling
+const extractRNFromFilename = (filename, defaultCode) => {
+  if (!filename || typeof filename !== 'string') {
+    return defaultCode;
+  }
+
+  // Check if filename contains a pattern between '#' signs
+  // Pattern: #[anything]# where anything can include numbers, letters, spaces, and signs
+  const hashPattern = /#([^#]+)#/;  // Capturing group to extract content
+  const match = filename.match(hashPattern);
+  
+  if (match && match[1]) {
+    // Found a pattern between '#' signs, extract the content
+    const extractedCode = match[1].trim();
+    console.log('Extracted RN code from filename pattern:', {
+      filename: filename.substring(0, 100) + '...',
+      pattern: match[0],
+      extractedCode: extractedCode
+    });
+    return extractedCode;
+  }
+  
+  // No special pattern found, return the default code
+  return defaultCode;
+};
 const normalizeCarrierName = name => {
   if (!name) return '';
   return (
@@ -528,7 +553,7 @@ router.post('/', auth, async (req, res) => {
     // Create the new item object with all fields including createdBy
     const item = new Item({
       title: title.trim(),
-      code: code.trim(),
+      code: extractRNFromFilename(title, code.trim()),
       registracija: registracija ? registracija.trim() : undefined,
       prijevoznik: prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
       pdfUrl: pdfUrl.trim(),
