@@ -34,7 +34,7 @@ const getDisplayNameForUser = (item: Item): string => {
     item.createdBy.email === 'vetovo.vaga@velicki-kamen.hr' ||
     item.createdBy.email === 'velicki.vaga@velicki-kamen.hr'
   ) {
-    return 'VELIÄŒKI KAMEN d.o.o.';
+    return 'VELIČKI KAMEN d.o.o.';
   }
 
   if (item.createdBy.email === 'vaga.fukinac@kamen-psunj.hr') {
@@ -175,7 +175,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
           <tr>
             <th>Broj otpremnice</th>
             <th>Radni nalog</th>
-            <th>DobavljaÄ</th>
+            <th>Dobavljač</th>
             <th>Prijevoznik</th>
             <th>Registracija</th>
             <th>TeÅ¾ina (t)</th>
@@ -304,7 +304,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
             .print-table th:nth-child(2),
             .print-table td:nth-child(2) { width: 9%; }  /* Radni nalog */
             .print-table th:nth-child(3),
-            .print-table td:nth-child(3) { width: 12%; } /* DobavljaÄ */
+            .print-table td:nth-child(3) { width: 12%; } /* Dobavljač */
             .print-table th:nth-child(4),
             .print-table td:nth-child(4) { width: 10%; } /* Prijevoznik */
             .print-table th:nth-child(5),
