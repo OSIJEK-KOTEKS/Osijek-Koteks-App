@@ -72,6 +72,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25097': 'Darda - Izra. Man. Pov.',
   '25099': 'Farma Belje Popovac',
   '25100': 'Eurospin Retfala',
+  '25104': 'Belišće igralište',
   '5014': 'Betonara',
 };
 
