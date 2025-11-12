@@ -220,7 +220,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
       </table>
 
       <div className="print-footer">
-        <p>Â© Osijek-Koteks d.d. Sva prava pridrÅ¾ana.</p>
+        <p>Â© Osijek-Koteks d.d. Sva prava pridržana.</p>
       </div>
 
       <style>
