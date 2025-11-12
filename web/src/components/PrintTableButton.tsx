@@ -65,8 +65,8 @@ const safeParseDate = (dateInput: any): string => {
     }
     // Handle string inputs
     else if (typeof dateInput === 'string') {
-      // If it's already a US formatted date (MM/DD/YYYY), return as is
-      if (dateInput.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+      // If it's already a Croatian formatted date (DD.MM.YYYY), return as is
+      if (dateInput.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
         return dateInput;
       }
 
@@ -84,8 +84,8 @@ const safeParseDate = (dateInput: any): string => {
       return String(dateInput); // Return as string for debugging
     }
 
-    // Format to US format for print: MM/DD/YYYY
-    return date.toLocaleDateString('en-US', {
+    // Format to Croatian format for print: DD.MM.YYYY
+    return date.toLocaleDateString('hr-HR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -118,8 +118,8 @@ const formatApprovalDate = (approvalDate: any): string => {
     if (typeof approvalDate === 'object' && approvalDate.$date) {
       date = new Date(approvalDate.$date);
     } else if (typeof approvalDate === 'string') {
-      // If it's already formatted US datetime (MM/DD/YYYY HH:MM), return as is
-      if (approvalDate.match(/^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}$/)) {
+      // If it's already formatted Croatian datetime (DD.MM.YYYY HH:MM), return as is
+      if (approvalDate.match(/^\d{1,2}\.\d{1,2}\.\d{4} \d{1,2}:\d{2}$/)) {
         return approvalDate;
       }
       date = new Date(approvalDate);
@@ -131,7 +131,7 @@ const formatApprovalDate = (approvalDate: any): string => {
       return String(approvalDate);
     }
 
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('hr-HR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -161,7 +161,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
         {dateRange && <p className="print-date-range">Period: {dateRange}</p>}
         <p className="print-date">
           Datum ispisa:{' '}
-          {new Date().toLocaleDateString('en-US', {
+          {new Date().toLocaleDateString('hr-HR', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -203,7 +203,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
                   : '-'}
               </td>
               <td>
-                {/* FIXED: Use consistent date formatting */}
+             
                 {formatDateAndTime(item.creationDate, item.creationTime)}
               </td>
               <td>{item.approvalStatus}</td>
@@ -211,7 +211,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
                 {item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-'}
               </td>
               <td>
-                {/* FIXED: Use consistent approval date formatting */}
+              
                 {formatApprovalDate(item.approvalDate)}
               </td>
             </tr>
@@ -220,7 +220,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
       </table>
 
       <div className="print-footer">
-        <p>Â© Osijek-Koteks d.d. Sva prava pridržana.</p>
+        <p>© Osijek-Koteks d.d. Sva prava pridržana.</p>
       </div>
 
       <style>
@@ -304,13 +304,13 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
             .print-table th:nth-child(2),
             .print-table td:nth-child(2) { width: 9%; }  /* Radni nalog */
             .print-table th:nth-child(3),
-            .print-table td:nth-child(3) { width: 12%; } /* Dobavljač */
+            .print-table td:nth-child(3) { width: 12%; } /* DobavljaÄ */
             .print-table th:nth-child(4),
             .print-table td:nth-child(4) { width: 10%; } /* Prijevoznik */
             .print-table th:nth-child(5),
             .print-table td:nth-child(5) { width: 9%; }  /* Registracija */
             .print-table th:nth-child(6),
-            .print-table td:nth-child(6) { width: 7%; }  /* Težina */
+            .print-table td:nth-child(6) { width: 7%; }  /* TeÅ¾ina */
             .print-table th:nth-child(7),
             .print-table td:nth-child(7) { width: 8%; }  /* Razlika u vaganju */
             .print-table th:nth-child(8),
@@ -380,14 +380,14 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
           allItems = await onPrintAll();
         } catch (error) {
           console.error('Error fetching all items for printing:', error);
-          alert('Greška pri dohvaćanju svih dokumenata za ispis');
+          alert('Greška pri dohvaÄ‡anju svih dokumenata za ispis');
           return;
         }
       }
 
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
-        alert('Molimo omogućite pop-up prozore za ispis');
+        alert('Molimo omoguÄ‡ite pop-up prozore za ispis');
         return;
       }
 
@@ -428,7 +428,7 @@ const PrintTableButton: React.FC<PrintTableButtonProps> = ({
             color: #666;
             margin-top: 5px;
           ">
-            Datum ispisa: ${new Date().toLocaleDateString('en-US', {
+            Datum ispisa: ${new Date().toLocaleDateString('hr-HR', {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
