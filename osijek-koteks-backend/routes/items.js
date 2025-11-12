@@ -133,8 +133,11 @@ router.get('/codes', auth, async (req, res) => {
 
     console.log('Codes query:', query);
     console.log('Found unique codes:', uniqueCodes.length);
+    
+    // Filter out code 24042 from the selection menu
+    const filteredCodes = uniqueCodes.filter(code => code !== '24042');
 
-    res.json(uniqueCodes.sort());
+    res.json(filteredCodes.sort());
   } catch (err) {
     console.error('Error fetching unique codes:', err);
     res.status(500).json({ message: 'Server error' });
