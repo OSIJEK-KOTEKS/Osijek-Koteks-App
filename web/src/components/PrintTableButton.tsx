@@ -153,7 +153,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
         <img src="/images/logo.png" alt="Osijek-Koteks Logo" className="print-logo" />
         <div className="company-info">
           <p>Osijek-Koteks d.d.</p>
-          <p>Å amaÄ‡ka 11, 31000 Osijek, Hrvatska</p>
+          <p>Šamačka 11, 31000 Osijek, Hrvatska</p>
           <p>Tel: +385 31 227 700 | Fax: +385 31 227 777</p>
           <p>Email: info@osijek-koteks.hr | Web: www.osijek-koteks.hr</p>
         </div>
@@ -178,7 +178,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
             <th>Dobavljač</th>
             <th>Prijevoznik</th>
             <th>Registracija</th>
-            <th>TeÅ¾ina (t)</th>
+            <th>Težina (t)</th>
             <th>Razlika u vaganju (%)</th>
             <th>Datum kreiranja</th>
             <th>Status</th>
@@ -310,7 +310,7 @@ const PrintableTable = ({ items, dateRange }: { items: Item[]; dateRange?: strin
             .print-table th:nth-child(5),
             .print-table td:nth-child(5) { width: 9%; }  /* Registracija */
             .print-table th:nth-child(6),
-            .print-table td:nth-child(6) { width: 7%; }  /* TeÅ¾ina */
+            .print-table td:nth-child(6) { width: 7%; }  /* Težina */
             .print-table th:nth-child(7),
             .print-table td:nth-child(7) { width: 8%; }  /* Razlika u vaganju */
             .print-table th:nth-child(8),

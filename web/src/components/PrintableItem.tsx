@@ -138,7 +138,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({ item }) => {
           {/* Add tezina field to printout in tons */}
           {item.tezina !== undefined && (
             <div className="print-info-item">
-              <span className="print-label">TeÅ¾ina:</span>
+              <span className="print-label">Težina:</span>
               <span className="print-value">{(item.tezina / 1000).toFixed(3)} t</span>
             </div>
           )}
@@ -234,7 +234,7 @@ const PrintableItem: React.FC<PrintableItemProps> = ({ item }) => {
             timeZone: 'Europe/Zagreb',
           })}
         </p>
-        <p>Â© Osijek-Koteks d.d. Sva prava pridrÅ¾ana.</p>
+        <p>Â© Osijek-Koteks d.d. Sva prava pridržana.</p>
       </div>
     </div>
   );
