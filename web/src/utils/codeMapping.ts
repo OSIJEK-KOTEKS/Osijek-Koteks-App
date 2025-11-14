@@ -60,6 +60,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25054': 'Nexe cementara',
   '25057': 'Bistrička Ulica',
   '25062': 'Pevex Đakovo',
+  '25066': 'Izgradnja pristupne ceste za Centar za starije Našice',
   '25067': 'Copacabana Osijek',
   '25074': 'Kaufland Osijek',
   '25075': 'Dunavska Ulica Osijek',
