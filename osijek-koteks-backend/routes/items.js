@@ -114,7 +114,7 @@ const upload = multer({
   },
 });
 
-// Get unique codes
+// Get unique codes here
 router.get('/codes', auth, async (req, res) => {
   try {
     // Apply the same filtering logic as the main items route
