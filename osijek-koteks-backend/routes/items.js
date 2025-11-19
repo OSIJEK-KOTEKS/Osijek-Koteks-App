@@ -127,17 +127,15 @@ router.get('/codes', auth, async (req, res) => {
       // Admin with codes assigned: filter by those codes
       query.code = { $in: req.user.codes };
     }
-    // If admin with no codes assigned (empty array or null), show all codes (no filtering)
+    // If admin with no codes assigned, show all codes (no extra filtering)
 
     const uniqueCodes = await Item.distinct('code', query);
 
     console.log('Codes query:', query);
     console.log('Found unique codes:', uniqueCodes.length);
-    
-    // Filter out code 24042 from the selection menu
-    const filteredCodes = uniqueCodes.filter(code => code !== '24042');
 
-    res.json(filteredCodes.sort());
+    // 24042 is INCLUDED again here
+    res.json(uniqueCodes.sort());
   } catch (err) {
     console.error('Error fetching unique codes:', err);
     res.status(500).json({ message: 'Server error' });
