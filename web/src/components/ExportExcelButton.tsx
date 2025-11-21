@@ -155,7 +155,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
           ? `${item.creationDate} ${item.creationTime}`
           : item.creationDate,
         Status: item.approvalStatus,
-        'Plaćeno': item.isPaid ? 'Da' : 'Ne',
+        'Plaćen Prijevoz': item.isPaid ? 'Da' : 'Ne',
         'U tranzitu': item.in_transit ? 'Da' : 'Ne',
         Odobrio: item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-',
         'Datum odobrenja': item.approvalDate || '-',

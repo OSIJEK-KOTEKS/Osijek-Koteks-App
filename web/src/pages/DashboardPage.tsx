@@ -887,7 +887,7 @@ const Dashboard: React.FC = () => {
       filters.push('Samo u tranzitu');
     }
     if (paidStatus === 'paid') {
-      filters.push('Plaćeno');
+      filters.push('Plaćen');
     } else if (paidStatus === 'unpaid') {
       filters.push('Neplaćeno');
     }
@@ -1163,7 +1163,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Show in transit badge */}
                     {item.in_transit && <TransitBadge>🚛 U tranzitu</TransitBadge>}
-                    {item.isPaid && <PaidBadge>Plaćeno</PaidBadge>}
+                    {item.isPaid && <PaidBadge>Plaćen Prijevoz</PaidBadge>}
                   </div>
 
                   {item.approvalStatus === 'odobreno' && item.approvedBy && (
@@ -1176,7 +1176,7 @@ const Dashboard: React.FC = () => {
 
                   {item.isPaid && (
                     <ItemDetails>
-                      <strong>Plaćeno:</strong> {item.paidAt ? safeParseDate(item.paidAt) : 'Nepoznato'}
+                      <strong>Plaćen Prijevoz:</strong> {item.paidAt ? safeParseDate(item.paidAt) : 'Nepoznato'}
                       {item.paidBy && (
                         <>
                           {' '}| {item.paidBy.firstName} {item.paidBy.lastName}

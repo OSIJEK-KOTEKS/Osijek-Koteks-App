@@ -222,7 +222,7 @@ import React, { useCallback, useRef, useState } from 'react';
               <th>Razlika u vaganju (%)</th>
               <th>Datum kreiranja</th>
               <th>Status</th>
-              <th>Plaćeno</th>
+              <th>Plaćen Prijevoz</th>
               <th>Odobrio</th>
               <th>Datum odobrenja</th>
             </tr>

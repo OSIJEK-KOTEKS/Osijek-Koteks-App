@@ -476,7 +476,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               disabled={searchMode}
               $disabled={searchMode}>
               <option value="all">Sve stavke</option>
-              <option value="paid">Plaćeno</option>
+              <option value="paid">Plaćen Prijevoz</option>
               <option value="unpaid">Neplaćeno</option>
             </Select>
           </FilterInputContainer>
