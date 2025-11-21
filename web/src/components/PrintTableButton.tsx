@@ -212,43 +212,45 @@ import React, { useCallback, useRef, useState } from 'react';
                                                                                                                                                                                                                                                                        
         <table className="print-table">                                                                                                                                                                                                                                
           <thead>                                                                                                                                                                                                                                                      
-            <tr>                                                                                                                                                                                                                                                       
-              <th>Broj otpremnice</th>                                                                                                                                                                                                                                 
-              <th>Radni nalog</th>                                                                                                                                                                                                                                     
-              <th>Dobavljač</th>                                                                                                                                                                                                                                      
-              <th>Prijevoznik</th>                                                                                                                                                                                                                                     
-              <th>Registracija</th>                                                                                                                                                                                                                                    
-              <th>Težina (t)</th>                                                                                                                                                                                                                                     
-              <th>Razlika u vaganju (%)</th>                                                                                                                                                                                                                           
-              <th>Datum kreiranja</th>                                                                                                                                                                                                                                 
-              <th>Status</th>                                                                                                                                                                                                                                          
-              <th>Odobrio</th>                                                                                                                                                                                                                                         
-              <th>Datum odobrenja</th>                                                                                                                                                                                                                                 
-            </tr>                                                                                                                                                                                                                                                      
-          </thead>                                                                                                                                                                                                                                                     
-          <tbody>                                                                                                                                                                                                                                                      
+            <tr>
+              <th>Broj otpremnice</th>
+              <th>Radni nalog</th>
+              <th>Dobavljač</th>
+              <th>Prijevoznik</th>
+              <th>Registracija</th>
+              <th>Težina (t)</th>
+              <th>Razlika u vaganju (%)</th>
+              <th>Datum kreiranja</th>
+              <th>Status</th>
+              <th>Plaćeno</th>
+              <th>Odobrio</th>
+              <th>Datum odobrenja</th>
+            </tr>
+          </thead>
+          <tbody>
             {items.map((item: Item, index: number) => (                                                                                                                                                                                                                
               <tr key={item._id}>                                                                                                                                                                                                                                      
                 <td>{item.title}</td>                                                                                                                                                                                                                                  
                 <td>{getFormattedCode(item.code)}</td>                                                                                                                                                                                                                 
                 <td>{getDisplayNameForUser(item)}</td>                                                                                                                                                                                                                 
-                <td>{item.prijevoznik || '-'}</td>                                                                                                                                                                                                                     
-                <td>{item.registracija || '-'}</td>                                                                                                                                                                                                                    
-                <td>{item.tezina !== undefined ? (item.tezina / 1000).toFixed(3) : '-'}</td>                                                                                                                                                                           
-                <td>                                                                                                                                                                                                                                                   
-                  {item.approvalStatus === 'odobreno' && item.neto !== undefined                                                                                                                                                                                       
+                <td>{item.prijevoznik || '-'}</td>
+                <td>{item.registracija || '-'}</td>
+                <td>{item.tezina !== undefined ? (item.tezina / 1000).toFixed(3) : '-'}</td>
+                <td>
+                  {item.approvalStatus === 'odobreno' && item.neto !== undefined
                     ? item.neto > 1000                                                                                                                                                                                                                                 
                       ? '/'                                                                                                                                                                                                                                            
                       : `${item.neto}%`                                                                                                                                                                                                                                
                     : '-'}                                                                                                                                                                                                                                             
-                </td>                                                                                                                                                                                                                                                  
-                <td>{formatDateAndTime(item.creationDate, item.creationTime)}</td>                                                                                                                                                                                     
-                <td>{item.approvalStatus}</td>                                                                                                                                                                                                                         
-                <td>                                                                                                                                                                                                                                                   
-                  {item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-'}                                                                                                                                                                 
-                </td>                                                                                                                                                                                                                                                  
-                <td>{formatApprovalDate(item.approvalDate)}</td>                                                                                                                                                                                                       
-              </tr>                                                                                                                                                                                                                                                    
+                </td>
+                <td>{formatDateAndTime(item.creationDate, item.creationTime)}</td>
+                <td>{item.approvalStatus}</td>
+                <td>{item.isPaid ? 'Da' : 'Ne'}</td>
+                <td>
+                  {item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-'}
+                </td>
+                <td>{formatApprovalDate(item.approvalDate)}</td>
+              </tr>
             ))}                                                                                                                                                                                                                                                        
           </tbody>                                                                                                                                                                                                                                                     
         </table>                                                                                                                                                                                                                                                       
@@ -302,47 +304,49 @@ import React, { useCallback, useRef, useState } from 'react';
             }                                                                                                                                                                                                                                                          
                                                                                                                                                                                                                                                                        
             .print-table {
-            width: 100%;                                                                                                                                                                                                                                  
-            border-collapse: collapse;                                                                                                                                                                                                                    
-            margin-top: 20px;                                                                                                                                                                                                                             
-            font-size: 9px;        /* was 11px */                                                                                                                                                                                                         
-          }                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                          
-          .print-table th,                                                                                                                                                                                                                                
-          .print-table td {                                                                                                                                                                                                                               
-            border: 1px solid #000;                                                                                                                                                                                                                       
-            padding: 2px 3px;      /* was 4px 6px */                                                                                                                                                                                                      
-            text-align: left;                                                                                                                                                                                                                             
-            line-height: 1.1;      /* add this to tighten rows */                                                                                                                                                                                         
-          }                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                          
-          .print-table th {                                                                                                                                                                                                                               
-            background-color: #f0f0f0;                                                                                                                                                                                                                    
-            font-size: 9px;        /* ensure header not bigger */                                                                                                                                                                                         
-            font-weight: 600;                                                                                                                                                                                                                             
-          }                                                                                                                                                                                                                                                                                      
-            .print-table th:nth-child(1),                                                                                                                                                                                                                              
-            .print-table td:nth-child(1) { width: 10%; } /* Broj otpremnice */                                                                                                                                                                                         
-            .print-table th:nth-child(2),                                                                                                                                                                                                                              
-            .print-table td:nth-child(2) { width: 10%; } /* Radni nalog */                                                                                                                                                                                             
-            .print-table th:nth-child(3),                                                                                                                                                                                                                              
-            .print-table td:nth-child(3) { width: 12%; } /* DobavljaA,A? */                                                                                                                                                                                            
-            .print-table th:nth-child(4),                                                                                                                                                                                                                              
-            .print-table td:nth-child(4) { width: 10%; } /* Prijevoznik */                                                                                                                                                                                             
-            .print-table th:nth-child(5),                                                                                                                                                                                                                              
-            .print-table td:nth-child(5) { width: 9%; }  /* Registracija */                                                                                                                                                                                            
-            .print-table th:nth-child(6),                                                                                                                                                                                                                              
-            .print-table td:nth-child(6) { width: 7%; }  /* TeA.A_ina */                                                                                                                                                                                               
-            .print-table th:nth-child(7),                                                                                                                                                                                                                              
-            .print-table td:nth-child(7) { width: 8%; }  /* Razlika u vaganju */                                                                                                                                                                                       
-            .print-table th:nth-child(8),                                                                                                                                                                                                                              
-            .print-table td:nth-child(8) { width: 12%; } /* Datum kreiranja */                                                                                                                                                                                         
-            .print-table th:nth-child(9),                                                                                                                                                                                                                              
-            .print-table td:nth-child(9) { width: 8%; }  /* Status */
-            .print-table th:nth-child(10),                                                                                                                                                                                                                             
-            .print-table td:nth-child(10) { width: 8%; } /* Odobrio */                                                                                                                                                                                                 
-            .print-table th:nth-child(11),                                                                                                                                                                                                                             
-            .print-table td:nth-child(11) { width: 8%; } /* Datum odobrenja */                                                                                                                                                                                         
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+              font-size: 8px;        /* tighter text */
+            }
+
+            .print-table th,
+            .print-table td {
+              border: 1px solid #000;
+              padding: 1px 2px;      /* much tighter padding for shorter rows */
+              text-align: left;
+              line-height: 1.0;
+            }
+
+            .print-table th {
+              background-color: #f0f0f0;
+              font-size: 8px;
+              font-weight: 600;
+            }
+            .print-table th:nth-child(1),
+            .print-table td:nth-child(1) { width: 10%; } /* Broj otpremnice */
+            .print-table th:nth-child(2),
+            .print-table td:nth-child(2) { width: 10%; } /* Radni nalog */
+            .print-table th:nth-child(3),
+            .print-table td:nth-child(3) { width: 12%; } /* Dobavljač */
+            .print-table th:nth-child(4),
+            .print-table td:nth-child(4) { width: 10%; } /* Prijevoznik */
+            .print-table th:nth-child(5),
+            .print-table td:nth-child(5) { width: 9%; }  /* Registracija */
+            .print-table th:nth-child(6),
+            .print-table td:nth-child(6) { width: 7%; }  /* Težina */
+            .print-table th:nth-child(7),
+            .print-table td:nth-child(7) { width: 8%; }  /* Razlika u vaganju */
+            .print-table th:nth-child(8),
+            .print-table td:nth-child(8) { width: 11%; } /* Datum kreiranja */
+            .print-table th:nth-child(9),
+            .print-table td:nth-child(9) { width: 7%; }  /* Status */
+            .print-table th:nth-child(10),
+            .print-table td:nth-child(10) { width: 6%; } /* Plaćeno */
+            .print-table th:nth-child(11),
+            .print-table td:nth-child(11) { width: 8%; } /* Odobrio */
+            .print-table th:nth-child(12),
+            .print-table td:nth-child(12) { width: 8%; } /* Datum odobrenja */
                                                                                                                                                                                                                                                                        
             .print-footer {                                                                                                                                                                                                                                            
               margin-top: 15px;                                                                                                                                                                                                                                        

@@ -155,6 +155,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
           ? `${item.creationDate} ${item.creationTime}`
           : item.creationDate,
         Status: item.approvalStatus,
+        'Plaćeno': item.isPaid ? 'Da' : 'Ne',
         'U tranzitu': item.in_transit ? 'Da' : 'Ne',
         Odobrio: item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-',
         'Datum odobrenja': item.approvalDate || '-',
@@ -316,6 +317,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         { wch: 18 }, // Razlika u vaganju
         { wch: 20 }, // Datum kreiranja
         { wch: 12 }, // Status
+        { wch: 10 }, // Plaćeno
         { wch: 12 }, // U tranzitu
         { wch: 20 }, // Odobrio
         { wch: 15 }, // Datum odobrenja
