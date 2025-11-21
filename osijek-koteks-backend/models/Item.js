@@ -135,6 +135,19 @@ const ItemSchema = new mongoose.Schema(
         default: null,
       },
     },
+    isPaid: {
+      type: Boolean,
+      default: false,
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+    paidBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -245,6 +245,7 @@ router.get('/', auth, async (req, res) => {
       searchRegistration,
       inTransitOnly,
       createdByUser,
+      paidStatus,
     } = req.query;
 
     const page = parseInt(req.query.page) || 1;
@@ -355,6 +356,13 @@ router.get('/', auth, async (req, res) => {
       query.inTransit = true;
     }
 
+    // Paid status filtering
+    if (paidStatus === 'paid') {
+      query.isPaid = true;
+    } else if (paidStatus === 'unpaid') {
+      query.isPaid = { $ne: true }; // treats missing field as unpaid
+    }
+
     // Filter by user who created the item
     if (createdByUser) {
       if (createdByUser.includes(',')) {
@@ -398,6 +406,7 @@ router.get('/', auth, async (req, res) => {
     const items = await Item.find(query)
       .populate('createdBy', 'firstName lastName email')
       .populate('approvedBy', 'firstName lastName')
+      .populate('paidBy', 'firstName lastName email')
       .sort(sort)
       .skip(skip)
       .limit(limit);
@@ -955,6 +964,35 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     if (err.name === 'ValidationError') {
       return res.status(400).json({ message: err.message });
     }
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Mark item as paid/unpaid (admin only)
+router.patch('/:id/pay', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      console.log('Access denied - non-admin attempted to mark paid');
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+
+    const { isPaid = true } = req.body;
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    item.isPaid = !!isPaid;
+    item.paidAt = item.isPaid ? new Date() : null;
+    item.paidBy = item.isPaid ? req.user._id : null;
+
+    await item.save();
+    await item.populate('paidBy', 'firstName lastName email');
+
+    res.json(item);
+  } catch (err) {
+    console.error('Error marking item as paid:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
