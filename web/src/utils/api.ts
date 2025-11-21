@@ -309,6 +309,7 @@ export const apiService = {
       if (filters?.inTransitOnly) params.append('inTransitOnly', 'true');
       if (filters?.prijevoznik && filters.prijevoznik.trim())
         params.append('prijevoznik', filters.prijevoznik);
+      if (filters?.paidStatus) params.append('paidStatus', filters.paidStatus);
 
       // ADD ONLY THIS ONE LINE to your existing params:
       if (filters?.createdByUser && filters.createdByUser !== 'all')
@@ -477,6 +478,17 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching unique carriers:', error);
+      throw error;
+    }
+  },
+
+  markItemPaid: async (id: string, isPaid: boolean = true): Promise<Item> => {
+    try {
+      console.log('Marking item as paid:', { id, isPaid });
+      const response = await api.patch<Item>(`/api/items/${id}/pay`, { isPaid });
+      return response.data;
+    } catch (error) {
+      console.error('Error marking item as paid:', error);
       throw error;
     }
   },

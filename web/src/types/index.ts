@@ -74,6 +74,14 @@ export interface Item {
     accuracy: number;
     timestamp: Date;
   };
+  isPaid?: boolean;
+  paidAt?: string;
+  paidBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  } | null;
 }
 
 export interface ItemUser {
@@ -121,6 +129,7 @@ export interface ItemFilters {
   searchRegistration?: string;
   inTransitOnly?: boolean;
   createdByUser?: string;
+  paidStatus?: 'paid' | 'unpaid';
 }
 
 export interface DateRange {
@@ -199,4 +208,5 @@ export interface ApiService {
     inTransit: boolean,
     neto?: number
   ) => Promise<Item>;
+  markItemPaid: (id: string, isPaid?: boolean) => Promise<Item>;
 }

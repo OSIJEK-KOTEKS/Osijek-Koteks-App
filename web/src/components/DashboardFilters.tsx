@@ -114,6 +114,8 @@ interface DashboardFiltersProps {
   selectedUser: string;
   onUserChange: (user: string) => void;
   availableUsers: ItemUser[];
+  paidStatus: 'all' | 'paid' | 'unpaid';
+  onPaidStatusChange: (status: 'all' | 'paid' | 'unpaid') => void;
   sortOrder: string;
   onSortOrderChange: (order: string) => void;
   searchMode: boolean;
@@ -143,6 +145,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedUser,
   onUserChange,
   availableUsers,
+  paidStatus,
+  onPaidStatusChange,
   sortOrder,
   onSortOrderChange,
   searchMode,
@@ -456,6 +460,24 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   {option.label}
                 </option>
               ))}
+            </Select>
+          </FilterInputContainer>
+        </FilterSection>
+
+        <FilterSection>
+          <FilterLabel htmlFor="paid-select" $disabled={searchMode}>
+            Plaćen status
+          </FilterLabel>
+          <FilterInputContainer>
+            <Select
+              id="paid-select"
+              value={paidStatus}
+              onChange={e => onPaidStatusChange(e.target.value as 'all' | 'paid' | 'unpaid')}
+              disabled={searchMode}
+              $disabled={searchMode}>
+              <option value="all">Sve stavke</option>
+              <option value="paid">Plaćeno</option>
+              <option value="unpaid">Neplaćeno</option>
             </Select>
           </FilterInputContainer>
         </FilterSection>

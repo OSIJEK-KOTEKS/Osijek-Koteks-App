@@ -91,6 +91,18 @@ const TransitBadge = styled.span`
   margin-left: 10px;
 `;
 
+const PaidBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  margin-top: 8px;
+  margin-left: 10px;
+  border: 1px solid #a5d6a7;
+`;
+
 const UserInfo = styled.div`
   margin-bottom: ${({ theme }) => theme.spacing.medium};
   color: ${({ theme }) => theme.colors.text};
@@ -247,6 +259,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [inTransitOnly, setInTransitOnly] = useState(false);
+  const [paidStatus, setPaidStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -447,10 +460,12 @@ const Dashboard: React.FC = () => {
           // Search mode filters
           filters = {
             searchTitle: searchValue.trim(),
+            ...(paidStatus !== 'all' && { paidStatus }),
           };
         } else if (searchMode && registrationSearchValue.trim()) {
           filters = {
             searchRegistration: registrationSearchValue.trim(),
+            ...(paidStatus !== 'all' && { paidStatus }),
           };
         } else {
           // Normal mode filters with date range
@@ -470,6 +485,7 @@ const Dashboard: React.FC = () => {
             ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
             sortOrder,
             ...(inTransitOnly && { inTransitOnly: true }),
+            ...(paidStatus !== 'all' && { paidStatus }),
           };
         }
 
@@ -520,6 +536,7 @@ const Dashboard: React.FC = () => {
       selectedUser,
       sortOrder,
       inTransitOnly,
+      paidStatus,
       searchMode,
       searchValue,
       registrationSearchValue,
@@ -633,6 +650,10 @@ const Dashboard: React.FC = () => {
     // handleFilterChange will be triggered by the useEffect
   }, []);
 
+  const handlePaidStatusChange = useCallback((status: 'all' | 'paid' | 'unpaid') => {
+    setPaidStatus(status);
+  }, []);
+
   // Effects with proper dependencies
   useEffect(() => {
     if (!searchMode) {
@@ -646,6 +667,7 @@ const Dashboard: React.FC = () => {
     selectedUser,
     sortOrder,
     inTransitOnly,
+    paidStatus,
     searchMode, // Added searchMode to dependencies
     handleFilterChange,
   ]);
@@ -776,6 +798,18 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleMarkPaid = async (itemId: string, nextStatus: boolean) => {
+    try {
+      const updated = await apiService.markItemPaid(itemId, nextStatus);
+      setItems(prev =>
+        prev.map(it => (it._id === itemId ? { ...it, ...updated } : it))
+      );
+    } catch (error) {
+      console.error('Error marking item as paid:', error);
+      setError('Greška pri označavanju plaćanja');
+    }
+  };
+
   const handleApprovalSuccess = useCallback(() => {
     handleRefresh();
   }, [handleRefresh]);
@@ -787,7 +821,8 @@ const Dashboard: React.FC = () => {
     selectedCode: string,
     selectedPrijevoznik: string,
     selectedUser: string,
-    inTransitOnly: boolean
+    inTransitOnly: boolean,
+    paidStatus: 'all' | 'paid' | 'unpaid'
   ) => {
     const isSameDay = startDate.toDateString() === endDate.toDateString();
 
@@ -851,6 +886,11 @@ const Dashboard: React.FC = () => {
     if (inTransitOnly) {
       filters.push('Samo u tranzitu');
     }
+    if (paidStatus === 'paid') {
+      filters.push('Plaćeno');
+    } else if (paidStatus === 'unpaid') {
+      filters.push('Neplaćeno');
+    }
 
     return filters.length > 0 ? `${dateRangeText} (${filters.join(', ')})` : dateRangeText;
   };
@@ -866,8 +906,11 @@ const Dashboard: React.FC = () => {
       if (searchMode && (searchValue || registrationSearchValue)) {
         filters =
           searchType === 'title'
-            ? { searchTitle: searchValue }
-            : { searchRegistration: registrationSearchValue };
+            ? { searchTitle: searchValue, ...(paidStatus !== 'all' && { paidStatus }) }
+            : {
+                searchRegistration: registrationSearchValue,
+                ...(paidStatus !== 'all' && { paidStatus }),
+              };
       } else {
         const startOfDay = new Date(startDate);
         startOfDay.setHours(0, 0, 0, 0);
@@ -885,6 +928,7 @@ const Dashboard: React.FC = () => {
           ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
           sortOrder,
           ...(inTransitOnly && { inTransitOnly: true }),
+          ...(paidStatus !== 'all' && { paidStatus }),
         };
       }
 
@@ -933,7 +977,8 @@ const Dashboard: React.FC = () => {
               selectedCode,
               selectedPrijevoznik,
               selectedUser,
-              inTransitOnly
+              inTransitOnly,
+              paidStatus
             )}
             selectedCode={selectedCode}
             inTransitOnly={inTransitOnly}
@@ -951,7 +996,8 @@ const Dashboard: React.FC = () => {
               selectedCode,
               selectedPrijevoznik,
               selectedUser,
-              inTransitOnly
+              inTransitOnly,
+              paidStatus
             )}
           />
           {/* Document creation buttons */}
@@ -1000,6 +1046,8 @@ const Dashboard: React.FC = () => {
           selectedUser={selectedUser}
           onUserChange={handleUserChange}
           availableUsers={availableUsers}
+          paidStatus={paidStatus}
+          onPaidStatusChange={handlePaidStatusChange}
           sortOrder={sortOrder}
           onSortOrderChange={setSortOrder}
           searchValue={searchValue}
@@ -1115,6 +1163,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Show in transit badge */}
                     {item.in_transit && <TransitBadge>🚛 U tranzitu</TransitBadge>}
+                    {item.isPaid && <PaidBadge>Plaćeno</PaidBadge>}
                   </div>
 
                   {item.approvalStatus === 'odobreno' && item.approvedBy && (
@@ -1122,6 +1171,17 @@ const Dashboard: React.FC = () => {
                       <strong>Odobrio:</strong> {item.approvedBy.firstName}{' '}
                       {item.approvedBy.lastName}
                       {item.approvalDate && <> ({safeParseDate(item.approvalDate)})</>}
+                    </ItemDetails>
+                  )}
+
+                  {item.isPaid && (
+                    <ItemDetails>
+                      <strong>Plaćeno:</strong> {item.paidAt ? safeParseDate(item.paidAt) : 'Nepoznato'}
+                      {item.paidBy && (
+                        <>
+                          {' '}| {item.paidBy.firstName} {item.paidBy.lastName}
+                        </>
+                      )}
                     </ItemDetails>
                   )}
 
@@ -1223,7 +1283,17 @@ const Dashboard: React.FC = () => {
 
                     {/* Delete button for admin */}
                     {user?.role === 'admin' && (
-                      <DeleteButton onClick={() => handleDelete(item._id)}>Obriši</DeleteButton>
+                      <>
+                        <ActionButton
+                          onClick={() => handleMarkPaid(item._id, !item.isPaid)}
+                          style={{
+                            backgroundColor: item.isPaid ? '#f3e5f5' : '#e8f5e9',
+                            color: item.isPaid ? '#6a1b9a' : '#1b5e20',
+                          }}>
+                          {item.isPaid ? 'Označi kao neplaćeno' : 'Označi kao plaćeno'}
+                        </ActionButton>
+                        <DeleteButton onClick={() => handleDelete(item._id)}>Obriši</DeleteButton>
+                      </>
                     )}
                   </ButtonGroup>
                 </ItemCard>
