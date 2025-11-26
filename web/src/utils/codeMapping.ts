@@ -24,6 +24,7 @@ export const codeToTextMapping: Record<string, string> = {
   '24001': 'Izgradnja propusta Nemetin',
   '24005': 'Rest. toka Dunava - Zmajevički Dunavac',
   '24008': 'Prist. cesta i most Vuka',
+  '24009': 'Nuštar - Vukovar',
   '24010': 'Obilaznica Vukovar',
   '24030': 'Radovi Na. Brez. i Ordanja',
   '24042': 'HEY PARK VK',
