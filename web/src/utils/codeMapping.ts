@@ -31,6 +31,7 @@ export const codeToTextMapping: Record<string, string> = {
   '24044': 'Našice - Dom za starije',
   '24050': 'Rek. kan. mreže Nemetin',
   '24051': 'Građ. obrt. radovi - tvor cem. Našice',
+  '24057': 'Trnava',
   '24058': 'Dom za starije Vrpolje',
   '24060': 'Našice - Rad. na san. kanalali.',
   '24065': 'REKON. DC ERDUT - GP DALJ',
