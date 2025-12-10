@@ -9,6 +9,7 @@ export interface User {
   isVerified: boolean;
   phoneNumber?: string;
   hasFullAccess: boolean;
+  canAccessRacuni?: boolean;
 }
 
 export interface RegistrationData {
@@ -20,6 +21,7 @@ export interface RegistrationData {
   role: 'admin' | 'user' | 'bot' | 'pc-user';
   codes: string[];
   hasFullAccess?: boolean;
+  canAccessRacuni?: boolean;
 }
 
 export interface Item {

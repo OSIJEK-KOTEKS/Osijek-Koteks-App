@@ -6,6 +6,7 @@ import styled from 'styled-components';
 interface PrivateRouteProps {
   children: React.ReactNode;
   adminOnly?: boolean;
+  requiresRacuniAccess?: boolean;
 }
 
 const LoadingContainer = styled.div`
@@ -17,7 +18,11 @@ const LoadingContainer = styled.div`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, adminOnly = false }) => {
+const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  children,
+  adminOnly = false,
+  requiresRacuniAccess = false,
+}) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
@@ -30,6 +35,11 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, adminOnly = false
   }
 
   if (adminOnly && user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const hasRacuniAccess = user.role === 'admin' || user.canAccessRacuni;
+  if (requiresRacuniAccess && !hasRacuniAccess) {
     return <Navigate to="/dashboard" replace />;
   }
 

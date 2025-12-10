@@ -300,6 +300,7 @@ const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
+  const canAccessRacuni = user?.role === 'admin' || user?.canAccessRacuni;
 
   const getDisplayNameForUser = (item: Item): string => {
     if (!item.createdBy) return 'Nepoznato';
@@ -758,6 +759,11 @@ const Dashboard: React.FC = () => {
   }, [fetchItems]);
 
   // Other handlers
+  const handleNavigateToRacuni = () => {
+    if (!canAccessRacuni) return;
+    navigate('/racuni');
+  };
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -1020,6 +1026,7 @@ const Dashboard: React.FC = () => {
             onPrintAll={fetchAllItemsForPrinting}
           />
 
+          {canAccessRacuni && <S.Button onClick={handleNavigateToRacuni}>Racuni</S.Button>}
           {/* Logout button */}
           <S.Button onClick={handleLogout}>Odjava</S.Button>
         </HeaderActions>

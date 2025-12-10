@@ -204,12 +204,14 @@ export const apiService = {
       const response = await api.post<User>('/api/users', {
         ...userData,
         hasFullAccess: userData.hasFullAccess || false,
+        canAccessRacuni: userData.canAccessRacuni || false,
       });
 
       console.log('User creation successful:', {
         userId: response.data._id,
         email: response.data.email,
         hasFullAccess: response.data.hasFullAccess,
+        canAccessRacuni: response.data.canAccessRacuni,
       });
 
       return response.data;
@@ -224,16 +226,19 @@ export const apiService = {
       console.log('Updating user:', id, {
         ...userData,
         hasFullAccess: userData.hasFullAccess || false,
+        canAccessRacuni: userData.canAccessRacuni || false,
       });
 
       const response = await api.patch<User>(`/api/users/${id}`, {
         ...userData,
         hasFullAccess: userData.hasFullAccess || false,
+        canAccessRacuni: userData.canAccessRacuni || false,
       });
 
       console.log('User update successful:', {
         userId: response.data._id,
         hasFullAccess: response.data.hasFullAccess,
+        canAccessRacuni: response.data.canAccessRacuni,
       });
 
       return response.data;

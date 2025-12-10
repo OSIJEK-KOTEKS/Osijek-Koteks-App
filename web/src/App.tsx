@@ -5,6 +5,7 @@ import PrivateRoute from './components/PrivateRoute';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
+import RacuniPage from './pages/RacuniPage';
 
 const App: React.FC = () => {
   return (
@@ -25,6 +26,14 @@ const App: React.FC = () => {
             element={
               <PrivateRoute adminOnly>
                 <UserManagementPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/racuni"
+            element={
+              <PrivateRoute requiresRacuniAccess>
+                <RacuniPage />
               </PrivateRoute>
             }
           />

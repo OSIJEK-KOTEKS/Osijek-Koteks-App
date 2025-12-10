@@ -208,6 +208,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         codes: [...user.codes],
         isVerified: user.isVerified,
         hasFullAccess: user.hasFullAccess || false,
+        canAccessRacuni: user.canAccessRacuni ?? false,
       });
       // Reset other state values
       setNewCode('');
@@ -232,6 +233,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     setFormData(prev => ({
       ...prev,
       hasFullAccess: checked,
+    }));
+  };
+
+  const handleRacuniAccessChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      canAccessRacuni: checked,
     }));
   };
 
@@ -374,6 +382,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
             </FormGroup>
           )}
+
+          <FormGroup>
+            <Label>Pristup računima</Label>
+            <CheckboxContainer>
+              <input
+                type="checkbox"
+                checked={formData.canAccessRacuni || false}
+                onChange={e => handleRacuniAccessChange(e.target.checked)}
+                id="canAccessRacuni"
+              />
+              <label htmlFor="canAccessRacuni">Omogući pristup stranici Računi</label>
+            </CheckboxContainer>
+          </FormGroup>
 
           <FormGroup>
             <Label>Radni nalozi</Label>
