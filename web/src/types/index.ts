@@ -134,6 +134,21 @@ export interface ItemFilters {
   paidStatus?: 'paid' | 'unpaid';
 }
 
+export interface Bill {
+  _id: string;
+  title: string;
+  description?: string;
+  items: Item[];
+  createdBy: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DateRange {
   startDate: Date;
   endDate: Date;
@@ -183,6 +198,8 @@ export interface ApiService {
   createUser: (userData: RegistrationData) => Promise<User>;
   updateUser: (id: string, userData: Partial<Omit<User, '_id'>>) => Promise<User>;
   updateUserPassword: (userId: string, newPassword: string) => Promise<User>;
+  getBills: () => Promise<Bill[]>;
+  createBill: (billData: { title: string; description?: string; itemIds: string[] }) => Promise<Bill>;
 
   // Item methods
   getItems: (

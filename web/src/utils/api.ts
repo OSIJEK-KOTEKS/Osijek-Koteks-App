@@ -10,6 +10,7 @@ import {
   PaginatedResponse,
   ApiService,
   ItemUser,
+  Bill,
 } from '../types';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
@@ -168,6 +169,27 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching user:', error);
+      throw error;
+    }
+  },
+
+  // Bill methods
+  getBills: async (): Promise<Bill[]> => {
+    try {
+      const response = await api.get<Bill[]>('/api/bills');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching bills:', error);
+      throw error;
+    }
+  },
+
+  createBill: async (billData: { title: string; description?: string; itemIds: string[] }): Promise<Bill> => {
+    try {
+      const response = await api.post<Bill>('/api/bills', billData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating bill:', error);
       throw error;
     }
   },

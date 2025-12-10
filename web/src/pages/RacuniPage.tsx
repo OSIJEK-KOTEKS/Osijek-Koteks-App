@@ -1,9 +1,11 @@
-import React from 'react';
-import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
-import * as S from '../components/styled/Common';
-import Logo from '../components/Logo';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState } from "react";
+import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
+import * as S from "../components/styled/Common";
+import Logo from "../components/Logo";
+import { useAuth } from "../contexts/AuthContext";
+import { apiService } from "../utils/api";
+import { Bill, Item } from "../types";
 
 const Header = styled.div`
   display: flex;
@@ -27,12 +29,15 @@ const HeaderActions = styled.div`
   & button {
     padding: 0.638rem 0.85rem !important;
     font-size: 0.935rem !important;
+    width: auto;
+    min-width: 0;
   }
 
-  /* For buttons that specifically have the S.Button styling */
   & > ${S.Button}, & ${S.Button} {
     padding: 0.638rem 0.85rem !important;
     font-size: 0.935rem !important;
+    width: auto;
+    min-width: 0;
   }
 `;
 
@@ -51,21 +56,180 @@ const EmptyMessage = styled.div`
   box-shadow: ${({ theme }) => theme.shadows.main};
 `;
 
+const ContentGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: ${({ theme }) => theme.spacing.large};
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Card = styled.div`
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
+  padding: ${({ theme }) => theme.spacing.large};
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.medium};
+`;
+
+const SectionTitle = styled.h3`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.medium};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  font-size: 1rem;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.medium};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  font-size: 1rem;
+  min-height: 100px;
+  resize: vertical;
+`;
+
+const ItemsList = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: ${({ theme }) => theme.spacing.small};
+  max-height: 280px;
+  overflow: auto;
+  padding: ${({ theme }) => theme.spacing.small};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.white};
+`;
+
+const ItemRow = styled.label`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.small};
+  align-items: flex-start;
+  padding: ${({ theme }) => theme.spacing.small};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.white};
+`;
+
+const BillList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.small};
+`;
+
+const BillCard = styled.div`
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  padding: ${({ theme }) => theme.spacing.medium};
+  background: ${({ theme }) => theme.colors.white};
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.small};
+`;
+
+const Muted = styled.span`
+  color: ${({ theme }) => theme.colors.text};
+  opacity: 0.8;
+`;
+
+const Chip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.small};
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.gray};
+  font-size: 0.85rem;
+`;
+
 const RacuniPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const [items, setItems] = useState<Item[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate('/login');
+      navigate("/login");
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error("Logout error:", err);
     }
   };
 
   const handleNavigateToDashboard = () => {
-    navigate('/dashboard');
+    navigate("/dashboard");
+  };
+
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds(prev =>
+      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [itemsResponse, billsResponse] = await Promise.all([
+        apiService.getItems(1, 100),
+        apiService.getBills(),
+      ]);
+      setItems(itemsResponse.items);
+      setBills(billsResponse);
+    } catch (err) {
+      console.error("Error loading bills:", err);
+      setError("Neuspje?no u?itavanje ra?una ili dokumenata.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleCreateBill = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || selectedItemIds.length === 0) {
+      setError("Unesite naslov i odaberite barem jedan dokument.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const newBill = await apiService.createBill({
+        title: title.trim(),
+        description: description.trim(),
+        itemIds: selectedItemIds,
+      });
+      setBills(prev => [newBill, ...prev]);
+      setTitle("");
+      setDescription("");
+      setSelectedItemIds([]);
+    } catch (err) {
+      console.error("Error creating bill:", err);
+      setError("Neuspje?no spremanje ra?una.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -75,13 +239,92 @@ const RacuniPage: React.FC = () => {
           <Logo />
         </HeaderLeft>
         <HeaderActions>
-          <S.Button onClick={handleNavigateToDashboard}>Početna</S.Button>
+          <S.Button onClick={handleNavigateToDashboard}>Po?etna</S.Button>
           <S.Button onClick={handleLogout}>Odjava</S.Button>
         </HeaderActions>
       </Header>
 
       <DashboardContainer>
-        <EmptyMessage>Ovdje će biti prikaz računa.</EmptyMessage>
+        <ContentGrid>
+          <Card>
+            <SectionTitle>Kreiraj ra?un</SectionTitle>
+            <form onSubmit={handleCreateBill}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="Naslov ra?una"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <TextArea
+                    placeholder="Opis (opcionalno)"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Muted>Dodajte dokumente na ra?un</Muted>
+                  <ItemsList>
+                    {items.length === 0 && <Muted>Nema dostupnih dokumenata.</Muted>}
+                    {items.map(item => (
+                      <ItemRow key={item._id}>
+                        <input
+                          type="checkbox"
+                          checked={selectedItemIds.includes(item._id)}
+                          onChange={() => toggleItemSelection(item._id)}
+                        />
+                        <div>
+                          <div>{item.title}</div>
+                          <Muted>RN: {item.code}</Muted>
+                        </div>
+                      </ItemRow>
+                    ))}
+                  </ItemsList>
+                </div>
+                {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
+                <S.Button type="submit" disabled={submitting}>
+                  {submitting ? "Spremanje..." : "Spremi ra?un"}
+                </S.Button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <SectionTitle>Ra?uni</SectionTitle>
+            {loading ? (
+              <Muted>U?itavanje...</Muted>
+            ) : bills.length === 0 ? (
+              <EmptyMessage>Nema kreiranih ra?una.</EmptyMessage>
+            ) : (
+              <BillList>
+                {bills.map(bill => (
+                  <BillCard key={bill._id}>
+                    <div>
+                      <strong>{bill.title}</strong>
+                      {bill.description && <div>{bill.description}</div>}
+                    </div>
+                    <div>
+                      <Muted>Prilo?eni dokumenti:</Muted>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: 6 }}>
+                        {bill.items.map(item => (
+                          <Chip key={item._id}>
+                            {item.title} ({item.code})
+                          </Chip>
+                        ))}
+                      </div>
+                    </div>
+                    <Muted>
+                      Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
+                    </Muted>
+                  </BillCard>
+                ))}
+              </BillList>
+            )}
+          </Card>
+        </ContentGrid>
       </DashboardContainer>
     </S.PageContainer>
   );
