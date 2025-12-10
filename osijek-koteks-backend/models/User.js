@@ -26,6 +26,7 @@ const UserSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   phoneNumber: { type: String },
   hasFullAccess: { type: Boolean, default: false },
+  canAccessRacuni: { type: Boolean, default: false },
 });
 
 // Hash the password before saving

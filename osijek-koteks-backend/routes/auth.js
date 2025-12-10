@@ -8,7 +8,8 @@ router.post('/register', async (req, res) => {
   try {
     console.log('Registration attempt:', req.body);
 
-    const { firstName, lastName, company, email, password, codes, role } = req.body;
+    const { firstName, lastName, company, email, password, codes, role, canAccessRacuni } =
+      req.body;
 
     // Check if user already  exists
     let user = await User.findOne({ email });
@@ -26,6 +27,8 @@ router.post('/register', async (req, res) => {
       codes: codes || [],
       role: role || 'user',
       isVerified: false,
+      hasFullAccess: req.body.hasFullAccess || false,
+      canAccessRacuni: canAccessRacuni || false,
     });
 
     // Save user to database
@@ -55,6 +58,8 @@ router.post('/register', async (req, res) => {
         codes: user.codes,
         role: user.role,
         isVerified: user.isVerified,
+        hasFullAccess: user.hasFullAccess,
+        canAccessRacuni: user.canAccessRacuni,
       },
     });
   } catch (error) {
@@ -115,6 +120,8 @@ router.post('/login', async (req, res) => {
         codes: user.codes,
         role: user.role,
         isVerified: user.isVerified,
+        hasFullAccess: user.hasFullAccess,
+        canAccessRacuni: user.canAccessRacuni,
       },
     });
   } catch (error) {
