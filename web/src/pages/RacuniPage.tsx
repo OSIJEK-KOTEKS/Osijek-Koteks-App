@@ -639,7 +639,6 @@ const RacuniPage: React.FC = () => {
                                     <Muted>Registracija: {item.registracija || "N/A"}</Muted>
                                     <Muted>Prijevoznik: {item.prijevoznik || "N/A"}</Muted>
                                     <Muted>Materijal / težina: {formatMaterialWeight(item)}</Muted>
-                                    <Muted>Lokacija odobrenja: {formatApprovalLocation(item)}</Muted>
                                   </div>
                                 )}
                               </div>
