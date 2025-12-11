@@ -639,6 +639,44 @@ const RacuniPage: React.FC = () => {
                                     <Muted>Registracija: {item.registracija || "N/A"}</Muted>
                                     <Muted>Prijevoznik: {item.prijevoznik || "N/A"}</Muted>
                                     <Muted>Materijal / težina: {formatMaterialWeight(item)}</Muted>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                        <Muted>Slika (prednja):</Muted>
+                                        {item.approvalPhotoFront?.url ? (
+                                          <a
+                                            href={getImageUrl(item.approvalPhotoFront.url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            <img
+                                              src={getImageUrl(item.approvalPhotoFront.url)}
+                                              alt="Prednja slika"
+                                              style={{ maxWidth: "140px", maxHeight: "140px", objectFit: "cover" }}
+                                            />
+                                          </a>
+                                        ) : (
+                                          <Muted>N/A</Muted>
+                                        )}
+                                      </div>
+                                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                        <Muted>Slika (stražnja):</Muted>
+                                        {item.approvalPhotoBack?.url ? (
+                                          <a
+                                            href={getImageUrl(item.approvalPhotoBack.url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            <img
+                                              src={getImageUrl(item.approvalPhotoBack.url)}
+                                              alt="Stražnja slika"
+                                              style={{ maxWidth: "140px", maxHeight: "140px", objectFit: "cover" }}
+                                            />
+                                          </a>
+                                        ) : (
+                                          <Muted>N/A</Muted>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </div>

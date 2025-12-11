@@ -17,7 +17,7 @@ const baseBillQuery = () =>
   Bill.find().populate({
     path: 'items',
     select:
-      'title code pdfUrl creationDate registracija prijevoznik approvalStatus in_transit isPaid neto tezina approvalLocation approvalDocument',
+      'title code pdfUrl creationDate registracija prijevoznik approvalStatus in_transit isPaid neto tezina approvalLocation approvalDocument approvalPhotoFront approvalPhotoBack',
   });
 
 // Get bills for current user (admins see all)
