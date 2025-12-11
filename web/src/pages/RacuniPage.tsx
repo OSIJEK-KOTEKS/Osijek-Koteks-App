@@ -539,6 +539,9 @@ const RacuniPage: React.FC = () => {
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <strong>{bill.title}</strong>
                       <Muted>Dobavljač: {bill.dobavljac || "N/A"}</Muted>
+                      <Muted>
+                        Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
+                      </Muted>
                     </div>
                     {expandedBillId === bill._id && (
                       <>
@@ -574,9 +577,6 @@ const RacuniPage: React.FC = () => {
                             ))}
                           </div>
                         </div>
-                        <Muted>
-                          Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
-                        </Muted>
                       </>
                     )}
                   </BillCard>
