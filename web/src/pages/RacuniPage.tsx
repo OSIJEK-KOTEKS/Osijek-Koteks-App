@@ -152,6 +152,30 @@ const Chip = styled.span`
   font-size: 0.85rem;
 `;
 
+const StatusBadge = styled.span<{ $status: Item["approvalStatus"] }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: ${({ theme, $status }) =>
+    $status === "odobreno"
+      ? theme.colors.success
+      : $status === "odbijen"
+      ? theme.colors.error
+      : theme.colors.gray};
+  color: ${({ theme, $status }) =>
+    $status === "odobreno" || $status === "odbijen" ? theme.colors.white : theme.colors.text};
+`;
+
+const ItemContent = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: ${({ theme }) => theme.spacing.small};
+`;
+
 const RacuniPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -337,10 +361,19 @@ const RacuniPage: React.FC = () => {
                           checked={selectedItemIds.includes(item._id)}
                           onChange={() => toggleItemSelection(item._id)}
                         />
-                        <div>
-                          <div>{item.title}</div>
-                          <Muted>RN: {item.code}</Muted>
-                        </div>
+                        <ItemContent>
+                          <div>
+                            <div>{item.title}</div>
+                            <Muted>RN: {item.code}</Muted>
+                          </div>
+                          <StatusBadge $status={item.approvalStatus}>
+                            {item.approvalStatus === "odobreno"
+                              ? "Odobreno"
+                              : item.approvalStatus === "odbijen"
+                              ? "Odbijen"
+                              : "Na cekanju"}
+                          </StatusBadge>
+                        </ItemContent>
                       </ItemRow>
                     ))}
                   </ItemsList>
