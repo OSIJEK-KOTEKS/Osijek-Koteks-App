@@ -222,9 +222,15 @@ const RacuniPage: React.FC = () => {
   const [itemsLoading, setItemsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
+  const [billSearchTerm, setBillSearchTerm] = useState("");
+  const [billSearchQuery, setBillSearchQuery] = useState("");
   const selectedItems = selectedItemIds
     .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
     .filter((item): item is Item => Boolean(item));
+
+  const filteredBills = billSearchQuery
+    ? bills.filter(bill => bill.title.toLowerCase().includes(billSearchQuery.toLowerCase()))
+    : bills;
 
   const fetchItemsList = async (query?: string) => {
     const perPage = 100;
@@ -286,6 +292,10 @@ const RacuniPage: React.FC = () => {
 
   const toggleBillExpand = (id: string) => {
     setExpandedBillId(prev => (prev === id ? null : id));
+  };
+
+  const handleBillSearch = () => {
+    setBillSearchQuery(billSearchTerm.trim());
   };
 
   const handleSearch = async () => {
@@ -496,13 +506,24 @@ const RacuniPage: React.FC = () => {
 
           <Card>
             <SectionTitle>Računi</SectionTitle>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <Input
+                type="text"
+                placeholder="Pretrazi račune po naslovu"
+                value={billSearchTerm}
+                onChange={e => setBillSearchTerm(e.target.value)}
+              />
+              <S.Button type="button" onClick={handleBillSearch}>
+                Traži
+              </S.Button>
+            </div>
             {loading ? (
               <Muted>Učitavanje...</Muted>
             ) : bills.length === 0 ? (
               <EmptyMessage>Nema kreiranih računa.</EmptyMessage>
             ) : (
               <BillList>
-                {bills.map(bill => (
+                {filteredBills.map(bill => (
                   <BillCard
                     key={bill._id}
                     onClick={() => toggleBillExpand(bill._id)}
