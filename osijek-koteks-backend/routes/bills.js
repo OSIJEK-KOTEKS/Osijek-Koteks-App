@@ -16,7 +16,8 @@ const DOBAVLJACI = ['KAMEN - PSUNJ d.o.o.', 'MOLARIS d.o.o.', 'VELIČKI KAMEN d.
 const baseBillQuery = () =>
   Bill.find().populate({
     path: 'items',
-    select: 'title code pdfUrl creationDate registracija prijevoznik approvalStatus in_transit isPaid',
+    select:
+      'title code pdfUrl creationDate registracija prijevoznik approvalStatus in_transit isPaid neto tezina approvalLocation approvalDocument',
   });
 
 // Get bills for current user (admins see all)
