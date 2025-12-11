@@ -147,6 +147,7 @@ const BillCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.small};
+  cursor: pointer;
 `;
 
 const Muted = styled.span`
@@ -220,6 +221,7 @@ const RacuniPage: React.FC = () => {
   const [error, setError] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const selectedItems = selectedItemIds
     .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
     .filter((item): item is Item => Boolean(item));
@@ -280,6 +282,10 @@ const RacuniPage: React.FC = () => {
       if (prev.find(item => item._id === id)) return prev;
       return [...prev, itemToAdd];
     });
+  };
+
+  const toggleBillExpand = (id: string) => {
+    setExpandedBillId(prev => (prev === id ? null : id));
   };
 
   const handleSearch = async () => {
@@ -497,27 +503,61 @@ const RacuniPage: React.FC = () => {
             ) : (
               <BillList>
                 {bills.map(bill => (
-                  <BillCard key={bill._id}>
-                    <div>
+                  <BillCard
+                    key={bill._id}
+                    onClick={() => toggleBillExpand(bill._id)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleBillExpand(bill._id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <strong>{bill.title}</strong>
-                      <div>
-                        <Muted>Dobavljač: {bill.dobavljac || "N/A"}</Muted>
-                      </div>
-                      {bill.description && <div>{bill.description}</div>}
+                      <Muted>Dobavljač: {bill.dobavljac || "N/A"}</Muted>
                     </div>
-                    <div>
-                      <Muted>Priloženi dokumenti:</Muted>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: 6 }}>
-                        {bill.items.map(item => (
-                          <Chip key={item._id}>
-                            {item.title} ({item.code})
-                          </Chip>
-                        ))}
-                      </div>
-                    </div>
-                    <Muted>
-                      Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
-                    </Muted>
+                    {expandedBillId === bill._id && (
+                      <>
+                        {bill.description && <div>{bill.description}</div>}
+                        <div>
+                          <Muted>Priloženi dokumenti:</Muted>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: 6 }}>
+                            {bill.items.map(item => (
+                              <div
+                                key={item._id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "8px",
+                                  border: "1px solid rgba(0,0,0,0.1)",
+                                  borderRadius: "8px",
+                                  padding: "6px 8px",
+                                }}
+                              >
+                                <div>
+                                  <div>{item.title}</div>
+                                  <Muted>RN: {item.code}</Muted>
+                                </div>
+                                <StatusBadge $status={item.approvalStatus}>
+                                  {item.approvalStatus === "odobreno"
+                                    ? "Odobreno"
+                                    : item.approvalStatus === "odbijen"
+                                    ? "Odbijen"
+                                    : "Na cekanju"}
+                                </StatusBadge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <Muted>
+                          Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
+                        </Muted>
+                      </>
+                    )}
                   </BillCard>
                 ))}
               </BillList>
