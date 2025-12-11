@@ -58,7 +58,7 @@ const EmptyMessage = styled.div`
 
 const ContentGrid = styled.div`
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
   gap: ${({ theme }) => theme.spacing.large};
 
   @media (max-width: 900px) {
@@ -112,7 +112,7 @@ const ItemsList = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: ${({ theme }) => theme.spacing.small};
-  max-height: 280px;
+  max-height: 400px;
   overflow: auto;
   padding: ${({ theme }) => theme.spacing.small};
   border: 1px solid ${({ theme }) => theme.colors.gray};
@@ -134,6 +134,9 @@ const BillList = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.small};
+  max-height: 700px;
+  overflow: auto;
+  padding-right: ${({ theme }) => theme.spacing.small};
 `;
 
 const BillCard = styled.div`
@@ -159,6 +162,16 @@ const Chip = styled.span`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.gray};
   font-size: 0.85rem;
+`;
+
+const RemoveButton = styled.button`
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text};
+  padding: 0 4px;
+  line-height: 1;
 `;
 
 const StatusBadge = styled.span<{ $status: Item["approvalStatus"] }>`
@@ -201,11 +214,15 @@ const RacuniPage: React.FC = () => {
   const [description, setDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [selectedItemsCache, setSelectedItemsCache] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const selectedItems = selectedItemIds
+    .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
+    .filter((item): item is Item => Boolean(item));
 
   const fetchItemsList = async (query?: string) => {
     const perPage = 100;
@@ -252,6 +269,17 @@ const RacuniPage: React.FC = () => {
     setSelectedItemIds(prev =>
       prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
     );
+
+    setSelectedItemsCache(prev => {
+      const isSelected = selectedItemIds.includes(id);
+      if (isSelected) {
+        return prev.filter(item => item._id !== id);
+      }
+      const itemToAdd = items.find(item => item._id === id) || prev.find(item => item._id === id);
+      if (!itemToAdd) return prev;
+      if (prev.find(item => item._id === id)) return prev;
+      return [...prev, itemToAdd];
+    });
   };
 
   const handleSearch = async () => {
@@ -329,6 +357,7 @@ const RacuniPage: React.FC = () => {
       setDobavljac(DOBAVLJACI[0]);
       setDescription("");
       setSelectedItemIds([]);
+      setSelectedItemsCache([]);
     } catch (err) {
       console.error("Error creating bill:", err);
       setError("Neuspješno spremanje računa.");
@@ -401,7 +430,9 @@ const RacuniPage: React.FC = () => {
                           : "Nema dostupnih dokumenata."}
                       </Muted>
                     )}
-                    {items.map(item => (
+                    {items
+                      .filter(item => !selectedItemIds.includes(item._id))
+                      .map(item => (
                       <ItemRow key={item._id}>
                         <input
                           type="checkbox"
@@ -425,6 +456,21 @@ const RacuniPage: React.FC = () => {
                     ))}
                   </ItemsList>
                 </div>
+                {selectedItemIds.length > 0 && (
+                  <div>
+                    <Muted>Odabrani dokumenti:</Muted>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: 6 }}>
+                      {selectedItems.map(item => (
+                        <Chip key={item._id}>
+                          {item.title} ({item.code})
+                          <RemoveButton type="button" onClick={() => toggleItemSelection(item._id)}>
+                            ×
+                          </RemoveButton>
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
                 <S.Button type="submit" disabled={submitting}>
                   {submitting ? "Spremanje..." : "Spremi račun"}
