@@ -27,14 +27,14 @@ const HeaderActions = styled.div`
 
   & > button,
   & button {
-    padding: 0.638rem 0.85rem !important;
+    padding: 1.152rem 1.536rem !important;
     font-size: 0.935rem !important;
     width: auto;
     min-width: 0;
   }
 
   & > ${S.Button}, & ${S.Button} {
-    padding: 0.638rem 0.85rem !important;
+    padding: 1.152rem 1.536rem !important;
     font-size: 0.935rem !important;
     width: auto;
     min-width: 0;
