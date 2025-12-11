@@ -205,6 +205,7 @@ const RacuniPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const fetchItemsList = async (query?: string) => {
     const perPage = 100;
@@ -253,11 +254,11 @@ const RacuniPage: React.FC = () => {
     );
   };
 
-  const handleSearch = async (value: string) => {
-    setSearchTerm(value);
+  const handleSearch = async () => {
     setItemsLoading(true);
+    setSearchLoading(true);
     try {
-      const itemsResult = await fetchItemsList(value);
+      const itemsResult = await fetchItemsList(searchTerm);
       setItems(itemsResult);
       setError("");
     } catch (err) {
@@ -265,32 +266,41 @@ const RacuniPage: React.FC = () => {
       setError("Neuspjesno ucitavanje dokumenata.");
     } finally {
       setItemsLoading(false);
+      setSearchLoading(false);
     }
   };
 
 
-  const fetchData = async () => {
+  const loadBills = async () => {
     setLoading(true);
-    setItemsLoading(true);
     setError("");
     try {
-      const [itemsResult, billsResponse] = await Promise.all([
-        fetchItemsList(),
-        apiService.getBills(),
-      ]);
-      setItems(itemsResult);
+      const billsResponse = await apiService.getBills();
       setBills(billsResponse);
     } catch (err) {
       console.error("Error loading bills:", err);
-      setError("Neuspjesno ucitavanje racuna ili dokumenata.");
+      setError(prev => prev || "Neuspjesno ucitavanje racuna.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadItems = async () => {
+    setItemsLoading(true);
+    try {
+      const itemsResult = await fetchItemsList();
+      setItems(itemsResult);
+    } catch (err) {
+      console.error("Error loading items:", err);
+      setError(prev => prev || "Neuspjesno ucitavanje dokumenata.");
+    } finally {
       setItemsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    loadBills();
+    loadItems();
   }, []);
 
   const handleCreateBill = async (e: React.FormEvent) => {
@@ -371,15 +381,20 @@ const RacuniPage: React.FC = () => {
                 </div>
                 <div>
                   <Muted>Dodajte dokumente na račun</Muted>
-                  <Input
-                    type="text"
-                    placeholder="Pretrazi po broju otpremnice"
-                    value={searchTerm}
-                    onChange={e => handleSearch(e.target.value)}
-                    style={{ marginTop: 8 }}
-                  />
+                  <div style={{ display: "flex", gap: "8px", marginTop: 8 }}>
+                    <Input
+                      type="text"
+                      placeholder="Pretrazi po broju otpremnice"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    <S.Button type="button" onClick={handleSearch} disabled={searchLoading}>
+                      {searchLoading ? "Traženje..." : "Traži"}
+                    </S.Button>
+                  </div>
                   <ItemsList>
-                    {items.length === 0 && (
+                    {itemsLoading && <Muted>Učitavanje...</Muted>}
+                    {!itemsLoading && items.length === 0 && (
                       <Muted>
                         {searchTerm.trim()
                           ? "Nema dokumenata za zadani upit."
