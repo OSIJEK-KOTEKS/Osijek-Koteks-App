@@ -195,7 +195,7 @@ const RacuniPage: React.FC = () => {
       setBills(billsResponse);
     } catch (err) {
       console.error("Error loading bills:", err);
-      setError("Neuspje?no u?itavanje ra?una ili dokumenata.");
+      setError("Neuspješno učitavanje računa ili dokumenata.");
     } finally {
       setLoading(false);
     }
@@ -226,7 +226,7 @@ const RacuniPage: React.FC = () => {
       setSelectedItemIds([]);
     } catch (err) {
       console.error("Error creating bill:", err);
-      setError("Neuspje?no spremanje ra?una.");
+      setError("Neuspješno spremanje računa.");
     } finally {
       setSubmitting(false);
     }
@@ -239,7 +239,7 @@ const RacuniPage: React.FC = () => {
           <Logo />
         </HeaderLeft>
         <HeaderActions>
-          <S.Button onClick={handleNavigateToDashboard}>Po?etna</S.Button>
+          <S.Button onClick={handleNavigateToDashboard}>Početna</S.Button>
           <S.Button onClick={handleLogout}>Odjava</S.Button>
         </HeaderActions>
       </Header>
@@ -247,13 +247,13 @@ const RacuniPage: React.FC = () => {
       <DashboardContainer>
         <ContentGrid>
           <Card>
-            <SectionTitle>Kreiraj ra?un</SectionTitle>
+            <SectionTitle>Kreiraj račun</SectionTitle>
             <form onSubmit={handleCreateBill}>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div>
                   <Input
                     type="text"
-                    placeholder="Naslov ra?una"
+                    placeholder="Naslov računa"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                   />
@@ -266,7 +266,7 @@ const RacuniPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Muted>Dodajte dokumente na ra?un</Muted>
+                  <Muted>Dodajte dokumente na račun</Muted>
                   <ItemsList>
                     {items.length === 0 && <Muted>Nema dostupnih dokumenata.</Muted>}
                     {items.map(item => (
@@ -286,18 +286,18 @@ const RacuniPage: React.FC = () => {
                 </div>
                 {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
                 <S.Button type="submit" disabled={submitting}>
-                  {submitting ? "Spremanje..." : "Spremi ra?un"}
+                  {submitting ? "Spremanje..." : "Spremi račun"}
                 </S.Button>
               </div>
             </form>
           </Card>
 
           <Card>
-            <SectionTitle>Ra?uni</SectionTitle>
+            <SectionTitle>Računi</SectionTitle>
             {loading ? (
-              <Muted>U?itavanje...</Muted>
+              <Muted>Učitavanje...</Muted>
             ) : bills.length === 0 ? (
-              <EmptyMessage>Nema kreiranih ra?una.</EmptyMessage>
+              <EmptyMessage>Nema kreiranih računa.</EmptyMessage>
             ) : (
               <BillList>
                 {bills.map(bill => (
@@ -307,7 +307,7 @@ const RacuniPage: React.FC = () => {
                       {bill.description && <div>{bill.description}</div>}
                     </div>
                     <div>
-                      <Muted>Prilo?eni dokumenti:</Muted>
+                      <Muted>Priloženi dokumenti:</Muted>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: 6 }}>
                         {bill.items.map(item => (
                           <Chip key={item._id}>
