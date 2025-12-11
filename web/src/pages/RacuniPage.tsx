@@ -341,7 +341,7 @@ const RacuniPage: React.FC = () => {
                   <Muted>Dodajte dokumente na račun</Muted>
                   <Input
                     type="text"
-                    placeholder="Pretrazi dokumente po naslovu"
+                    placeholder="Pretrazi po broju otpremnice"
                     value={searchTerm}
                     onChange={e => handleSearch(e.target.value)}
                     style={{ marginTop: 8 }}
