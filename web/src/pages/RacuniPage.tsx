@@ -5,6 +5,7 @@ import * as S from "../components/styled/Common";
 import Logo from "../components/Logo";
 import { useAuth } from "../contexts/AuthContext";
 import { apiService, getImageUrl } from "../utils/api";
+import ImageViewerModal from "../components/ImageViewerModal";
 import { Bill, Item } from "../types";
 
 const Header = styled.div`
@@ -240,6 +241,8 @@ const RacuniPage: React.FC = () => {
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
   const [billSearchTerm, setBillSearchTerm] = useState("");
   const [billSearchQuery, setBillSearchQuery] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const token = localStorage.getItem("userToken") || "";
   const selectedItems = selectedItemIds
     .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
     .filter((item): item is Item => Boolean(item));
@@ -639,21 +642,45 @@ const RacuniPage: React.FC = () => {
                                     <Muted>Registracija: {item.registracija || "N/A"}</Muted>
                                     <Muted>Prijevoznik: {item.prijevoznik || "N/A"}</Muted>
                                     <Muted>Materijal / težina: {formatMaterialWeight(item)}</Muted>
+                                    {formatApprovalLocation(item) !== "N/A" && (
+                                      <S.Button
+                                        type="button"
+                                        style={{
+                                          width: "auto",
+                                          minWidth: "0",
+                                          padding: "6px 10px",
+                                          fontSize: "0.85rem",
+                                        }}
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          const lat = item.approvalLocation?.coordinates?.latitude;
+                                          const lon = item.approvalLocation?.coordinates?.longitude;
+                                          if (typeof lat === "number" && typeof lon === "number") {
+                                            window.open(`https://www.google.com/maps?q=${lat},${lon}`, "_blank");
+                                          }
+                                        }}
+                                      >
+                                        Otvori lokaciju
+                                      </S.Button>
+                                    )}
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                                       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                         <Muted>Slika (prednja):</Muted>
                                         {item.approvalPhotoFront?.url ? (
-                                          <a
-                                            href={getImageUrl(item.approvalPhotoFront.url)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                          >
-                                            <img
-                                              src={getImageUrl(item.approvalPhotoFront.url)}
-                                              alt="Prednja slika"
-                                              style={{ maxWidth: "140px", maxHeight: "140px", objectFit: "cover" }}
-                                            />
-                                          </a>
+                                          <img
+                                            src={getImageUrl(item.approvalPhotoFront.url)}
+                                            alt="Prednja slika"
+                                            style={{
+                                              maxWidth: "140px",
+                                              maxHeight: "140px",
+                                              objectFit: "cover",
+                                              cursor: "pointer",
+                                            }}
+                                            onClick={e => {
+                                              e.stopPropagation();
+                                              setSelectedImage(getImageUrl(item.approvalPhotoFront!.url!));
+                                            }}
+                                          />
                                         ) : (
                                           <Muted>N/A</Muted>
                                         )}
@@ -661,17 +688,20 @@ const RacuniPage: React.FC = () => {
                                       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                         <Muted>Slika (stražnja):</Muted>
                                         {item.approvalPhotoBack?.url ? (
-                                          <a
-                                            href={getImageUrl(item.approvalPhotoBack.url)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                          >
-                                            <img
-                                              src={getImageUrl(item.approvalPhotoBack.url)}
-                                              alt="Stražnja slika"
-                                              style={{ maxWidth: "140px", maxHeight: "140px", objectFit: "cover" }}
-                                            />
-                                          </a>
+                                          <img
+                                            src={getImageUrl(item.approvalPhotoBack.url)}
+                                            alt="Stražnja slika"
+                                            style={{
+                                              maxWidth: "140px",
+                                              maxHeight: "140px",
+                                              objectFit: "cover",
+                                              cursor: "pointer",
+                                            }}
+                                            onClick={e => {
+                                              e.stopPropagation();
+                                              setSelectedImage(getImageUrl(item.approvalPhotoBack!.url!));
+                                            }}
+                                          />
                                         ) : (
                                           <Muted>N/A</Muted>
                                         )}
@@ -692,6 +722,9 @@ const RacuniPage: React.FC = () => {
           </Card>
         </ContentGrid>
       </DashboardContainer>
+      {selectedImage && token && (
+        <ImageViewerModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} token={token} />
+      )}
     </S.PageContainer>
   );
 };
