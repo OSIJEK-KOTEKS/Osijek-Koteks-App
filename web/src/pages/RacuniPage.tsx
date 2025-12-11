@@ -159,10 +159,40 @@ const RacuniPage: React.FC = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [itemsLoading, setItemsLoading] = useState(false);
+
+  const fetchItemsList = async (query?: string) => {
+    const perPage = 100;
+    let page = 1;
+    let hasMore = true;
+    const allItems: Item[] = [];
+    const trimmedQuery = query?.trim();
+
+    while (hasMore) {
+      const response = await apiService.getItems(
+        page,
+        perPage,
+        trimmedQuery ? { searchTitle: trimmedQuery } : undefined
+      );
+      allItems.push(...response.items);
+
+      if (response.items.length === 0) {
+        break;
+      }
+
+      const pagination = response.pagination;
+      hasMore =
+        (pagination && pagination.hasMore) || (!pagination && response.items.length === perPage);
+      page += 1;
+    }
+
+    return allItems;
+  };
 
   const handleLogout = async () => {
     try {
@@ -183,21 +213,39 @@ const RacuniPage: React.FC = () => {
     );
   };
 
+  const handleSearch = async (value: string) => {
+    setSearchTerm(value);
+    setItemsLoading(true);
+    try {
+      const itemsResult = await fetchItemsList(value);
+      setItems(itemsResult);
+      setError("");
+    } catch (err) {
+      console.error("Error searching items:", err);
+      setError("Neuspjesno ucitavanje dokumenata.");
+    } finally {
+      setItemsLoading(false);
+    }
+  };
+
+
   const fetchData = async () => {
     setLoading(true);
+    setItemsLoading(true);
     setError("");
     try {
-      const [itemsResponse, billsResponse] = await Promise.all([
-        apiService.getItems(1, 100),
+      const [itemsResult, billsResponse] = await Promise.all([
+        fetchItemsList(),
         apiService.getBills(),
       ]);
-      setItems(itemsResponse.items);
+      setItems(itemsResult);
       setBills(billsResponse);
     } catch (err) {
       console.error("Error loading bills:", err);
-      setError("Neuspješno učitavanje računa ili dokumenata.");
+      setError("Neuspjesno ucitavanje racuna ili dokumenata.");
     } finally {
       setLoading(false);
+      setItemsLoading(false);
     }
   };
 
@@ -267,21 +315,36 @@ const RacuniPage: React.FC = () => {
                 </div>
                 <div>
                   <Muted>Dodajte dokumente na račun</Muted>
+                  <Input
+                    type="text"
+                    placeholder="Pretrazi dokumente po naslovu"
+                    value={searchTerm}
+                    onChange={e => handleSearch(e.target.value)}
+                    style={{ marginTop: 8 }}
+                  />
                   <ItemsList>
-                    {items.length === 0 && <Muted>Nema dostupnih dokumenata.</Muted>}
-                    {items.map(item => (
-                      <ItemRow key={item._id}>
-                        <input
-                          type="checkbox"
-                          checked={selectedItemIds.includes(item._id)}
-                          onChange={() => toggleItemSelection(item._id)}
-                        />
-                        <div>
-                          <div>{item.title}</div>
-                          <Muted>RN: {item.code}</Muted>
-                        </div>
-                      </ItemRow>
-                    ))}
+                    {itemsLoading && <Muted>Ucitavanje...</Muted>}
+                    {!itemsLoading && items.length === 0 && (
+                      <Muted>
+                        {searchTerm.trim()
+                          ? "Nema dokumenata za zadani upit."
+                          : "Nema dostupnih dokumenata."}
+                      </Muted>
+                    )}
+                    {!itemsLoading &&
+                      items.map(item => (
+                        <ItemRow key={item._id}>
+                          <input
+                            type="checkbox"
+                            checked={selectedItemIds.includes(item._id)}
+                            onChange={() => toggleItemSelection(item._id)}
+                          />
+                          <div>
+                            <div>{item.title}</div>
+                            <Muted>RN: {item.code}</Muted>
+                          </div>
+                        </ItemRow>
+                      ))}
                   </ItemsList>
                 </div>
                 {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
