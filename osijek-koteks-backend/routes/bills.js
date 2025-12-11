@@ -23,8 +23,7 @@ const baseBillQuery = () =>
 // Get bills for current user (admins see all)
 router.get('/', auth, ensureRacuniAccess, async (req, res) => {
   try {
-    const filter = req.user.role === 'admin' ? {} : { createdBy: req.user._id };
-    const bills = await baseBillQuery().find(filter).populate('createdBy', 'firstName lastName email');
+    const bills = await baseBillQuery().find().populate('createdBy', 'firstName lastName email');
     res.json(bills);
   } catch (error) {
     console.error('Error fetching bills:', error);
