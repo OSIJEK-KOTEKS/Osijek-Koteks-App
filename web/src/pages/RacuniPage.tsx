@@ -283,6 +283,12 @@ const RacuniPage: React.FC = () => {
   };
 
   const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      setSearchLoading(false);
+      setItemsLoading(false);
+      return;
+    }
+
     setItemsLoading(true);
     setSearchLoading(true);
     try {
@@ -314,21 +320,24 @@ const RacuniPage: React.FC = () => {
   };
 
   const loadItems = async () => {
-    setItemsLoading(true);
     try {
       const itemsResult = await fetchItemsList();
       setItems(itemsResult);
     } catch (err) {
       console.error("Error loading items:", err);
       setError(prev => prev || "Neuspjesno ucitavanje dokumenata.");
-    } finally {
-      setItemsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadBills();
-    loadItems();
+    const init = async () => {
+      setItemsLoading(true);
+      setSearchLoading(false);
+      await Promise.all([loadBills(), loadItems()]);
+      setItemsLoading(false);
+    };
+
+    init();
   }, []);
 
   const handleCreateBill = async (e: React.FormEvent) => {
@@ -422,7 +431,7 @@ const RacuniPage: React.FC = () => {
                     </S.Button>
                   </div>
                   <ItemsList>
-                    {itemsLoading && <Muted>Učitavanje...</Muted>}
+                    {itemsLoading && <Muted></Muted>}
                     {!itemsLoading && items.length === 0 && (
                       <Muted>
                         {searchTerm.trim()
