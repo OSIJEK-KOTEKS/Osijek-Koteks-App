@@ -11,6 +11,8 @@ const ensureRacuniAccess = (req, res, next) => {
   return res.status(403).json({ message: 'Access denied. Racuni access required.' });
 };
 
+const DOBAVLJACI = ['KAMEN - PSUNJ d.o.o.', 'MOLARIS d.o.o.', 'VELIČKI KAMEN d.o.o.'];
+
 const baseBillQuery = () =>
   Bill.find().populate({
     path: 'items',
@@ -32,10 +34,14 @@ router.get('/', auth, ensureRacuniAccess, async (req, res) => {
 // Create bill
 router.post('/', auth, ensureRacuniAccess, async (req, res) => {
   try {
-    const { title, description, itemIds } = req.body;
+    const { title, description, itemIds, dobavljac } = req.body;
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return res.status(400).json({ message: 'Title is required' });
+    }
+
+    if (!dobavljac || !DOBAVLJACI.includes(dobavljac)) {
+      return res.status(400).json({ message: 'Valid dobavljac is required' });
     }
 
     if (!Array.isArray(itemIds) || itemIds.length === 0) {
@@ -58,6 +64,7 @@ router.post('/', auth, ensureRacuniAccess, async (req, res) => {
 
     const bill = new Bill({
       title: title.trim(),
+      dobavljac,
       description: description ? description.trim() : '',
       items: uniqueItemIds,
       createdBy: req.user._id,

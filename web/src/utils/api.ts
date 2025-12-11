@@ -184,7 +184,12 @@ export const apiService = {
     }
   },
 
-  createBill: async (billData: { title: string; description?: string; itemIds: string[] }): Promise<Bill> => {
+  createBill: async (billData: {
+    title: string;
+    description?: string;
+    dobavljac: Bill['dobavljac'];
+    itemIds: string[];
+  }): Promise<Bill> => {
     try {
       const response = await api.post<Bill>('/api/bills', billData);
       return response.data;

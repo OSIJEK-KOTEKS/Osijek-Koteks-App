@@ -7,6 +7,12 @@ const BillSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    dobavljac: {
+      type: String,
+      required: true,
+      enum: ['KAMEN - PSUNJ d.o.o.', 'MOLARIS d.o.o.', 'VELIČKI KAMEN d.o.o.'],
+      trim: true,
+    },
     description: {
       type: String,
       default: '',

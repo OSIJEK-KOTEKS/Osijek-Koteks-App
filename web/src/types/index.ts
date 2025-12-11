@@ -137,6 +137,7 @@ export interface ItemFilters {
 export interface Bill {
   _id: string;
   title: string;
+  dobavljac: 'KAMEN - PSUNJ d.o.o.' | 'MOLARIS d.o.o.' | 'VELIČKI KAMEN d.o.o.';
   description?: string;
   items: Item[];
   createdBy: {
@@ -199,7 +200,12 @@ export interface ApiService {
   updateUser: (id: string, userData: Partial<Omit<User, '_id'>>) => Promise<User>;
   updateUserPassword: (userId: string, newPassword: string) => Promise<User>;
   getBills: () => Promise<Bill[]>;
-  createBill: (billData: { title: string; description?: string; itemIds: string[] }) => Promise<Bill>;
+  createBill: (billData: {
+    title: string;
+    description?: string;
+    dobavljac: Bill['dobavljac'];
+    itemIds: string[];
+  }) => Promise<Bill>;
 
   // Item methods
   getItems: (

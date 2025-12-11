@@ -89,6 +89,15 @@ const Input = styled.input`
   font-size: 1rem;
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.medium};
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  font-size: 1rem;
+  background: ${({ theme }) => theme.colors.white};
+`;
+
 const TextArea = styled.textarea`
   width: 100%;
   padding: ${({ theme }) => theme.spacing.medium};
@@ -176,12 +185,19 @@ const ItemContent = styled.div`
   gap: ${({ theme }) => theme.spacing.small};
 `;
 
+const DOBAVLJACI: Bill["dobavljac"][] = [
+  "KAMEN - PSUNJ d.o.o.",
+  "MOLARIS d.o.o.",
+  "VELIČKI KAMEN d.o.o.",
+];
+
 const RacuniPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [title, setTitle] = useState("");
+  const [dobavljac, setDobavljac] = useState<Bill["dobavljac"]>(DOBAVLJACI[0]);
   const [description, setDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -284,16 +300,23 @@ const RacuniPage: React.FC = () => {
       return;
     }
 
+    if (!dobavljac) {
+      setError("Odaberite dobavljača");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     try {
       const newBill = await apiService.createBill({
         title: title.trim(),
         description: description.trim(),
+        dobavljac,
         itemIds: selectedItemIds,
       });
       setBills(prev => [newBill, ...prev]);
       setTitle("");
+      setDobavljac(DOBAVLJACI[0]);
       setDescription("");
       setSelectedItemIds([]);
     } catch (err) {
@@ -329,6 +352,15 @@ const RacuniPage: React.FC = () => {
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                   />
+                </div>
+                <div>
+                  <Select value={dobavljac} onChange={e => setDobavljac(e.target.value as Bill["dobavljac"])}>
+                    {DOBAVLJACI.map(option => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
                 <div>
                   <TextArea
@@ -398,6 +430,9 @@ const RacuniPage: React.FC = () => {
                   <BillCard key={bill._id}>
                     <div>
                       <strong>{bill.title}</strong>
+                      <div>
+                        <Muted>Dobavljač: {bill.dobavljac || "N/A"}</Muted>
+                      </div>
                       {bill.description && <div>{bill.description}</div>}
                     </div>
                     <div>
