@@ -323,28 +323,26 @@ const RacuniPage: React.FC = () => {
                     style={{ marginTop: 8 }}
                   />
                   <ItemsList>
-                    {itemsLoading && <Muted>Ucitavanje...</Muted>}
-                    {!itemsLoading && items.length === 0 && (
+                    {items.length === 0 && (
                       <Muted>
                         {searchTerm.trim()
                           ? "Nema dokumenata za zadani upit."
                           : "Nema dostupnih dokumenata."}
                       </Muted>
                     )}
-                    {!itemsLoading &&
-                      items.map(item => (
-                        <ItemRow key={item._id}>
-                          <input
-                            type="checkbox"
-                            checked={selectedItemIds.includes(item._id)}
-                            onChange={() => toggleItemSelection(item._id)}
-                          />
-                          <div>
-                            <div>{item.title}</div>
-                            <Muted>RN: {item.code}</Muted>
-                          </div>
-                        </ItemRow>
-                      ))}
+                    {items.map(item => (
+                      <ItemRow key={item._id}>
+                        <input
+                          type="checkbox"
+                          checked={selectedItemIds.includes(item._id)}
+                          onChange={() => toggleItemSelection(item._id)}
+                        />
+                        <div>
+                          <div>{item.title}</div>
+                          <Muted>RN: {item.code}</Muted>
+                        </div>
+                      </ItemRow>
+                    ))}
                   </ItemsList>
                 </div>
                 {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
