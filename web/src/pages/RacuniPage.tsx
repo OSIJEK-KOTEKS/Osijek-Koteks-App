@@ -280,7 +280,7 @@ const RacuniPage: React.FC = () => {
   const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || selectedItemIds.length === 0) {
-      setError("Unesite naslov i odaberite barem jedan dokument.");
+      setError("Unesite naslov i odaberite barem jedan dokument");
       return;
     }
 
