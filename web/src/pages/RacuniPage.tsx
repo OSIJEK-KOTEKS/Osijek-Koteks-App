@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import * as S from "../components/styled/Common";
 import Logo from "../components/Logo";
 import { useAuth } from "../contexts/AuthContext";
-import { apiService } from "../utils/api";
+import { apiService, getImageUrl } from "../utils/api";
 import { Bill, Item } from "../types";
 
 const Header = styled.div`
@@ -199,6 +199,21 @@ const ItemContent = styled.div`
   gap: ${({ theme }) => theme.spacing.small};
 `;
 
+const formatMaterialWeight = (item: Item) => {
+  if (typeof item.tezina === "number") return `${item.tezina} t`;
+  if (typeof item.neto === "number") return `${item.neto} kg`;
+  return "N/A";
+};
+
+const formatApprovalLocation = (item: Item) => {
+  const lat = item.approvalLocation?.coordinates?.latitude;
+  const lon = item.approvalLocation?.coordinates?.longitude;
+  if (typeof lat === "number" && typeof lon === "number") {
+    return `Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}`;
+  }
+  return "N/A";
+};
+
 const DOBAVLJACI: Bill["dobavljac"][] = [
   "KAMEN - PSUNJ d.o.o.",
   "MOLARIS d.o.o.",
@@ -222,6 +237,7 @@ const RacuniPage: React.FC = () => {
   const [itemsLoading, setItemsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
+  const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
   const [billSearchTerm, setBillSearchTerm] = useState("");
   const [billSearchQuery, setBillSearchQuery] = useState("");
   const selectedItems = selectedItemIds
@@ -291,7 +307,17 @@ const RacuniPage: React.FC = () => {
   };
 
   const toggleBillExpand = (id: string) => {
-    setExpandedBillId(prev => (prev === id ? null : id));
+    setExpandedBillId(prev => {
+      const next = prev === id ? null : id;
+      if (next !== prev) {
+        setExpandedItemIds([]);
+      }
+      return next;
+    });
+  };
+
+  const toggleItemExpand = (id: string) => {
+    setExpandedItemIds(prev => (prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]));
   };
 
   const handleBillSearch = () => {
@@ -550,29 +576,72 @@ const RacuniPage: React.FC = () => {
                           <Muted>Priloženi dokumenti:</Muted>
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: 6 }}>
                             {bill.items.map(item => (
-                              <div
-                                key={item._id}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "8px",
-                                  border: "1px solid rgba(0,0,0,0.1)",
-                                  borderRadius: "8px",
-                                  padding: "6px 8px",
-                                }}
-                              >
-                                <div>
-                                  <div>{item.title}</div>
-                                  <Muted>RN: {item.code}</Muted>
+                              <div key={item._id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                <div
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    toggleItemExpand(item._id);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      toggleItemExpand(item._id);
+                                    }
+                                  }}
+                                  role="button"
+                                  tabIndex={0}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: "8px",
+                                    border: "1px solid rgba(0,0,0,0.1)",
+                                    borderRadius: "8px",
+                                    padding: "6px 8px",
+                                    background: "#f9fafb",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <div>
+                                    <div>{item.title}</div>
+                                    <Muted>RN: {item.code}</Muted>
+                                  </div>
+                                  <StatusBadge $status={item.approvalStatus}>
+                                    {item.approvalStatus === "odobreno"
+                                      ? "Odobreno"
+                                      : item.approvalStatus === "odbijen"
+                                      ? "Odbijen"
+                                      : "Na cekanju"}
+                                  </StatusBadge>
                                 </div>
-                                <StatusBadge $status={item.approvalStatus}>
-                                  {item.approvalStatus === "odobreno"
-                                    ? "Odobreno"
-                                    : item.approvalStatus === "odbijen"
-                                    ? "Odbijen"
-                                    : "Na cekanju"}
-                                </StatusBadge>
+                                {expandedItemIds.includes(item._id) && (
+                                  <div
+                                    style={{
+                                      border: "1px solid rgba(0,0,0,0.08)",
+                                      borderRadius: "8px",
+                                      padding: "8px 10px",
+                                      background: "#ffffff",
+                                      display: "grid",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    <Muted>
+                                      PDF:{" "}
+                                      {item.pdfUrl ? (
+                                        <a href={getImageUrl(item.pdfUrl)} target="_blank" rel="noopener noreferrer">
+                                          Otvori PDF
+                                        </a>
+                                      ) : (
+                                        "N/A"
+                                      )}
+                                    </Muted>
+                                    <Muted>Registracija: {item.registracija || "N/A"}</Muted>
+                                    <Muted>Prijevoznik: {item.prijevoznik || "N/A"}</Muted>
+                                    <Muted>Materijal / težina: {formatMaterialWeight(item)}</Muted>
+                                    <Muted>Lokacija odobrenja: {formatApprovalLocation(item)}</Muted>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
