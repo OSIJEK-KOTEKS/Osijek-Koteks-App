@@ -577,9 +577,9 @@ const RacuniPage: React.FC = () => {
                         {bill.description && <div>{bill.description}</div>}
                         <div>
                           <Muted>Priloženi dokumenti:</Muted>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: 6 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: 2 }}>
                             {bill.items.map(item => (
-                              <div key={item._id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              <div key={item._id} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                                 <div
                                   onClick={e => {
                                     e.stopPropagation();
