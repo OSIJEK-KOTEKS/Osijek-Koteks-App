@@ -620,6 +620,7 @@ const RacuniPage: React.FC = () => {
                                 </div>
                                 {expandedItemIds.includes(item._id) && (
                                   <div
+                                    onClick={e => e.stopPropagation()}
                                     style={{
                                       border: "1px solid rgba(0,0,0,0.08)",
                                       borderRadius: "8px",
