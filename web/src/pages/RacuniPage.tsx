@@ -206,6 +206,17 @@ const formatMaterialWeight = (item: Item) => {
   return "N/A";
 };
 
+const getBillPdfDownloadName = (attachment?: Bill["attachment"] | null) => {
+  if (!attachment?.url) return undefined;
+
+  const baseName =
+    attachment.originalName ||
+    attachment.url.split("/").pop() ||
+    "bill-attachment";
+
+  return baseName.toLowerCase().endsWith(".pdf") ? baseName : `${baseName}.pdf`;
+};
+
 const formatApprovalLocation = (item: Item) => {
   const lat = item.approvalLocation?.coordinates?.latitude;
   const lon = item.approvalLocation?.coordinates?.longitude;
@@ -663,7 +674,12 @@ const RacuniPage: React.FC = () => {
                           <Muted>
                             PDF računa:{" "}
                             {bill.attachment?.url ? (
-                              <a href={getImageUrl(bill.attachment.url)} target="_blank" rel="noopener noreferrer">
+                              <a
+                                href={getImageUrl(bill.attachment.url)}
+                                download={getBillPdfDownloadName(bill.attachment)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 {bill.attachment.originalName || "Otvori PDF"}
                               </a>
                             ) : (

@@ -62,7 +62,7 @@ const uploadToCloudinary = async file => {
       // Sanitize the filename
       const sanitizedFilename = sanitizeFilename(file.originalname);
       const timestamp = Date.now();
-      const uniqueFilename = `${sanitizedFilename}_${timestamp}`;
+      const uniqueFilename = `${sanitizedFilename}_${timestamp}.pdf`;
 
       console.log('Processing PDF file:', {
         original: file.originalname,
@@ -76,7 +76,7 @@ const uploadToCloudinary = async file => {
 
       // Use application/pdf type instead of image or raw
       uploadOptions.resource_type = 'raw';
-      uploadOptions.public_id = uniqueFilename; // No extension in public_id
+      uploadOptions.public_id = uniqueFilename;
       uploadOptions.type = 'upload';
 
       console.log('Using PDF upload options:', uploadOptions);
