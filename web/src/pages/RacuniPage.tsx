@@ -156,6 +156,11 @@ const Muted = styled.span`
   opacity: 0.8;
 `;
 
+const PdfLink = styled.a`
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: underline;
+`;
+
 const Chip = styled.span`
   display: inline-flex;
   align-items: center;
@@ -525,7 +530,7 @@ const RacuniPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Muted>Priloži PDF računa (opcionalno)</Muted>
+                  <Muted>Priložite PDF (opcionalno)</Muted>
                   <Input
                     key={pdfInputKey}
                     type="file"
@@ -672,19 +677,17 @@ const RacuniPage: React.FC = () => {
                         {bill.description && <div>{bill.description}</div>}
                         <div>
                           <Muted>
-                            PDF računa:{" "}
+                            Priloženi PDF:{" "}
                             {bill.attachment?.url ? (
-                              <a
+                              <PdfLink
                                 href={getImageUrl(bill.attachment.url)}
                                 download={getBillPdfDownloadName(bill.attachment)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
                                 {bill.attachment.originalName || "Otvori PDF"}
-                              </a>
-                            ) : (
-                              "N/A"
-                            )}
+                              </PdfLink>
+                            ) : null}
                           </Muted>
                         </div>
                         <div>
@@ -745,9 +748,9 @@ const RacuniPage: React.FC = () => {
                                     <Muted>
                                       PDF:{" "}
                                       {item.pdfUrl ? (
-                                        <a href={getImageUrl(item.pdfUrl)} target="_blank" rel="noopener noreferrer">
+                                        <PdfLink href={getImageUrl(item.pdfUrl)} target="_blank" rel="noopener noreferrer">
                                           Otvori PDF
-                                        </a>
+                                        </PdfLink>
                                       ) : (
                                         "N/A"
                                       )}
