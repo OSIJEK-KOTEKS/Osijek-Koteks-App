@@ -229,6 +229,8 @@ const RacuniPage: React.FC = () => {
   const [title, setTitle] = useState("");
   const [dobavljac, setDobavljac] = useState<Bill["dobavljac"]>(DOBAVLJACI[0]);
   const [description, setDescription] = useState("");
+  const [billPdf, setBillPdf] = useState<File | null>(null);
+  const [pdfInputKey, setPdfInputKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchCode, setSearchCode] = useState("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -373,6 +375,23 @@ const RacuniPage: React.FC = () => {
     }
   };
 
+  const handleBillPdfChange = (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setBillPdf(null);
+      return;
+    }
+
+    const file = files[0];
+    if (file.type !== "application/pdf") {
+      setError("Dodajte PDF datoteku (format .pdf).");
+      setBillPdf(null);
+      return;
+    }
+
+    setError("");
+    setBillPdf(file);
+  };
+
 
   const loadBills = async () => {
     setLoading(true);
@@ -421,6 +440,11 @@ const RacuniPage: React.FC = () => {
       return;
     }
 
+    if (billPdf && billPdf.type !== "application/pdf") {
+      setError("Dodajte PDF datoteku (format .pdf).");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     try {
@@ -429,11 +453,14 @@ const RacuniPage: React.FC = () => {
         description: description.trim(),
         dobavljac,
         itemIds: selectedItemIds,
+        billPdf: billPdf || undefined,
       });
       setBills(prev => [newBill, ...prev]);
       setTitle("");
       setDobavljac(DOBAVLJACI[0]);
       setDescription("");
+      setBillPdf(null);
+      setPdfInputKey(prev => prev + 1);
       setSelectedItemIds([]);
       setSelectedItemsCache([]);
     } catch (err) {
@@ -485,6 +512,33 @@ const RacuniPage: React.FC = () => {
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                   />
+                </div>
+                <div>
+                  <Muted>Priloži PDF računa (opcionalno)</Muted>
+                  <Input
+                    key={pdfInputKey}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={e => handleBillPdfChange(e.target.files)}
+                  />
+                  {billPdf && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: 6 }}>
+                      <Chip>
+                        {billPdf.name}
+                        <RemoveButton
+                          type="button"
+                          onClick={() => {
+                            setBillPdf(null);
+                            setPdfInputKey(prev => prev + 1);
+                          }}
+                          aria-label="Ukloni PDF"
+                        >
+                          x
+                        </RemoveButton>
+                      </Chip>
+                      <Muted>{(billPdf.size / (1024 * 1024)).toFixed(2)} MB</Muted>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Muted>Dodajte dokumente na račun</Muted>
@@ -605,6 +659,18 @@ const RacuniPage: React.FC = () => {
                     {expandedBillId === bill._id && (
                       <>
                         {bill.description && <div>{bill.description}</div>}
+                        <div>
+                          <Muted>
+                            PDF računa:{" "}
+                            {bill.attachment?.url ? (
+                              <a href={getImageUrl(bill.attachment.url)} target="_blank" rel="noopener noreferrer">
+                                {bill.attachment.originalName || "Otvori PDF"}
+                              </a>
+                            ) : (
+                              "N/A"
+                            )}
+                          </Muted>
+                        </div>
                         <div>
                           <Muted>Priloženi dokumenti:</Muted>
                           <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: 2 }}>

@@ -189,9 +189,29 @@ export const apiService = {
     description?: string;
     dobavljac: Bill['dobavljac'];
     itemIds: string[];
+    billPdf?: File;
   }): Promise<Bill> => {
     try {
-      const response = await api.post<Bill>('/api/bills', billData);
+      if (billData.billPdf) {
+        const formData = new FormData();
+        formData.append('title', billData.title);
+        formData.append('dobavljac', billData.dobavljac);
+        formData.append('itemIds', JSON.stringify(billData.itemIds));
+
+        if (billData.description) {
+          formData.append('description', billData.description);
+        }
+
+        formData.append('billPdf', billData.billPdf);
+
+        const response = await api.post<Bill>('/api/bills', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      }
+
+      const { billPdf, ...payload } = billData;
+      const response = await api.post<Bill>('/api/bills', payload);
       return response.data;
     } catch (error) {
       console.error('Error creating bill:', error);

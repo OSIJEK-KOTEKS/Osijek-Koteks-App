@@ -3,6 +3,8 @@ const router = express.Router();
 const Bill = require('../models/Bill');
 const Item = require('../models/Item');
 const auth = require('../middleware/auth');
+const multer = require('multer');
+const uploadToCloudinary = require('../utils/uploadToCloudinary');
 
 const ensureRacuniAccess = (req, res, next) => {
   if (req.user.role === 'admin' || req.user.canAccessRacuni) {
@@ -12,6 +14,42 @@ const ensureRacuniAccess = (req, res, next) => {
 };
 
 const DOBAVLJACI = ['KAMEN - PSUNJ d.o.o.', 'MOLARIS d.o.o.', 'VELIČKI KAMEN d.o.o.'];
+
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      return cb(null, true);
+    }
+    return cb(new Error('Only PDF files are allowed for bill attachments'), false);
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+});
+
+const normalizeItemIds = rawItemIds => {
+  if (Array.isArray(rawItemIds)) {
+    return rawItemIds;
+  }
+
+  if (typeof rawItemIds === 'string') {
+    try {
+      const parsed = JSON.parse(rawItemIds);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (err) {
+      return rawItemIds
+        .split(',')
+        .map(id => id.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
 
 const baseBillQuery = () =>
   Bill.find().populate({
@@ -32,9 +70,10 @@ router.get('/', auth, ensureRacuniAccess, async (req, res) => {
 });
 
 // Create bill
-router.post('/', auth, ensureRacuniAccess, async (req, res) => {
+router.post('/', auth, ensureRacuniAccess, upload.single('billPdf'), async (req, res) => {
   try {
-    const { title, description, itemIds, dobavljac } = req.body;
+    const { title, description, dobavljac } = req.body;
+    const itemIds = normalizeItemIds(req.body.itemIds);
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return res.status(400).json({ message: 'Title is required' });
@@ -62,12 +101,26 @@ router.post('/', auth, ensureRacuniAccess, async (req, res) => {
       }
     }
 
+    let attachment = null;
+
+    if (req.file) {
+      const uploadedPdf = await uploadToCloudinary(req.file);
+      attachment = {
+        url: uploadedPdf.url,
+        publicId: uploadedPdf.publicId,
+        uploadDate: new Date(),
+        mimeType: req.file.mimetype,
+        originalName: req.file.originalname || null,
+      };
+    }
+
     const bill = new Bill({
       title: title.trim(),
       dobavljac,
       description: description ? description.trim() : '',
       items: uniqueItemIds,
       createdBy: req.user._id,
+      attachment,
     });
 
     await bill.save();

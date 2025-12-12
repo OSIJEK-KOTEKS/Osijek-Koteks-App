@@ -139,6 +139,13 @@ export interface Bill {
   title: string;
   dobavljac: 'KAMEN - PSUNJ d.o.o.' | 'MOLARIS d.o.o.' | 'VELIČKI KAMEN d.o.o.';
   description?: string;
+  attachment?: {
+    url: string | null;
+    publicId: string | null;
+    uploadDate: string | null;
+    mimeType: string | null;
+    originalName?: string | null;
+  } | null;
   items: Item[];
   createdBy: {
     _id: string;
@@ -205,6 +212,7 @@ export interface ApiService {
     description?: string;
     dobavljac: Bill['dobavljac'];
     itemIds: string[];
+    billPdf?: File;
   }) => Promise<Bill>;
 
   // Item methods
