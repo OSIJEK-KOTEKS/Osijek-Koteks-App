@@ -230,6 +230,7 @@ const RacuniPage: React.FC = () => {
   const [dobavljac, setDobavljac] = useState<Bill["dobavljac"]>(DOBAVLJACI[0]);
   const [description, setDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchCode, setSearchCode] = useState("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [selectedItemsCache, setSelectedItemsCache] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -246,23 +247,30 @@ const RacuniPage: React.FC = () => {
   const selectedItems = selectedItemIds
     .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
     .filter((item): item is Item => Boolean(item));
+  const hasItemSearch = searchTerm.trim() !== "" || searchCode.trim() !== "";
 
   const filteredBills = billSearchQuery
     ? bills.filter(bill => bill.title.toLowerCase().includes(billSearchQuery.toLowerCase()))
     : bills;
 
-  const fetchItemsList = async (query?: string) => {
+  const fetchItemsList = async (filters?: { title?: string; code?: string }) => {
     const perPage = 100;
     let page = 1;
     let hasMore = true;
     const allItems: Item[] = [];
-    const trimmedQuery = query?.trim();
+    const trimmedTitle = filters?.title?.trim();
+    const trimmedCode = filters?.code?.trim();
 
     while (hasMore) {
       const response = await apiService.getItems(
         page,
         perPage,
-        trimmedQuery ? { searchTitle: trimmedQuery } : undefined
+        trimmedTitle || trimmedCode
+          ? {
+              ...(trimmedTitle ? { searchTitle: trimmedTitle } : {}),
+              ...(trimmedCode ? { code: trimmedCode } : {}),
+            }
+          : undefined
       );
       allItems.push(...response.items);
 
@@ -328,16 +336,32 @@ const RacuniPage: React.FC = () => {
   };
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) {
+    const trimmedSearchTerm = searchTerm.trim();
+    const trimmedSearchCode = searchCode.trim();
+
+    if (!trimmedSearchTerm && !trimmedSearchCode) {
       setSearchLoading(false);
-      setItemsLoading(false);
+      setItemsLoading(true);
+      try {
+        const itemsResult = await fetchItemsList();
+        setItems(itemsResult);
+        setError("");
+      } catch (err) {
+        console.error("Error loading items:", err);
+        setError("Neuspjesno ucitavanje dokumenata.");
+      } finally {
+        setItemsLoading(false);
+      }
       return;
     }
 
     setItemsLoading(true);
     setSearchLoading(true);
     try {
-      const itemsResult = await fetchItemsList(searchTerm);
+      const itemsResult = await fetchItemsList({
+        title: trimmedSearchTerm || undefined,
+        code: trimmedSearchCode || undefined,
+      });
       setItems(itemsResult);
       setError("");
     } catch (err) {
@@ -467,9 +491,15 @@ const RacuniPage: React.FC = () => {
                   <div style={{ display: "flex", gap: "8px", marginTop: 8 }}>
                     <Input
                       type="text"
-                      placeholder="Pretrazi po broju otpremnice"
+                      placeholder="Broj otpremnice"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Radni nalog"
+                      value={searchCode}
+                      onChange={e => setSearchCode(e.target.value)}
                     />
                     <S.Button type="button" onClick={handleSearch} disabled={searchLoading}>
                       {searchLoading ? "Traženje..." : "Traži"}
@@ -479,7 +509,7 @@ const RacuniPage: React.FC = () => {
                     {itemsLoading && <Muted></Muted>}
                     {!itemsLoading && items.length === 0 && (
                       <Muted>
-                        {searchTerm.trim()
+                        {hasItemSearch
                           ? "Nema dokumenata za zadani upit."
                           : "Nema dostupnih dokumenata."}
                       </Muted>
