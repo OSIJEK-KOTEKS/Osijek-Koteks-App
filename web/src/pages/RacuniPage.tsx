@@ -243,6 +243,30 @@ const formatMaterialWeight = (item: Item) => {
   return "N/A";
 };
 
+const getGoogleDriveDownloadUrl = (url: string) => {
+  const driveIdMatch =
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/open\?id=([a-zA-Z0-9_-]+)/);
+
+  if (driveIdMatch?.[1]) {
+    return `https://drive.google.com/uc?export=download&id=${driveIdMatch[1]}`;
+  }
+
+  return url;
+};
+
+const getPdfDownloadUrl = (url?: string | null) => {
+  if (!url) return "";
+
+  const normalizedUrl = getImageUrl(url);
+  if (normalizedUrl.includes("drive.google.com")) {
+    return getGoogleDriveDownloadUrl(normalizedUrl);
+  }
+
+  return normalizedUrl;
+};
+
 const getBillPdfDownloadName = (attachment?: Bill["attachment"] | null) => {
   if (!attachment?.url) return undefined;
 
@@ -252,6 +276,12 @@ const getBillPdfDownloadName = (attachment?: Bill["attachment"] | null) => {
     "bill-attachment";
 
   return baseName.toLowerCase().endsWith(".pdf") ? baseName : `${baseName}.pdf`;
+};
+
+const getItemPdfDownloadName = (item: Item) => {
+  const baseName = item.title || item.code || "item-pdf";
+  const normalized = baseName.trim().replace(/\s+/g, "-");
+  return normalized.toLowerCase().endsWith(".pdf") ? normalized : `${normalized}.pdf`;
 };
 
 const formatApprovalLocation = (item: Item) => {
@@ -455,6 +485,20 @@ const RacuniPage: React.FC = () => {
 
     init();
   }, []);
+
+  const handleItemPdfDownload = (item: Item, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const downloadUrl = getPdfDownloadUrl(item.pdfUrl);
+    if (!downloadUrl) return;
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.target = "_blank";
+    link.download = getItemPdfDownloadName(item);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handlePrintBill = async (bill: Bill, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -760,7 +804,7 @@ const RacuniPage: React.FC = () => {
                             Priloženi PDF:{" "}
                             {bill.attachment?.url ? (
                               <PdfLink
-                                href={getImageUrl(bill.attachment.url)}
+                                href={getPdfDownloadUrl(bill.attachment.url)}
                                 download={getBillPdfDownloadName(bill.attachment)}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -828,9 +872,37 @@ const RacuniPage: React.FC = () => {
                                     <Muted>
                                       PDF:{" "}
                                       {item.pdfUrl ? (
-                                        <PdfLink href={getImageUrl(item.pdfUrl)} target="_blank" rel="noopener noreferrer">
-                                          Otvori PDF
-                                        </PdfLink>
+                                        <span
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                            marginLeft: "4px",
+                                          }}
+                                        >
+                                          <PdfLink
+                                            href={getPdfDownloadUrl(item.pdfUrl)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download={getItemPdfDownloadName(item)}
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            Otvori PDF
+                                          </PdfLink>
+                                          <S.Button
+                                            type="button"
+                                            style={{
+                                              width: "auto",
+                                              minWidth: "0",
+                                              padding: "4px 8px",
+                                              fontSize: "0.82rem",
+                                            }}
+                                            onClick={e => handleItemPdfDownload(item, e)}
+                                            aria-label={`Preuzmi PDF za ${item.title}`}
+                                          >
+                                            Preuzmi
+                                          </S.Button>
+                                        </span>
                                       ) : (
                                         "N/A"
                                       )}
