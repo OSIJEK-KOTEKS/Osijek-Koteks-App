@@ -231,10 +231,12 @@ const formatApprovalLocation = (item: Item) => {
   return "N/A";
 };
 
+const DEFAULT_DOBAVLJAC: Bill["dobavljac"] = "VELIČKI KAMEN d.o.o.";
+
 const DOBAVLJACI: Bill["dobavljac"][] = [
   "KAMEN - PSUNJ d.o.o.",
   "MOLARIS d.o.o.",
-  "VELIČKI KAMEN d.o.o.",
+  DEFAULT_DOBAVLJAC,
 ];
 
 const RacuniPage: React.FC = () => {
@@ -243,7 +245,7 @@ const RacuniPage: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [title, setTitle] = useState("");
-  const [dobavljac, setDobavljac] = useState<Bill["dobavljac"]>(DOBAVLJACI[0]);
+  const [dobavljac, setDobavljac] = useState<Bill["dobavljac"]>(DEFAULT_DOBAVLJAC);
   const [description, setDescription] = useState("");
   const [billPdf, setBillPdf] = useState<File | null>(null);
   const [pdfInputKey, setPdfInputKey] = useState(0);
@@ -473,7 +475,7 @@ const RacuniPage: React.FC = () => {
       });
       setBills(prev => [newBill, ...prev]);
       setTitle("");
-      setDobavljac(DOBAVLJACI[0]);
+      setDobavljac(DEFAULT_DOBAVLJAC);
       setDescription("");
       setBillPdf(null);
       setPdfInputKey(prev => prev + 1);
