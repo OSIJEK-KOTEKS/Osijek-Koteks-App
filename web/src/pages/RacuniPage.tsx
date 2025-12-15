@@ -129,6 +129,13 @@ const ItemRow = styled.label`
   border: 1px solid ${({ theme }) => theme.colors.gray};
   border-radius: ${({ theme }) => theme.borderRadius};
   background: ${({ theme }) => theme.colors.white};
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.gray};
+    border-color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const BillList = styled.div`
@@ -589,12 +596,18 @@ const RacuniPage: React.FC = () => {
                     {items
                       .filter(item => !selectedItemIds.includes(item._id))
                       .map(item => (
-                      <ItemRow key={item._id}>
-                        <input
-                          type="checkbox"
-                          checked={selectedItemIds.includes(item._id)}
-                          onChange={() => toggleItemSelection(item._id)}
-                        />
+                      <ItemRow
+                        key={item._id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => toggleItemSelection(item._id)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleItemSelection(item._id);
+                          }
+                        }}
+                      >
                         <ItemContent>
                           <div>
                             <div>{item.title}</div>
