@@ -92,6 +92,13 @@ const getItemPdfDownloadName = item => {
   return normalized.toLowerCase().endsWith('.pdf') ? normalized : `${normalized}.pdf`;
 };
 
+const getBillAttachmentName = attachment => {
+  const baseName =
+    (attachment && (attachment.originalName || (attachment.url && attachment.url.split('/').pop()))) || 'bill-attachment';
+  const normalized = baseName.trim().replace(/\s+/g, '-');
+  return normalized.toLowerCase().endsWith('.pdf') ? normalized : `${normalized}.pdf`;
+};
+
 // Get bills for current user (admins see all)
 router.get('/', auth, ensureRacuniAccess, async (req, res) => {
   try {
@@ -203,7 +210,24 @@ router.get('/:id/zip', auth, ensureRacuniAccess, async (req, res) => {
     }
 
     const zip = new JSZip();
+    const folder = zip.folder(sanitizeName(bill.title || 'bill')) || zip;
     let added = 0;
+
+    if (bill.attachment?.url) {
+      const attachmentUrl = getPdfDownloadUrl(bill.attachment.url, req);
+      try {
+        const response = await axios.get(attachmentUrl, {
+          responseType: 'arraybuffer',
+          maxRedirects: 5,
+          validateStatus: status => status >= 200 && status < 400,
+          timeout: 20000,
+        });
+        folder.file(getBillAttachmentName(bill.attachment), response.data);
+        added += 1;
+      } catch (err) {
+        console.error('Failed to fetch bill attachment for zip:', { attachmentUrl, error: err?.message });
+      }
+    }
 
     for (const item of itemsWithPdf) {
       const downloadUrl = getPdfDownloadUrl(item.pdfUrl, req);
@@ -212,10 +236,12 @@ router.get('/:id/zip', auth, ensureRacuniAccess, async (req, res) => {
       try {
         const response = await axios.get(downloadUrl, {
           responseType: 'arraybuffer',
+          maxRedirects: 5,
+          validateStatus: status => status >= 200 && status < 400,
           timeout: 20000,
         });
 
-        zip.file(getItemPdfDownloadName(item), response.data);
+        folder.file(getItemPdfDownloadName(item), response.data);
         added += 1;
       } catch (err) {
         console.error('Failed to fetch PDF for zip:', { downloadUrl, error: err?.message });
