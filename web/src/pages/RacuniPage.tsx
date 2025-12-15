@@ -290,6 +290,7 @@ const RacuniPage: React.FC = () => {
   const [error, setError] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
   const [billSearchTerm, setBillSearchTerm] = useState("");
@@ -393,22 +394,7 @@ const RacuniPage: React.FC = () => {
     const trimmedSearchTerm = searchTerm.trim();
     const trimmedSearchCode = searchCode.trim();
 
-    if (!trimmedSearchTerm && !trimmedSearchCode) {
-      setSearchLoading(false);
-      setItemsLoading(true);
-      try {
-        const itemsResult = await fetchItemsList();
-        setItems(itemsResult);
-        setError("");
-      } catch (err) {
-        console.error("Error loading items:", err);
-        setError("Neuspjesno ucitavanje dokumenata.");
-      } finally {
-        setItemsLoading(false);
-      }
-      return;
-    }
-
+    setHasSearched(true);
     setItemsLoading(true);
     setSearchLoading(true);
     try {
@@ -459,21 +445,11 @@ const RacuniPage: React.FC = () => {
     }
   };
 
-  const loadItems = async () => {
-    try {
-      const itemsResult = await fetchItemsList();
-      setItems(itemsResult);
-    } catch (err) {
-      console.error("Error loading items:", err);
-      setError(prev => prev || "Neuspjesno ucitavanje dokumenata.");
-    }
-  };
-
   useEffect(() => {
     const init = async () => {
       setItemsLoading(true);
       setSearchLoading(false);
-      await Promise.all([loadBills(), loadItems()]);
+      await loadBills();
       setItemsLoading(false);
     };
 
@@ -644,44 +620,48 @@ const RacuniPage: React.FC = () => {
                     </S.Button>
                   </div>
                   <ItemsList>
-                    {itemsLoading && <Muted></Muted>}
-                    {!itemsLoading && items.length === 0 && (
+                    {!hasSearched ? (
+                      <Muted>Kliknite "Traži" za prikaz dokumenata.</Muted>
+                    ) : itemsLoading ? (
+                      <Muted>Uitavanje...</Muted>
+                    ) : items.length === 0 ? (
                       <Muted>
                         {hasItemSearch
                           ? "Nema dokumenata za zadani upit."
                           : "Nema dostupnih dokumenata."}
                       </Muted>
+                    ) : (
+                      items
+                        .filter(item => !selectedItemIds.includes(item._id))
+                        .map(item => (
+                          <ItemRow
+                            key={item._id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => toggleItemSelection(item._id)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleItemSelection(item._id);
+                              }
+                            }}
+                          >
+                            <ItemContent>
+                              <div>
+                                <div>{item.title}</div>
+                                <Muted>RN: {item.code}</Muted>
+                              </div>
+                              <StatusBadge $status={item.approvalStatus}>
+                                {item.approvalStatus === "odobreno"
+                                  ? "Odobreno"
+                                  : item.approvalStatus === "odbijen"
+                                  ? "Odbijen"
+                                  : "Na cekanju"}
+                              </StatusBadge>
+                            </ItemContent>
+                          </ItemRow>
+                        ))
                     )}
-                    {items
-                      .filter(item => !selectedItemIds.includes(item._id))
-                      .map(item => (
-                      <ItemRow
-                        key={item._id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => toggleItemSelection(item._id)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleItemSelection(item._id);
-                          }
-                        }}
-                      >
-                        <ItemContent>
-                          <div>
-                            <div>{item.title}</div>
-                            <Muted>RN: {item.code}</Muted>
-                          </div>
-                          <StatusBadge $status={item.approvalStatus}>
-                            {item.approvalStatus === "odobreno"
-                              ? "Odobreno"
-                              : item.approvalStatus === "odbijen"
-                              ? "Odbijen"
-                              : "Na cekanju"}
-                          </StatusBadge>
-                        </ItemContent>
-                      </ItemRow>
-                    ))}
                   </ItemsList>
                 </div>
                 {selectedItemIds.length > 0 && (
