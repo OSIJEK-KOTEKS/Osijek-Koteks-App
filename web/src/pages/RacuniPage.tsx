@@ -8,7 +8,6 @@ import { apiService, getImageUrl } from "../utils/api";
 import { buildBillPrintPdf } from "../utils/printBill";
 import ImageViewerModal from "../components/ImageViewerModal";
 import { Bill, Item } from "../types";
-import JSZip from "jszip";
 
 const Header = styled.div`
   display: flex;
@@ -564,48 +563,9 @@ const RacuniPage: React.FC = () => {
     setDownloadingBillId(bill._id);
 
     try {
-      const zip = new JSZip();
-      const folderName = sanitizeName(bill.title, "bill-items");
-      const folder = zip.folder(folderName) || zip;
-      let addedFiles = 0;
-
-      for (const item of itemsWithPdf) {
-        const downloadUrl = getPdfDownloadUrl(item.pdfUrl);
-        if (!downloadUrl) continue;
-
-        try {
-          const fetchOptions: RequestInit =
-            !token || downloadUrl.includes("drive.google.com")
-              ? {}
-              : {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                };
-
-          const response = await fetch(downloadUrl, fetchOptions);
-          if (!response.ok) {
-            console.error("Failed to fetch PDF:", downloadUrl, response.status);
-            continue;
-          }
-
-          const blob = await response.blob();
-          const arrayBuffer = await blob.arrayBuffer();
-          folder.file(getItemPdfDownloadName(item), arrayBuffer);
-          addedFiles += 1;
-        } catch (err) {
-          console.error("Error fetching PDF:", err);
-        }
-      }
-
-      if (addedFiles === 0) {
-        setDownloadError("Nije moguce preuzeti PDF datoteke.");
-        return;
-      }
-
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const zipBlob = await apiService.downloadBillZip(bill._id);
       const blobUrl = URL.createObjectURL(zipBlob);
-      const zipName = `${folderName || "bill-items"}.zip`;
+      const zipName = `${sanitizeName(bill.title, "bill-items")}.zip`;
 
       const link = document.createElement("a");
       link.href = blobUrl;

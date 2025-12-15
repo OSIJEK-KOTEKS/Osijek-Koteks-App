@@ -183,6 +183,17 @@ export const apiService = {
       throw error;
     }
   },
+  downloadBillZip: async (billId: string): Promise<Blob> => {
+    try {
+      const response = await api.get(`/api/bills/${billId}/zip`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error downloading bill zip:', error);
+      throw error;
+    }
+  },
 
   createBill: async (billData: {
     title: string;
