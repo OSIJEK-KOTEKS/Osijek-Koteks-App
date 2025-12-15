@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import * as S from "../components/styled/Common";
@@ -395,7 +395,7 @@ const RacuniPage: React.FC = () => {
       await signOut();
       navigate("/login");
     } catch (err) {
-      console.error("Logout error:", err);
+      console.error("Logout error: ", err);
     }
   };
 
