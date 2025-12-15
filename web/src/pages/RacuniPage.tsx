@@ -5,6 +5,7 @@ import * as S from "../components/styled/Common";
 import Logo from "../components/Logo";
 import { useAuth } from "../contexts/AuthContext";
 import { apiService, getImageUrl } from "../utils/api";
+import { buildBillPrintPdf } from "../utils/printBill";
 import ImageViewerModal from "../components/ImageViewerModal";
 import { Bill, Item } from "../types";
 
@@ -158,6 +159,20 @@ const BillCard = styled.div`
   cursor: pointer;
 `;
 
+const BillHeaderRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.medium};
+`;
+
+const PrintBillButton = styled(S.Button)`
+  padding: 0.6rem 1rem !important;
+  min-width: auto;
+  font-size: 0.9rem !important;
+  white-space: nowrap;
+`;
+
 const Muted = styled.span`
   color: ${({ theme }) => theme.colors.text};
   opacity: 0.8;
@@ -270,6 +285,8 @@ const RacuniPage: React.FC = () => {
   const [billSearchTerm, setBillSearchTerm] = useState("");
   const [billSearchQuery, setBillSearchQuery] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
+  const [printError, setPrintError] = useState("");
   const token = localStorage.getItem("userToken") || "";
   const selectedItems = selectedItemIds
     .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
@@ -452,6 +469,38 @@ const RacuniPage: React.FC = () => {
 
     init();
   }, []);
+
+  const handlePrintBill = async (bill: Bill, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPrintError("");
+
+    if (!token) {
+      setPrintError("Nedostaje token za ispis. Prijavite se ponovo.");
+      return;
+    }
+
+    setPrintingId(bill._id);
+
+    try {
+      const blob = await buildBillPrintPdf(bill, token);
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url);
+
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.focus();
+          printWindow.print();
+        };
+      }
+
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      console.error("Error printing bill:", err);
+      setPrintError("Nije moguće generirati PDF za ispis.");
+    } finally {
+      setPrintingId(null);
+    }
+  };
 
   const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -680,13 +729,22 @@ const RacuniPage: React.FC = () => {
                     role="button"
                     tabIndex={0}
                   >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <strong>{bill.title}</strong>
+                    <BillHeaderRow>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <strong>{bill.title}</strong>
                       <Muted>Dobavljač: {bill.dobavljac || "N/A"}</Muted>
                       <Muted>
                         Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
                       </Muted>
                     </div>
+                    <PrintBillButton
+                      type="button"
+                      onClick={e => handlePrintBill(bill, e)}
+                      disabled={printingId === bill._id}
+                    >
+                      {printingId === bill._id ? "Ispis..." : "Ispisi"}
+                    </PrintBillButton>
+                    </BillHeaderRow>
                     {expandedBillId === bill._id && (
                       <>
                         {bill.description && <div>{bill.description}</div>}
@@ -850,6 +908,7 @@ const RacuniPage: React.FC = () => {
                 ))}
               </BillList>
             )}
+            {printError && <S.ErrorMessage>{printError}</S.ErrorMessage>}
           </Card>
         </ContentGrid>
       </DashboardContainer>
