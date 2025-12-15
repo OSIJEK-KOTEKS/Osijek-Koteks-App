@@ -8,6 +8,7 @@ import { apiService, getImageUrl } from "../utils/api";
 import { buildBillPrintPdf } from "../utils/printBill";
 import ImageViewerModal from "../components/ImageViewerModal";
 import { Bill, Item } from "../types";
+import JSZip from "jszip";
 
 const Header = styled.div`
   display: flex;
@@ -183,6 +184,17 @@ const PrintBillButton = styled(S.Button)`
   }
 `;
 
+const DownloadAllButton = styled(PrintBillButton)`
+  background: ${({ theme }) => theme.colors.gray};
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const IconActions = styled.div`
+  display: inline-flex;
+  gap: ${({ theme }) => theme.spacing.small};
+  align-items: center;
+`;
+
 const Muted = styled.span`
   color: ${({ theme }) => theme.colors.text};
   opacity: 0.8;
@@ -284,6 +296,11 @@ const getItemPdfDownloadName = (item: Item) => {
   return normalized.toLowerCase().endsWith(".pdf") ? normalized : `${normalized}.pdf`;
 };
 
+const sanitizeName = (value?: string | null, fallback: string = "bill-items") => {
+  if (!value || !value.trim()) return fallback;
+  return value.trim().replace(/[^\w.-]+/g, "-");
+};
+
 const formatApprovalLocation = (item: Item) => {
   const lat = item.approvalLocation?.coordinates?.latitude;
   const lon = item.approvalLocation?.coordinates?.longitude;
@@ -328,6 +345,8 @@ const RacuniPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printError, setPrintError] = useState("");
+  const [downloadingBillId, setDownloadingBillId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState("");
   const token = localStorage.getItem("userToken") || "";
   const selectedItems = selectedItemIds
     .map(id => selectedItemsCache.find(item => item._id === id) || items.find(item => item._id === id))
@@ -529,6 +548,77 @@ const RacuniPage: React.FC = () => {
       setPrintError("Nije moguće generirati PDF za ispis.");
     } finally {
       setPrintingId(null);
+    }
+  };
+
+  const handleDownloadBillItemPdfs = async (bill: Bill, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDownloadError("");
+
+    const itemsWithPdf = bill.items.filter(item => item.pdfUrl);
+    if (itemsWithPdf.length === 0) {
+      setDownloadError("Nema PDF dokumenata za preuzimanje.");
+      return;
+    }
+
+    setDownloadingBillId(bill._id);
+
+    try {
+      const zip = new JSZip();
+      const folderName = sanitizeName(bill.title, "bill-items");
+      const folder = zip.folder(folderName) || zip;
+      let addedFiles = 0;
+
+      for (const item of itemsWithPdf) {
+        const downloadUrl = getPdfDownloadUrl(item.pdfUrl);
+        if (!downloadUrl) continue;
+
+        try {
+          const fetchOptions: RequestInit =
+            !token || downloadUrl.includes("drive.google.com")
+              ? {}
+              : {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                };
+
+          const response = await fetch(downloadUrl, fetchOptions);
+          if (!response.ok) {
+            console.error("Failed to fetch PDF:", downloadUrl, response.status);
+            continue;
+          }
+
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          folder.file(getItemPdfDownloadName(item), arrayBuffer);
+          addedFiles += 1;
+        } catch (err) {
+          console.error("Error fetching PDF:", err);
+        }
+      }
+
+      if (addedFiles === 0) {
+        setDownloadError("Nije moguce preuzeti PDF datoteke.");
+        return;
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const blobUrl = URL.createObjectURL(zipBlob);
+      const zipName = `${folderName || "bill-items"}.zip`;
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = zipName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+      console.error("Error downloading bill PDFs:", err);
+      setDownloadError("Nije moguce preuzeti PDF datoteke.");
+    } finally {
+      setDownloadingBillId(null);
     }
   };
 
@@ -771,6 +861,32 @@ const RacuniPage: React.FC = () => {
                         Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
                       </Muted>
                     </div>
+                    <IconActions>
+                      <DownloadAllButton
+                        type="button"
+                        onClick={e => handleDownloadBillItemPdfs(bill, e)}
+                        disabled={downloadingBillId === bill._id}
+                        aria-label="Preuzmi sve PDF-ove"
+                        title="Preuzmi sve PDF-ove"
+                      >
+                        {downloadingBillId === bill._id ? (
+                          "..."
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M12 3v12" />
+                            <path d="m6 11 6 6 6-6" />
+                            <path d="M5 19h14" />
+                          </svg>
+                        )}
+                      </DownloadAllButton>
                       <PrintBillButton
                         type="button"
                         onClick={e => handlePrintBill(bill, e)}
@@ -795,6 +911,7 @@ const RacuniPage: React.FC = () => {
                           </svg>
                         )}
                       </PrintBillButton>
+                    </IconActions>
                     </BillHeaderRow>
                     {expandedBillId === bill._id && (
                       <>
@@ -988,6 +1105,7 @@ const RacuniPage: React.FC = () => {
               </BillList>
             )}
             {printError && <S.ErrorMessage>{printError}</S.ErrorMessage>}
+            {downloadError && <S.ErrorMessage>{downloadError}</S.ErrorMessage>}
           </Card>
         </ContentGrid>
       </DashboardContainer>
