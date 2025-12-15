@@ -167,10 +167,20 @@ const BillHeaderRow = styled.div`
 `;
 
 const PrintBillButton = styled(S.Button)`
-  padding: 0.6rem 1rem !important;
-  min-width: auto;
-  font-size: 0.9rem !important;
-  white-space: nowrap;
+  padding: 0.45rem !important;
+  min-width: 0;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem !important;
+  border-radius: 50%;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 `;
 
 const Muted = styled.span`
@@ -737,13 +747,30 @@ const RacuniPage: React.FC = () => {
                         Kreirao: {bill.createdBy?.firstName} {bill.createdBy?.lastName}
                       </Muted>
                     </div>
-                    <PrintBillButton
-                      type="button"
-                      onClick={e => handlePrintBill(bill, e)}
-                      disabled={printingId === bill._id}
-                    >
-                      {printingId === bill._id ? "Ispis..." : "Ispisi"}
-                    </PrintBillButton>
+                      <PrintBillButton
+                        type="button"
+                        onClick={e => handlePrintBill(bill, e)}
+                        disabled={printingId === bill._id}
+                        aria-label="Ispis računa"
+                      >
+                        {printingId === bill._id ? (
+                          "..."
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="6 9 6 2 18 2 18 9" />
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                            <rect x="6" y="14" width="12" height="8" />
+                          </svg>
+                        )}
+                      </PrintBillButton>
                     </BillHeaderRow>
                     {expandedBillId === bill._id && (
                       <>
