@@ -55,9 +55,9 @@ export const buildBillPrintPdf = async (bill: Bill, token: string) => {
   };
 
   const columns = [
-    { key: 'title', label: 'Dokument', width: 230 },
+    { key: 'title', label: 'Dokument', width: 210 },
     { key: 'code', label: 'RN', width: 90 },
-    { key: 'status', label: 'Status', width: 110 },
+    { key: 'status', label: 'Status', width: 90 },
     { key: 'prijevoznik', label: 'Prijevoznik', width: 90 },
   ] as const;
 
