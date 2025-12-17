@@ -278,15 +278,28 @@ const getPdfDownloadUrl = (url?: string | null) => {
   return normalizedUrl;
 };
 
-const getBillPdfDownloadName = (attachment?: Bill["attachment"] | null) => {
-  if (!attachment?.url) return undefined;
+const getGoogleDrivePreviewUrl = (url: string) => {
+  const driveIdMatch =
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/open\?id=([a-zA-Z0-9_-]+)/);
 
-  const baseName =
-    attachment.originalName ||
-    attachment.url.split("/").pop() ||
-    "bill-attachment";
+  if (driveIdMatch?.[1]) {
+    return `https://drive.google.com/file/d/${driveIdMatch[1]}/preview`;
+  }
 
-  return baseName.toLowerCase().endsWith(".pdf") ? baseName : `${baseName}.pdf`;
+  return url;
+};
+
+const getPdfViewUrl = (url?: string | null) => {
+  if (!url) return "";
+
+  const normalizedUrl = getImageUrl(url);
+  if (normalizedUrl.includes("drive.google.com")) {
+    return getGoogleDrivePreviewUrl(normalizedUrl);
+  }
+
+  return normalizedUrl;
 };
 
 const getItemPdfDownloadName = (item: Item) => {
@@ -299,6 +312,9 @@ const sanitizeName = (value?: string | null, fallback: string = "bill-items") =>
   if (!value || !value.trim()) return fallback;
   return value.trim().replace(/[^\w.-]+/g, "-");
 };
+
+const sortBillsByNewest = (list: Bill[]) =>
+  [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 const formatApprovalLocation = (item: Item) => {
   const lat = item.approvalLocation?.coordinates?.latitude;
@@ -484,7 +500,7 @@ const RacuniPage: React.FC = () => {
     setError("");
     try {
       const billsResponse = await apiService.getBills();
-      setBills(billsResponse);
+      setBills(sortBillsByNewest(billsResponse));
     } catch (err) {
       console.error("Error loading bills:", err);
       setError(prev => prev || "Neuspjesno ucitavanje racuna.");
@@ -609,7 +625,7 @@ const RacuniPage: React.FC = () => {
         itemIds: selectedItemIds,
         billPdf: billPdf || undefined,
       });
-      setBills(prev => [newBill, ...prev]);
+      setBills(prev => sortBillsByNewest([newBill, ...prev]));
       setTitle("");
       setDobavljac(DEFAULT_DOBAVLJAC);
       setDescription("");
@@ -881,8 +897,7 @@ const RacuniPage: React.FC = () => {
                             Priloženi PDF:{" "}
                             {bill.attachment?.url ? (
                               <PdfLink
-                                href={getPdfDownloadUrl(bill.attachment.url)}
-                                download={getBillPdfDownloadName(bill.attachment)}
+                                href={getPdfViewUrl(bill.attachment.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -958,10 +973,9 @@ const RacuniPage: React.FC = () => {
                                           }}
                                         >
                                           <PdfLink
-                                            href={getPdfDownloadUrl(item.pdfUrl)}
+                                            href={getPdfViewUrl(item.pdfUrl)}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            download={getItemPdfDownloadName(item)}
                                             onClick={e => e.stopPropagation()}
                                           >
                                             Otvori PDF
