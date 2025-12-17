@@ -761,7 +761,7 @@ const RacuniPage: React.FC = () => {
                     {!hasSearched ? (
                       <Muted>Kliknite "Traži" za prikaz dokumenata</Muted>
                     ) : itemsLoading ? (
-                      <Muted>Uitavanje...</Muted>
+                      <Muted>Učitavanje...</Muted>
                     ) : items.length === 0 ? (
                       <Muted>
                         {hasItemSearch
