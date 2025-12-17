@@ -252,7 +252,8 @@ export const buildBillItemsDetailPdf = async (bill: Bill, token?: string) => {
     }
   };
 
-  for (const [index, item] of bill.items.entries()) {
+  for (let index = 0; index < bill.items.length; index += 1) {
+    const item = bill.items[index];
     page.drawText(`#${index + 1} ${safeText(item.title)}`, {
       x: MARGIN,
       y,
