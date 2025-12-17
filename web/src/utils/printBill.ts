@@ -21,6 +21,62 @@ const statusLabel = (status: Item['approvalStatus']) => {
 const safeText = (value: string | number | undefined | null) =>
   value !== undefined && value !== null ? toAscii(String(value)) : 'N/A';
 
+const parseDateValue = (value: any): Date | null => {
+  if (!value) return null;
+  const parsed = value && typeof value === 'object' && '$date' in value ? (value as any).$date : value;
+  const date = new Date(parsed);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatDateOnly = (value: any) => {
+  const date = parseDateValue(value);
+  if (!date) return safeText(value);
+  return date.toLocaleDateString('hr-HR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Zagreb',
+  });
+};
+
+const formatDateAndTime = (creationDate: any, creationTime?: string) => {
+  const date = parseDateValue(creationDate);
+  if (!date && !creationTime) return 'N/A';
+  const datePart = date
+    ? date.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'Europe/Zagreb',
+      })
+    : safeText(creationDate);
+  return creationTime ? `${datePart} ${creationTime}` : datePart;
+};
+
+const formatTimeOnly = (dateValue: any, explicitTime?: string) => {
+  if (explicitTime) return safeText(explicitTime);
+  const date = parseDateValue(dateValue);
+  if (!date) return 'N/A';
+  return date.toLocaleTimeString('hr-HR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Zagreb',
+  });
+};
+
+const formatApprovalDate = (approvalDate: any) => {
+  const date = parseDateValue(approvalDate);
+  if (!date) return safeText(approvalDate);
+  return date.toLocaleString('hr-HR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Zagreb',
+  });
+};
+
 export const buildBillPrintPdf = async (bill: Bill, token: string) => {
   if (!token) {
     throw new Error('Missing auth token for fetching PDFs.');
@@ -118,6 +174,65 @@ export const buildBillPrintPdf = async (bill: Bill, token: string) => {
       x += col.width;
     });
 
+    nextLine(14);
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
+};
+
+export const buildBillItemsDetailPdf = async (bill: Bill) => {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let y = PAGE_HEIGHT - MARGIN;
+
+  const nextLine = (gap = 16) => {
+    y -= gap;
+    if (y < MARGIN + 60) {
+      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      y = PAGE_HEIGHT - MARGIN;
+    }
+  };
+
+  const drawLabelValue = (label: string, value: string) => {
+    page.drawText(toAscii(label), { x: MARGIN, y, size: 11, font: boldFont });
+    page.drawText(toAscii(value), { x: MARGIN + 140, y, size: 11, font });
+    nextLine(14);
+  };
+
+  page.drawText(toAscii('Stavke računa'), { x: MARGIN, y, size: 16, font: boldFont });
+  nextLine(22);
+  page.drawText(toAscii(`Račun: ${safeText(bill.title)}`), { x: MARGIN, y, size: 12, font });
+  nextLine(18);
+
+  bill.items.forEach((item, index) => {
+    page.drawText(`#${index + 1} ${safeText(item.title)}`, {
+      x: MARGIN,
+      y,
+      size: 13,
+      font: boldFont,
+    });
+    nextLine(18);
+    drawLabelValue('RN', safeText(item.code));
+    drawLabelValue('Registracija', safeText(item.registracija));
+    const weightValue =
+      typeof item.tezina === 'number'
+        ? `${(item.tezina / 1000).toFixed(3)} t`
+        : typeof item.neto === 'number'
+        ? `${item.neto} kg`
+        : 'N/A';
+    drawLabelValue('Težina', weightValue);
+    drawLabelValue('Datum kreiranja', formatDateAndTime(item.creationDate, item.creationTime));
+    drawLabelValue('Vrijeme kreiranja', formatTimeOnly(item.creationDate, item.creationTime));
+    drawLabelValue('Status', statusLabel(item.approvalStatus));
+    const approvedByName = item.approvedBy
+      ? `${safeText(item.approvedBy.firstName)} ${safeText(item.approvedBy.lastName)}`
+      : 'N/A';
+    drawLabelValue('Odobrio', approvedByName);
+    drawLabelValue('Datum odobrenja', formatApprovalDate(item.approvalDate));
     nextLine(14);
   });
 

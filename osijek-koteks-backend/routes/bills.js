@@ -57,7 +57,8 @@ const baseBillQuery = () =>
   Bill.find().populate({
     path: 'items',
     select:
-      'title code pdfUrl creationDate registracija prijevoznik approvalStatus in_transit isPaid neto tezina approvalLocation approvalDocument approvalPhotoFront approvalPhotoBack',
+      'title code pdfUrl creationDate creationTime registracija prijevoznik approvalStatus approvalDate approvedBy in_transit isPaid neto tezina approvalLocation approvalDocument approvalPhotoFront approvalPhotoBack',
+    populate: { path: 'approvedBy', select: 'firstName lastName email' },
   });
 
 const sanitizeName = (value, fallback = 'bill-items') => {

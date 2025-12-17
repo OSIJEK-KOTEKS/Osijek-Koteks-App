@@ -5,7 +5,7 @@ import * as S from "../components/styled/Common";
 import Logo from "../components/Logo";
 import { useAuth } from "../contexts/AuthContext";
 import { apiService, getImageUrl } from "../utils/api";
-import { buildBillPrintPdf } from "../utils/printBill";
+import { buildBillItemsDetailPdf, buildBillPrintPdf } from "../utils/printBill";
 import ImageViewerModal from "../components/ImageViewerModal";
 import { Bill, Item } from "../types";
 
@@ -361,6 +361,7 @@ const RacuniPage: React.FC = () => {
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printError, setPrintError] = useState("");
   const [downloadingBillId, setDownloadingBillId] = useState<string | null>(null);
+  const [itemsPdfBillId, setItemsPdfBillId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState("");
   const token = localStorage.getItem("userToken") || "";
   const selectedItems = selectedItemIds
@@ -595,6 +596,29 @@ const RacuniPage: React.FC = () => {
       setDownloadError("Nije moguce preuzeti PDF datoteke.");
     } finally {
       setDownloadingBillId(null);
+    }
+  };
+
+  const handleDownloadBillItemsPdf = async (bill: Bill, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDownloadError("");
+    setItemsPdfBillId(bill._id);
+
+    try {
+      const blob = await buildBillItemsDetailPdf(bill);
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${sanitizeName(bill.title, "bill")}-stavke.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+      console.error("Error generating bill items PDF:", err);
+      setDownloadError("Nije moguce generirati PDF stavki.");
+    } finally {
+      setItemsPdfBillId(null);
     }
   };
 
@@ -884,6 +908,32 @@ const RacuniPage: React.FC = () => {
                             <polyline points="6 9 6 2 18 2 18 9" />
                             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                             <rect x="6" y="14" width="12" height="8" />
+                          </svg>
+                        )}
+                      </PrintBillButton>
+                      <PrintBillButton
+                        type="button"
+                        onClick={e => handleDownloadBillItemsPdf(bill, e)}
+                        disabled={itemsPdfBillId === bill._id}
+                        aria-label="Preuzmi PDF stavki"
+                        title="Preuzmi PDF stavki"
+                      >
+                        {itemsPdfBillId === bill._id ? (
+                          "..."
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="9" y1="13" x2="15" y2="13" />
+                            <line x1="9" y1="17" x2="13" y2="17" />
                           </svg>
                         )}
                       </PrintBillButton>
