@@ -412,7 +412,7 @@ const RacuniPage: React.FC = () => {
       await signOut();
       navigate("/login");
     } catch (err) {
-      console.error("Logout error: ", err);
+      console.error("Logout error : ", err);
     }
   };
 
