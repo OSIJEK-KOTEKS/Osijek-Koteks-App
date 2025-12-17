@@ -602,10 +602,14 @@ const RacuniPage: React.FC = () => {
   const handleDownloadBillItemsPdf = async (bill: Bill, e: React.MouseEvent) => {
     e.stopPropagation();
     setDownloadError("");
+    if (!token) {
+      setDownloadError("Nedostaje token za preuzimanje PDF-a. Prijavite se ponovo.");
+      return;
+    }
     setItemsPdfBillId(bill._id);
 
     try {
-      const blob = await buildBillItemsDetailPdf(bill);
+      const blob = await buildBillItemsDetailPdf(bill, token);
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
@@ -866,8 +870,8 @@ const RacuniPage: React.FC = () => {
                         type="button"
                         onClick={e => handleDownloadBillItemPdfs(bill, e)}
                         disabled={downloadingBillId === bill._id}
-                        aria-label="Preuzmi sve PDF-ove"
-                        title="Preuzmi sve PDF-ove"
+                        aria-label="Preuzmi sve"
+                        title="Preuzmi sve"
                       >
                         {downloadingBillId === bill._id ? (
                           "..."

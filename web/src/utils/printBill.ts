@@ -181,7 +181,23 @@ export const buildBillPrintPdf = async (bill: Bill, token: string) => {
   return new Blob([pdfBytes], { type: 'application/pdf' });
 };
 
-export const buildBillItemsDetailPdf = async (bill: Bill) => {
+const fetchImageBytes = async (url: string, token?: string) => {
+  const normalizedUrl = getImageUrl(url);
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(normalizedUrl, {
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${normalizedUrl}`);
+  }
+
+  return response.arrayBuffer();
+};
+
+export const buildBillItemsDetailPdf = async (bill: Bill, token?: string) => {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -208,7 +224,35 @@ export const buildBillItemsDetailPdf = async (bill: Bill) => {
   page.drawText(toAscii(`Račun: ${safeText(bill.title)}`), { x: MARGIN, y, size: 12, font });
   nextLine(18);
 
-  bill.items.forEach((item, index) => {
+  const embedPhoto = async (photo: Item['approvalPhotoFront'], label: string) => {
+    if (!photo?.url) return;
+
+    try {
+      const bytes = await fetchImageBytes(photo.url, token);
+      const image =
+        photo.mimeType && photo.mimeType.includes('png') ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+
+      const maxWidth = 220;
+      const maxHeight = 180;
+      const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+
+      if (y - drawHeight - 40 < MARGIN) {
+        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        y = PAGE_HEIGHT - MARGIN;
+      }
+
+      page.drawText(toAscii(label), { x: MARGIN, y: y, size: 11, font: boldFont });
+      y -= 16;
+      page.drawImage(image, { x: MARGIN, y: y - drawHeight, width: drawWidth, height: drawHeight });
+      y -= drawHeight + 12;
+    } catch (err) {
+      console.error('Failed to embed image in bill items PDF', err);
+    }
+  };
+
+  for (const [index, item] of bill.items.entries()) {
     page.drawText(`#${index + 1} ${safeText(item.title)}`, {
       x: MARGIN,
       y,
@@ -234,7 +278,11 @@ export const buildBillItemsDetailPdf = async (bill: Bill) => {
     drawLabelValue('Odobrio', approvedByName);
     drawLabelValue('Datum odobrenja', formatApprovalDate(item.approvalDate));
     nextLine(14);
-  });
+
+    await embedPhoto(item.approvalPhotoFront, 'Prednja slika');
+    await embedPhoto(item.approvalPhotoBack, 'Stražnja slika');
+    nextLine(8);
+  }
 
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });
