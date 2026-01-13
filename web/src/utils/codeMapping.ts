@@ -1,7 +1,7 @@
 // utils/codeMapping.ts
 export const codeToTextMapping: Record<string, string> = {
   '1994': 'AB Našice',
-  '20001': 'Tranzit',
+  '2001': 'Tranzit',
   '21102': 'Šire NA područje',
   '21075': 'AB Našice skladište rasutog mat.',
   '21098': 'Retencija Glogovica',
