@@ -174,7 +174,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   };
 
   // Filter out unused codes AND deduplicate
-  const unusedCodes = ['1111', '1996'];
+  const unusedCodes = ['1111', '1996,20001'];
   const filteredCodes = Array.from(new Set(availableCodes)) // Deduplicate first
     .filter(code => !unusedCodes.includes(code))
     .sort(); // Sort for consistent ordering
