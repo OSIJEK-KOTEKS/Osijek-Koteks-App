@@ -238,11 +238,13 @@ const AdminCodeEditor: React.FC<AdminCodeEditorProps> = ({
     }
   };
 
-  // Filter out the current code from available options AND remove duplicates
+  const excludedCodes = new Set(['20001']);
+
+  // Filter out the current code, excluded codes, and remove duplicates
   const filteredCodes = React.useMemo(() => {
     // First remove duplicates, then filter out current code
     const uniqueCodes = Array.from(new Set(availableCodes));
-    return uniqueCodes.filter(code => code !== item.code);
+    return uniqueCodes.filter(code => code !== item.code && !excludedCodes.has(code));
   }, [availableCodes, item.code]);
 
   // Debug logging (remove in production)
