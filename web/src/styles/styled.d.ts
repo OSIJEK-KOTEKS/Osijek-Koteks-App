@@ -14,5 +14,14 @@ declare module 'styled-components' {
       success: string;
       successDark: string;
     };
+    spacing: {
+      small: string;
+      medium: string;
+      large: string;
+    };
+    borderRadius: string;
+    shadows: {
+      main: string;
+    };
   }
 }
