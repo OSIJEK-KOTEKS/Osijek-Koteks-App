@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -112,6 +113,7 @@ interface NoviZahtjevModalProps {
   onClose: () => void;
   onSubmit: (data: {
     kamenolom: string;
+    gradiliste: string;
     brojKamiona: number;
     prijevozNaDan: string;
   }) => Promise<void>;
@@ -130,6 +132,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   onSubmit,
 }) => {
   const [kamenolom, setKamenolom] = useState('');
+  const [gradiliste, setGradiliste] = useState('');
   const [brojKamiona, setBrojKamiona] = useState('');
   const [prijevozNaDan, setPrijevozNaDan] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -142,6 +145,11 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     // Validation
     if (!kamenolom) {
       setError('Molimo odaberite kamenolom');
+      return;
+    }
+
+    if (!gradiliste) {
+      setError('Molimo odaberite gradilište');
       return;
     }
 
@@ -160,11 +168,13 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     try {
       await onSubmit({
         kamenolom,
+        gradiliste,
         brojKamiona: brojKamionaNum,
         prijevozNaDan,
       });
       // Reset form
       setKamenolom('');
+      setGradiliste('');
       setBrojKamiona('');
       setPrijevozNaDan('');
       onClose();
@@ -179,6 +189,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   const handleClose = () => {
     if (!isLoading) {
       setKamenolom('');
+      setGradiliste('');
       setBrojKamiona('');
       setPrijevozNaDan('');
       setError('');
@@ -204,6 +215,22 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
               {KAMENOLOMI.map(k => (
                 <option key={k} value={k}>
                   {k}
+                </option>
+              ))}
+            </Select>
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="gradiliste">Gradilište</Label>
+            <Select
+              id="gradiliste"
+              value={gradiliste}
+              onChange={e => setGradiliste(e.target.value)}
+              required>
+              <option value="">Odaberite gradilište...</option>
+              {Object.keys(codeToTextMapping).sort().map(code => (
+                <option key={code} value={code}>
+                  {getFormattedCode(code)}
                 </option>
               ))}
             </Select>

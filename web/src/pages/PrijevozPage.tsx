@@ -83,13 +83,14 @@ const PrijevozPage: React.FC = () => {
 
   const handleSubmitZahtjev = async (data: {
     kamenolom: string;
+    gradiliste: string;
     brojKamiona: number;
     prijevozNaDan: string;
   }) => {
     console.log('Novi zahtjev:', data);
     // TODO: Send data to backend API
     // For now, just log it
-    alert(`Zahtjev kreiran:\nKamenolom: ${data.kamenolom}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
+    alert(`Zahtjev kreiran:\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
   };
 
   return (
