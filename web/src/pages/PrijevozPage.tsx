@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
+import NoviZahtjevModal from '../components/NoviZahtjevModal';
 
 const Header = styled.div`
   display: flex;
@@ -56,9 +57,16 @@ const ContentText = styled.p`
   line-height: 1.6;
 `;
 
+const ButtonSection = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.large};
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.medium};
+`;
+
 const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -71,6 +79,17 @@ const PrijevozPage: React.FC = () => {
 
   const handleNavigateToDashboard = () => {
     navigate('/dashboard');
+  };
+
+  const handleSubmitZahtjev = async (data: {
+    kamenolom: string;
+    brojKamiona: number;
+    prijevozNaDan: string;
+  }) => {
+    console.log('Novi zahtjev:', data);
+    // TODO: Send data to backend API
+    // For now, just log it
+    alert(`Zahtjev kreiran:\nKamenolom: ${data.kamenolom}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
   };
 
   return (
@@ -88,9 +107,18 @@ const PrijevozPage: React.FC = () => {
       <DashboardContainer>
         <ContentTitle>Prijevoz</ContentTitle>
         <ContentText>
-          Stranica za upravljanje prijevozom je u pripremi.
+          Upravljajte zahtjevima za prijevoz.
         </ContentText>
+        <ButtonSection>
+          <S.Button onClick={() => setIsModalOpen(true)}>Novi zahtjev</S.Button>
+        </ButtonSection>
       </DashboardContainer>
+
+      <NoviZahtjevModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmitZahtjev}
+      />
     </S.PageContainer>
   );
 };
