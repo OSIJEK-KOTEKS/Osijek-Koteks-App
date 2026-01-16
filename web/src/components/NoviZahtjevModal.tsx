@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { format } from 'date-fns';
 import { codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
 
 const ModalOverlay = styled.div`
@@ -108,6 +111,25 @@ const Title = styled.h2`
   color: ${({ theme }) => theme.colors.text};
 `;
 
+const DatePickerWrapper = styled.div`
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+
+  .react-datepicker__input-container input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid ${({ theme }) => theme.colors.gray};
+    border-radius: 4px;
+    font-size: 1rem;
+
+    &:focus {
+      outline: none;
+      border-color: ${({ theme }) => theme.colors.primary};
+    }
+  }
+`;
+
 interface NoviZahtjevModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -134,7 +156,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   const [kamenolom, setKamenolom] = useState('');
   const [gradiliste, setGradiliste] = useState('');
   const [brojKamiona, setBrojKamiona] = useState('');
-  const [prijevozNaDan, setPrijevozNaDan] = useState('');
+  const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -164,19 +186,22 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       return;
     }
 
+    // Format date to dd/mm/yyyy
+    const formattedDate = format(prijevozNaDan, 'dd/MM/yyyy');
+
     setIsLoading(true);
     try {
       await onSubmit({
         kamenolom,
         gradiliste,
         brojKamiona: brojKamionaNum,
-        prijevozNaDan,
+        prijevozNaDan: formattedDate,
       });
       // Reset form
       setKamenolom('');
       setGradiliste('');
       setBrojKamiona('');
-      setPrijevozNaDan('');
+      setPrijevozNaDan(null);
       onClose();
     } catch (err) {
       setError('Greška pri spremanju zahtjeva');
@@ -191,7 +216,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       setKamenolom('');
       setGradiliste('');
       setBrojKamiona('');
-      setPrijevozNaDan('');
+      setPrijevozNaDan(null);
       setError('');
       onClose();
     }
@@ -252,13 +277,15 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
 
           <FormGroup>
             <Label htmlFor="prijevozNaDan">Prijevoz na dan</Label>
-            <Input
-              id="prijevozNaDan"
-              type="date"
-              value={prijevozNaDan}
-              onChange={e => setPrijevozNaDan(e.target.value)}
-              required
-            />
+            <DatePickerWrapper>
+              <DatePicker
+                selected={prijevozNaDan}
+                onChange={(date: Date | null) => setPrijevozNaDan(date)}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="DD/MM/YYYY"
+                required
+              />
+            </DatePickerWrapper>
           </FormGroup>
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
