@@ -209,6 +209,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         isVerified: user.isVerified,
         hasFullAccess: user.hasFullAccess || false,
         canAccessRacuni: user.canAccessRacuni ?? false,
+        canAccessPrijevoz: user.canAccessPrijevoz ?? false,
       });
       // Reset other state values
       setNewCode('');
@@ -240,6 +241,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     setFormData(prev => ({
       ...prev,
       canAccessRacuni: checked,
+    }));
+  };
+
+  const handlePrijevozAccessChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      canAccessPrijevoz: checked,
     }));
   };
 
@@ -393,6 +401,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 id="canAccessRacuni"
               />
               <label htmlFor="canAccessRacuni">Omogući pristup stranici Računi</label>
+            </CheckboxContainer>
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Pristup prijevozu</Label>
+            <CheckboxContainer>
+              <input
+                type="checkbox"
+                checked={formData.canAccessPrijevoz || false}
+                onChange={e => handlePrijevozAccessChange(e.target.checked)}
+                id="canAccessPrijevoz"
+              />
+              <label htmlFor="canAccessPrijevoz">Omogući pristup stranici Prijevoz</label>
             </CheckboxContainer>
           </FormGroup>
 
