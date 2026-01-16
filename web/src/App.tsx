@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
 import RacuniPage from './pages/RacuniPage';
+import PrijevozPage from './pages/PrijevozPage';
 
 const App: React.FC = () => {
   return (
@@ -34,6 +35,14 @@ const App: React.FC = () => {
             element={
               <PrivateRoute requiresRacuniAccess>
                 <RacuniPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/prijevoz"
+            element={
+              <PrivateRoute requiresPrijevozAccess>
+                <PrijevozPage />
               </PrivateRoute>
             }
           />

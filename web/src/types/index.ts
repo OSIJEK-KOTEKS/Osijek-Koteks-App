@@ -10,6 +10,7 @@ export interface User {
   phoneNumber?: string;
   hasFullAccess: boolean;
   canAccessRacuni?: boolean;
+  canAccessPrijevoz?: boolean;
 }
 
 export interface RegistrationData {
@@ -22,6 +23,7 @@ export interface RegistrationData {
   codes: string[];
   hasFullAccess?: boolean;
   canAccessRacuni?: boolean;
+  canAccessPrijevoz?: boolean;
 }
 
 export interface Item {

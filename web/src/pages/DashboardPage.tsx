@@ -301,6 +301,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
   const canAccessRacuni = user?.role === 'admin' || user?.canAccessRacuni;
+  const canAccessPrijevoz = user?.role === 'admin' || user?.canAccessPrijevoz;
 
   const getDisplayNameForUser = (item: Item): string => {
     if (!item.createdBy) return 'Nepoznato';
@@ -764,6 +765,11 @@ const Dashboard: React.FC = () => {
     navigate('/racuni');
   };
 
+  const handleNavigateToPrijevoz = () => {
+    if (!canAccessPrijevoz) return;
+    navigate('/prijevoz');
+  };
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -1027,6 +1033,7 @@ const Dashboard: React.FC = () => {
           />
 
           {canAccessRacuni && <S.Button onClick={handleNavigateToRacuni}>Racuni</S.Button>}
+          {canAccessPrijevoz && <S.Button onClick={handleNavigateToPrijevoz}>Prijevoz</S.Button>}
           {/* Logout button */}
           <S.Button onClick={handleLogout}>Odjava</S.Button>
         </HeaderActions>
