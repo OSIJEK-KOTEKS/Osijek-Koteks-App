@@ -48,9 +48,24 @@ const DashboardContainer = styled.div`
   padding: ${({ theme }) => theme.spacing.large};
 `;
 
+const ContentHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${({ theme }) => theme.spacing.large};
+`;
+
 const ContentTitle = styled.h2`
-  margin: 0 0 ${({ theme }) => theme.spacing.large} 0;
+  margin: 0;
   color: ${({ theme }) => theme.colors.text};
+`;
+
+const SmallButton = styled(S.Button)`
+  padding: 0.5rem 1rem !important;
+  font-size: 0.875rem !important;
+  min-width: auto !important;
+  width: auto !important;
+  max-width: fit-content !important;
 `;
 
 const ContentText = styled.p`
@@ -112,13 +127,13 @@ const PrijevozPage: React.FC = () => {
       </Header>
 
       <DashboardContainer>
-        <ContentTitle>Prijevoz</ContentTitle>
+        <ContentHeader>
+          <ContentTitle>Prijevoz</ContentTitle>
+          <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
+        </ContentHeader>
         <ContentText>
           Upravljajte zahtjevima za prijevoz.
         </ContentText>
-        <ButtonSection>
-          <S.Button onClick={() => setIsModalOpen(true)}>Novi zahtjev</S.Button>
-        </ButtonSection>
       </DashboardContainer>
 
       <NoviZahtjevModal
