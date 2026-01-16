@@ -127,7 +127,7 @@ router.patch('/:id', auth, async (req, res) => {
     const updatableFields = ['firstName', 'lastName', 'company', 'phoneNumber'];
     if (req.user.role === 'admin') {
       // Admin can manage additional fields
-      updatableFields.push('role', 'isVerified', 'codes', 'hasFullAccess', 'canAccessRacuni');
+      updatableFields.push('role', 'isVerified', 'codes', 'hasFullAccess', 'canAccessRacuni', 'canAccessPrijevoz');
     }
 
     // Update allowed fields
@@ -157,7 +157,7 @@ router.post('/', auth, async (req, res) => {
       password: '[REDACTED]',
     });
 
-    const { firstName, lastName, company, email, password, codes, role, canAccessRacuni } =
+    const { firstName, lastName, company, email, password, codes, role, canAccessRacuni, canAccessPrijevoz } =
       req.body;
 
     // Check if user already exists
@@ -178,6 +178,7 @@ router.post('/', auth, async (req, res) => {
       isVerified: false,
       hasFullAccess: req.body.hasFullAccess || false,
       canAccessRacuni: canAccessRacuni || false,
+      canAccessPrijevoz: canAccessPrijevoz || false,
     });
 
     await user.save();
