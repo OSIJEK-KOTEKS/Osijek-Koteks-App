@@ -85,6 +85,7 @@ const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const itemsRouter = require('./routes/items');
 const billsRouter = require('./routes/bills');
+const transportRequestsRouter = require('./routes/transportRequests');
 
 // GDPR Routes
 app.get('/api/privacy-policy', (req, res) => {
@@ -119,6 +120,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/bills', billsRouter);
+app.use('/api/transport-requests', transportRequestsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

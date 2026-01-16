@@ -5,6 +5,7 @@ import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 import NoviZahtjevModal from '../components/NoviZahtjevModal';
+import { apiService } from '../utils/api';
 
 const Header = styled.div`
   display: flex;
@@ -87,10 +88,15 @@ const PrijevozPage: React.FC = () => {
     brojKamiona: number;
     prijevozNaDan: string;
   }) => {
-    console.log('Novi zahtjev:', data);
-    // TODO: Send data to backend API
-    // For now, just log it
-    alert(`Zahtjev kreiran:\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
+    try {
+      console.log('Submitting transport request:', data);
+      const response = await apiService.createTransportRequest(data);
+      console.log('Transport request created:', response);
+      alert(`Zahtjev uspješno kreiran!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
+    } catch (error) {
+      console.error('Error creating transport request:', error);
+      alert('Greška pri kreiranju zahtjeva. Molimo pokušajte ponovno.');
+    }
   };
 
   return (

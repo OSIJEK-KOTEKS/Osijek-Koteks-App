@@ -555,6 +555,64 @@ export const apiService = {
       throw error;
     }
   },
+
+  // Transport Request methods
+  createTransportRequest: async (requestData: {
+    kamenolom: string;
+    gradiliste: string;
+    brojKamiona: number;
+    prijevozNaDan: string;
+  }): Promise<any> => {
+    try {
+      console.log('Creating transport request:', requestData);
+      const response = await api.post('/api/transport-requests', requestData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating transport request:', error);
+      throw error;
+    }
+  },
+
+  getTransportRequests: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/transport-requests');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching transport requests:', error);
+      throw error;
+    }
+  },
+
+  getTransportRequestById: async (id: string): Promise<any> => {
+    try {
+      const response = await api.get(`/api/transport-requests/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching transport request:', error);
+      throw error;
+    }
+  },
+
+  updateTransportRequestStatus: async (id: string, status: string): Promise<any> => {
+    try {
+      console.log('Updating transport request status:', { id, status });
+      const response = await api.patch(`/api/transport-requests/${id}/status`, { status });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating transport request status:', error);
+      throw error;
+    }
+  },
+
+  deleteTransportRequest: async (id: string): Promise<void> => {
+    try {
+      console.log('Deleting transport request:', id);
+      await api.delete(`/api/transport-requests/${id}`);
+    } catch (error) {
+      console.error('Error deleting transport request:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;
