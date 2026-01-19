@@ -6,10 +6,10 @@ const auth = require('../middleware/auth');
 // Create a new transport request
 router.post('/', auth, async (req, res) => {
   try {
-    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan } = req.body;
+    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;
 
     // Validate required fields
-    if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan) {
+    if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -19,6 +19,7 @@ router.post('/', auth, async (req, res) => {
       gradiliste,
       brojKamiona,
       prijevozNaDan,
+      isplataPoT,
       userId: req.user._id,
       userEmail: req.user.email,
     });
