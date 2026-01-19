@@ -147,6 +147,7 @@ interface TransportRequest {
   gradiliste: string;
   brojKamiona: number;
   prijevozNaDan: string;
+  isplataPoT: number;
   status: string;
   createdAt: string;
   userEmail: string;
@@ -193,6 +194,7 @@ const PrijevozPage: React.FC = () => {
     gradiliste: string;
     brojKamiona: number;
     prijevozNaDan: string;
+    isplataPoT: number;
   }) => {
     try {
       console.log('Submitting transport request:', data);
@@ -259,6 +261,7 @@ const PrijevozPage: React.FC = () => {
                 <Th>Gradilište</Th>
                 <Th>Broj kamiona</Th>
                 <Th>Prijevoz na dan</Th>
+                <Th>Isplata po t</Th>
                 <Th>Status</Th>
               </tr>
             </thead>
@@ -270,6 +273,7 @@ const PrijevozPage: React.FC = () => {
                   <Td>{request.gradiliste}</Td>
                   <Td>{request.brojKamiona}</Td>
                   <Td>{request.prijevozNaDan}</Td>
+                  <Td>{request.isplataPoT}</Td>
                   <Td>
                     <StatusBadge status={request.status}>
                       {getStatusLabel(request.status)}

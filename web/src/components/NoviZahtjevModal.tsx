@@ -138,6 +138,7 @@ interface NoviZahtjevModalProps {
     gradiliste: string;
     brojKamiona: number;
     prijevozNaDan: string;
+    isplataPoT: number;
   }) => Promise<void>;
 }
 
@@ -157,6 +158,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   const [gradiliste, setGradiliste] = useState('');
   const [brojKamiona, setBrojKamiona] = useState('');
   const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
+  const [isplataPoT, setIsplataPoT] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -186,6 +188,12 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       return;
     }
 
+    const isplataPoTNum = parseFloat(isplataPoT);
+    if (!isplataPoT || isNaN(isplataPoTNum) || isplataPoTNum < 0) {
+      setError('Isplata po t mora biti pozitivan broj');
+      return;
+    }
+
     // Format date to dd/mm/yyyy
     const formattedDate = format(prijevozNaDan, 'dd/MM/yyyy');
 
@@ -196,12 +204,14 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         gradiliste,
         brojKamiona: brojKamionaNum,
         prijevozNaDan: formattedDate,
+        isplataPoT: isplataPoTNum,
       });
       // Reset form
       setKamenolom('');
       setGradiliste('');
       setBrojKamiona('');
       setPrijevozNaDan(null);
+      setIsplataPoT('');
       onClose();
     } catch (err) {
       setError('Greška pri spremanju zahtjeva');
@@ -217,6 +227,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       setGradiliste('');
       setBrojKamiona('');
       setPrijevozNaDan(null);
+      setIsplataPoT('');
       setError('');
       onClose();
     }
@@ -286,6 +297,20 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                 required
               />
             </DatePickerWrapper>
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="isplataPoT">Isplata po t za ovu relaciju</Label>
+            <Input
+              id="isplataPoT"
+              type="number"
+              step="0.01"
+              min="0"
+              value={isplataPoT}
+              onChange={e => setIsplataPoT(e.target.value)}
+              placeholder="Unesite iznos (npr. 0.55, 2, 6)"
+              required
+            />
           </FormGroup>
 
           {error && <ErrorMessage>{error}</ErrorMessage>}

@@ -21,6 +21,11 @@ const TransportRequestSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    isplataPoT: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

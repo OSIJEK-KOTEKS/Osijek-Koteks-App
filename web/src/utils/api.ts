@@ -562,6 +562,7 @@ export const apiService = {
     gradiliste: string;
     brojKamiona: number;
     prijevozNaDan: string;
+    isplataPoT: number;
   }): Promise<any> => {
     try {
       console.log('Creating transport request:', requestData);
