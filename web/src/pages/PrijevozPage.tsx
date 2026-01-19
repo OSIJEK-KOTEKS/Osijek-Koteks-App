@@ -273,7 +273,7 @@ const PrijevozPage: React.FC = () => {
                   <Td>{request.gradiliste}</Td>
                   <Td>{request.brojKamiona}</Td>
                   <Td>{request.prijevozNaDan}</Td>
-                  <Td>{request.isplataPoT}</Td>
+                  <Td>{request.isplataPoT} €</Td>
                   <Td>
                     <StatusBadge status={request.status}>
                       {getStatusLabel(request.status)}
