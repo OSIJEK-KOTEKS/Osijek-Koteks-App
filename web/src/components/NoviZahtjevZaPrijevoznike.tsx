@@ -198,6 +198,7 @@ const NoviZahtjevZaPrijevoznike: React.FC<NoviZahtjevZaPrijevoznike> = ({
   const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
   const [isplataPoT, setIsplataPoT] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [error, setError] = useState('');
   const [prijevozUsers, setPrijevozUsers] = useState<PrijevozUser[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -209,12 +210,21 @@ const NoviZahtjevZaPrijevoznike: React.FC<NoviZahtjevZaPrijevoznike> = ({
   }, [isOpen]);
 
   const fetchPrijevozUsers = async () => {
+    setIsLoadingUsers(true);
+    setError('');
     try {
       const users = await apiService.getUsersWithPrijevozAccess();
+      console.log('Fetched prijevoz users:', users);
       setPrijevozUsers(users);
-    } catch (error) {
+      if (users.length === 0) {
+        setError('Nema korisnika s pristupom prijevozima. Molimo provjerite postavke korisnika.');
+      }
+    } catch (error: any) {
       console.error('Error fetching prijevoz users:', error);
-      setError('Greška pri učitavanju korisnika');
+      console.error('Error response:', error?.response?.data);
+      setError(`Greška pri učitavanju korisnika: ${error?.response?.data?.message || error.message}`);
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
@@ -390,16 +400,26 @@ const NoviZahtjevZaPrijevoznike: React.FC<NoviZahtjevZaPrijevoznike> = ({
           <FormGroup>
             <Label>Odaberite prijevoznike</Label>
             <UserSelectionContainer>
-              {prijevozUsers.map(user => (
-                <UserCheckboxItem key={user._id}>
-                  <Checkbox
-                    type="checkbox"
-                    checked={selectedUserIds.includes(user._id)}
-                    onChange={() => handleUserToggle(user._id)}
-                  />
-                  <UserName>{`${user.firstName} ${user.lastName}`}</UserName>
-                </UserCheckboxItem>
-              ))}
+              {isLoadingUsers ? (
+                <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+                  Učitavanje korisnika...
+                </div>
+              ) : prijevozUsers.length === 0 ? (
+                <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+                  Nema dostupnih korisnika
+                </div>
+              ) : (
+                prijevozUsers.map(user => (
+                  <UserCheckboxItem key={user._id}>
+                    <Checkbox
+                      type="checkbox"
+                      checked={selectedUserIds.includes(user._id)}
+                      onChange={() => handleUserToggle(user._id)}
+                    />
+                    <UserName>{`${user.firstName} ${user.lastName}`}</UserName>
+                  </UserCheckboxItem>
+                ))
+              )}
             </UserSelectionContainer>
           </FormGroup>
 
