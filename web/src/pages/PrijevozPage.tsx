@@ -204,6 +204,10 @@ const PrijevozPage: React.FC = () => {
 
   const isAdmin = user?.role === 'admin';
 
+  console.log('PrijevozPage - User:', user);
+  console.log('PrijevozPage - isAdmin:', isAdmin);
+  console.log('PrijevozPage - user.role:', user?.role);
+
   const handleLogout = async () => {
     try {
       await signOut();
