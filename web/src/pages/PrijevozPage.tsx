@@ -182,6 +182,65 @@ const ActionButtons = styled.div`
   gap: 0.5rem;
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0 0 1.5rem 0;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const UserList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const UserItem = styled.div`
+  padding: 0.75rem;
+  background-color: ${({ theme }) => theme.colors.background};
+  border-radius: 4px;
+  font-size: 1rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const ModalCloseButton = styled.button`
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  width: 100%;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -192,6 +251,7 @@ interface TransportRequest {
   status: string;
   createdAt: string;
   userEmail: string;
+  assignedTo: 'All' | string[];
 }
 
 const PrijevozPage: React.FC = () => {
@@ -200,9 +260,12 @@ const PrijevozPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSpecificDriversModalOpen, setIsSpecificDriversModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAssignedUsersModalOpen, setIsAssignedUsersModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<TransportRequest | null>(null);
+  const [selectedRequestForUsers, setSelectedRequestForUsers] = useState<TransportRequest | null>(null);
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [assignedUsers, setAssignedUsers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([]);
 
   const isAdmin = user?.role === 'admin';
 
@@ -353,6 +416,23 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleShowAssignedUsers = async (request: TransportRequest) => {
+    if (request.assignedTo === 'All') return;
+
+    try {
+      setSelectedRequestForUsers(request);
+      // Fetch user details for the assigned user IDs
+      const userIds = request.assignedTo as string[];
+      const userDetailsPromises = userIds.map(id => apiService.getUserById(id));
+      const users = await Promise.all(userDetailsPromises);
+      setAssignedUsers(users);
+      setIsAssignedUsersModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching assigned users:', error);
+      alert('Greška pri učitavanju korisnika');
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -398,6 +478,7 @@ const PrijevozPage: React.FC = () => {
                 <Th>Broj kamiona</Th>
                 <Th>Prijevoz na dan</Th>
                 <Th>Isplata po t</Th>
+                <Th>Prijevoznici</Th>
                 <Th>Status</Th>
                 {isAdmin && <Th>Akcije</Th>}
               </tr>
@@ -411,6 +492,18 @@ const PrijevozPage: React.FC = () => {
                   <Td>{request.brojKamiona}</Td>
                   <Td>{request.prijevozNaDan}</Td>
                   <Td>{request.isplataPoT} €</Td>
+                  <Td>
+                    {request.assignedTo === 'All' ? (
+                      'Svi'
+                    ) : (
+                      <ActionButton
+                        onClick={() => handleShowAssignedUsers(request)}
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
+                        Prikaži prijevoznike
+                      </ActionButton>
+                    )}
+                  </Td>
                   <Td>
                     <StatusBadge status={request.status}>
                       {getStatusLabel(request.status)}
@@ -456,6 +549,24 @@ const PrijevozPage: React.FC = () => {
         onSubmit={handleEditSubmit}
         request={editingRequest}
       />
+
+      {isAssignedUsersModalOpen && (
+        <ModalOverlay onClick={() => setIsAssignedUsersModalOpen(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>Dodijeljeni prijevoznici</ModalTitle>
+            <UserList>
+              {assignedUsers.map((user) => (
+                <UserItem key={user._id}>
+                  {user.firstName} {user.lastName}
+                </UserItem>
+              ))}
+            </UserList>
+            <ModalCloseButton onClick={() => setIsAssignedUsersModalOpen(false)}>
+              Zatvori
+            </ModalCloseButton>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </S.PageContainer>
   );
 };
