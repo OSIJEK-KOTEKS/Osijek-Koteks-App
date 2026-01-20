@@ -248,7 +248,10 @@ const PrijevozPage: React.FC = () => {
   }) => {
     try {
       console.log('Submitting transport request:', data);
-      const response = await apiService.createTransportRequest(data);
+      const response = await apiService.createTransportRequest({
+        ...data,
+        assignedTo: 'All',
+      });
       console.log('Transport request created:', response);
       alert(`Zahtjev uspješno kreiran!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
       // Refresh the list after creating a new request
@@ -269,22 +272,20 @@ const PrijevozPage: React.FC = () => {
   }) => {
     try {
       console.log('Submitting transport request for specific drivers:', data);
-      // For now, we'll create multiple requests, one for each selected driver
-      // You can modify the backend later to handle this differently if needed
-      for (const userId of data.selectedUserIds) {
-        await apiService.createTransportRequest({
-          kamenolom: data.kamenolom,
-          gradiliste: data.gradiliste,
-          brojKamiona: data.brojKamiona,
-          prijevozNaDan: data.prijevozNaDan,
-          isplataPoT: data.isplataPoT,
-        });
-      }
-      alert(`Zahtjevi uspješno kreirani za ${data.selectedUserIds.length} prijevoznika!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
-      // Refresh the list after creating new requests
+      const response = await apiService.createTransportRequest({
+        kamenolom: data.kamenolom,
+        gradiliste: data.gradiliste,
+        brojKamiona: data.brojKamiona,
+        prijevozNaDan: data.prijevozNaDan,
+        isplataPoT: data.isplataPoT,
+        assignedTo: data.selectedUserIds,
+      });
+      console.log('Transport request created:', response);
+      alert(`Zahtjev uspješno kreiran za ${data.selectedUserIds.length} prijevoznika!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
+      // Refresh the list after creating the request
       await fetchRequests();
     } catch (error) {
-      console.error('Error creating transport requests:', error);
+      console.error('Error creating transport request:', error);
       alert('Greška pri kreiranju zahtjeva. Molimo pokušajte ponovno.');
     }
   };

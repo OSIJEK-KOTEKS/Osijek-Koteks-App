@@ -16,11 +16,16 @@ router.post('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only admins can create transport requests' });
     }
 
-    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;
+    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT, assignedTo } = req.body;
 
     // Validate required fields
-    if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined) {
+    if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined || !assignedTo) {
       return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Validate assignedTo field
+    if (assignedTo !== 'All' && (!Array.isArray(assignedTo) || assignedTo.length === 0)) {
+      return res.status(400).json({ message: 'assignedTo must be "All" or an array of user IDs' });
     }
 
     // Create new transport request
@@ -32,6 +37,7 @@ router.post('/', auth, async (req, res) => {
       isplataPoT,
       userId: req.user._id,
       userEmail: req.user.email,
+      assignedTo,
     });
 
     await transportRequest.save();

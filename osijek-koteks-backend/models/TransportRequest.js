@@ -40,6 +40,21 @@ const TransportRequestSchema = new mongoose.Schema(
       enum: ['pending', 'approved', 'rejected', 'completed'],
       default: 'pending',
     },
+    assignedTo: {
+      type: mongoose.Schema.Types.Mixed,
+      required: true,
+      validate: {
+        validator: function(value) {
+          // Must be either the string "All" or an array of ObjectIds
+          if (value === 'All') return true;
+          if (Array.isArray(value)) {
+            return value.length > 0 && value.every(id => mongoose.Types.ObjectId.isValid(id));
+          }
+          return false;
+        },
+        message: 'assignedTo must be either "All" or an array of valid user IDs'
+      }
+    },
   },
   {
     timestamps: true,
