@@ -45,7 +45,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return <Navigate to="/dashboard" replace />;
   }
 
-  const hasPrijevozAccess = user.role === 'admin' || user.canAccessPrijevoz;
+  const hasPrijevozAccess = user.canAccessPrijevoz === true;
   if (requiresPrijevozAccess && !hasPrijevozAccess) {
     return <Navigate to="/dashboard" replace />;
   }

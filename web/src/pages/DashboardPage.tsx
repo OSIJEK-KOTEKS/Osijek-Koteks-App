@@ -301,7 +301,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
   const canAccessRacuni = user?.role === 'admin' || user?.canAccessRacuni;
-  const canAccessPrijevoz = user?.role === 'admin' || user?.canAccessPrijevoz;
+  const canAccessPrijevoz = user?.canAccessPrijevoz === true;
 
   const getDisplayNameForUser = (item: Item): string => {
     if (!item.createdBy) return 'Nepoznato';

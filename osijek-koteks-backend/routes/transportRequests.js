@@ -6,6 +6,11 @@ const auth = require('../middleware/auth');
 // Create a new transport request
 router.post('/', auth, async (req, res) => {
   try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
     const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;
 
     // Validate required fields
@@ -39,18 +44,15 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Get all transport requests (admin and users with canAccessPrijevoz can see all, others see only their own)
+// Get all transport requests (users with canAccessPrijevoz can see all)
 router.get('/', auth, async (req, res) => {
   try {
-    let query = {};
-
-    // If not admin and doesn't have canAccessPrijevoz, only show user's own requests
-    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
-    if (!hasFullAccess) {
-      query.userId = req.user._id.toString();
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
     }
 
-    const transportRequests = await TransportRequest.find(query)
+    const transportRequests = await TransportRequest.find({})
       .sort({ createdAt: -1 })
       .populate('userId', 'firstName lastName email company');
 
@@ -67,6 +69,11 @@ router.get('/', auth, async (req, res) => {
 // Get a single transport request by ID
 router.get('/:id', auth, async (req, res) => {
   try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
     const transportRequest = await TransportRequest.findById(req.params.id).populate(
       'userId',
       'firstName lastName email company'
@@ -74,12 +81,6 @@ router.get('/:id', auth, async (req, res) => {
 
     if (!transportRequest) {
       return res.status(404).json({ message: 'Transport request not found' });
-    }
-
-    // Check if user has permission to view this request
-    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
-    if (!hasFullAccess && transportRequest.userId._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
     }
 
     res.json(transportRequest);
@@ -92,9 +93,14 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Update transport request (full update - admin only)
+// Update transport request (full update - admin with prijevoz access only)
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
     // Only admins can update transport requests
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update transport requests' });
@@ -135,9 +141,14 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// Update transport request status (admin only)
+// Update transport request status (admin with prijevoz access only)
 router.patch('/:id/status', auth, async (req, res) => {
   try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update request status' });
     }
@@ -171,9 +182,14 @@ router.patch('/:id/status', auth, async (req, res) => {
   }
 });
 
-// Delete transport request (admin only)
+// Delete transport request (admin with prijevoz access only)
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
     // Only admins can delete transport requests
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete transport requests' });
