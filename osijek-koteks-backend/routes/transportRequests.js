@@ -92,19 +92,18 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Update transport request (full update - admin, users with canAccessPrijevoz, or owner)
+// Update transport request (full update - admin only)
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Only admins can update transport requests
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can update transport requests' });
+    }
+
     const transportRequest = await TransportRequest.findById(req.params.id);
 
     if (!transportRequest) {
       return res.status(404).json({ message: 'Transport request not found' });
-    }
-
-    // Check permissions: admin, users with canAccessPrijevoz, or owner can update
-    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
-    if (!hasFullAccess && transportRequest.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
     }
 
     const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;
@@ -172,19 +171,18 @@ router.patch('/:id/status', auth, async (req, res) => {
   }
 });
 
-// Delete transport request
+// Delete transport request (admin only)
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Only admins can delete transport requests
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can delete transport requests' });
+    }
+
     const transportRequest = await TransportRequest.findById(req.params.id);
 
     if (!transportRequest) {
       return res.status(404).json({ message: 'Transport request not found' });
-    }
-
-    // Only admin, users with canAccessPrijevoz, or the owner can delete
-    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
-    if (!hasFullAccess && transportRequest.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
     }
 
     await TransportRequest.findByIdAndDelete(req.params.id);

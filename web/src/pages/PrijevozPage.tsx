@@ -173,12 +173,14 @@ interface TransportRequest {
 
 const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<TransportRequest | null>(null);
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isAdmin = user?.role === 'admin';
 
   const handleLogout = async () => {
     try {
@@ -312,7 +314,7 @@ const PrijevozPage: React.FC = () => {
                 <Th>Prijevoz na dan</Th>
                 <Th>Isplata po t</Th>
                 <Th>Status</Th>
-                <Th>Akcije</Th>
+                {isAdmin && <Th>Akcije</Th>}
               </tr>
             </thead>
             <tbody>
@@ -329,11 +331,13 @@ const PrijevozPage: React.FC = () => {
                       {getStatusLabel(request.status)}
                     </StatusBadge>
                   </Td>
-                  <Td>
-                    <ActionButton onClick={() => handleEditClick(request)}>
-                      Uredi
-                    </ActionButton>
-                  </Td>
+                  {isAdmin && (
+                    <Td>
+                      <ActionButton onClick={() => handleEditClick(request)}>
+                        Uredi
+                      </ActionButton>
+                    </Td>
+                  )}
                 </tr>
               ))}
             </tbody>
