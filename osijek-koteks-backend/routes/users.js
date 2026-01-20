@@ -23,7 +23,10 @@ router.get('/prijevoz/access', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
-    const users = await User.find({ canAccessPrijevoz: true }).select('firstName lastName _id');
+    const users = await User.find({
+      canAccessPrijevoz: true,
+      role: { $ne: 'admin' }
+    }).select('firstName lastName _id');
     res.json(users);
   } catch (error) {
     console.error('Error fetching prijevoz users:', error);
