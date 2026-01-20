@@ -3,12 +3,17 @@ const router = express.Router();
 const TransportRequest = require('../models/TransportRequest');
 const auth = require('../middleware/auth');
 
-// Create a new transport request
+// Create a new transport request (admin with prijevoz access only)
 router.post('/', auth, async (req, res) => {
   try {
     // Check if user has canAccessPrijevoz permission
     if (!req.user.canAccessPrijevoz) {
       return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
+    // Only admins can create transport requests
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can create transport requests' });
     }
 
     const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;

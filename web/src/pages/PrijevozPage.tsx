@@ -331,7 +331,7 @@ const PrijevozPage: React.FC = () => {
       <DashboardContainer>
         <ContentHeader>
           <ContentTitle>Prijevoz</ContentTitle>
-          <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
+          {isAdmin && <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>}
         </ContentHeader>
         <ContentText>
           Upravljajte zahtjevima za prijevoz.
