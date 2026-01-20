@@ -17,6 +17,20 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Get users with prijevoz access (admin only)
+router.get('/prijevoz/access', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+    const users = await User.find({ canAccessPrijevoz: true }).select('firstName lastName _id');
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching prijevoz users:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get user by ID
 router.get('/:id', auth, async (req, res) => {
   try {

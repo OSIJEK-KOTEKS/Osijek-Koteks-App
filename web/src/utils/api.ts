@@ -634,6 +634,16 @@ export const apiService = {
       throw error;
     }
   },
+
+  getUsersWithPrijevozAccess: async (): Promise<Array<{ _id: string; firstName: string; lastName: string }>> => {
+    try {
+      const response = await api.get('/api/users/prijevoz/access');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching users with prijevoz access:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;

@@ -5,6 +5,7 @@ import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 import NoviZahtjevModal from '../components/NoviZahtjevModal';
+import NoviZahtjevZaPrijevoznike from '../components/NoviZahtjevZaPrijevoznike';
 import EditZahtjevModal from '../components/EditZahtjevModal';
 import { apiService } from '../utils/api';
 
@@ -197,6 +198,7 @@ const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSpecificDriversModalOpen, setIsSpecificDriversModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<TransportRequest | null>(null);
   const [requests, setRequests] = useState<TransportRequest[]>([]);
@@ -253,6 +255,36 @@ const PrijevozPage: React.FC = () => {
       await fetchRequests();
     } catch (error) {
       console.error('Error creating transport request:', error);
+      alert('Greška pri kreiranju zahtjeva. Molimo pokušajte ponovno.');
+    }
+  };
+
+  const handleSubmitSpecificDriversZahtjev = async (data: {
+    kamenolom: string;
+    gradiliste: string;
+    brojKamiona: number;
+    prijevozNaDan: string;
+    isplataPoT: number;
+    selectedUserIds: string[];
+  }) => {
+    try {
+      console.log('Submitting transport request for specific drivers:', data);
+      // For now, we'll create multiple requests, one for each selected driver
+      // You can modify the backend later to handle this differently if needed
+      for (const userId of data.selectedUserIds) {
+        await apiService.createTransportRequest({
+          kamenolom: data.kamenolom,
+          gradiliste: data.gradiliste,
+          brojKamiona: data.brojKamiona,
+          prijevozNaDan: data.prijevozNaDan,
+          isplataPoT: data.isplataPoT,
+        });
+      }
+      alert(`Zahtjevi uspješno kreirani za ${data.selectedUserIds.length} prijevoznika!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
+      // Refresh the list after creating new requests
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error creating transport requests:', error);
       alert('Greška pri kreiranju zahtjeva. Molimo pokušajte ponovno.');
     }
   };
@@ -335,7 +367,14 @@ const PrijevozPage: React.FC = () => {
       <DashboardContainer>
         <ContentHeader>
           <ContentTitle>Prijevoz</ContentTitle>
-          {isAdmin && <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>}
+          {isAdmin && (
+            <ButtonSection>
+              <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
+              <SmallButton onClick={() => setIsSpecificDriversModalOpen(true)}>
+                Novi zahtjev za određene prijevoznike
+              </SmallButton>
+            </ButtonSection>
+          )}
         </ContentHeader>
         <ContentText>
           Upravljajte zahtjevima za prijevoz.
@@ -399,6 +438,12 @@ const PrijevozPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitZahtjev}
+      />
+
+      <NoviZahtjevZaPrijevoznike
+        isOpen={isSpecificDriversModalOpen}
+        onClose={() => setIsSpecificDriversModalOpen(false)}
+        onSubmit={handleSubmitSpecificDriversZahtjev}
       />
 
       <EditZahtjevModal
