@@ -715,7 +715,7 @@ const Dashboard: React.FC = () => {
   }, [searchValue, registrationSearchValue, searchType, fetchItems]);
 
   const clearSearch = useCallback(() => {
-    console.log('Clearing search');
+    console.log('Clearing search ');
 
     // Cancel any ongoing request
     if (abortControllerRef.current) {
