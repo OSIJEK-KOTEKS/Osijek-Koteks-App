@@ -159,6 +159,28 @@ const ActionButton = styled.button`
   }
 `;
 
+const DeleteButton = styled.button`
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #dc3545;
+  background: white;
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #dc3545;
+    color: white;
+  }
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -260,6 +282,25 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleDeleteClick = async (request: TransportRequest) => {
+    const confirmDelete = window.confirm(
+      `Jeste li sigurni da želite obrisati zahtjev?\n\nKamenolom: ${request.kamenolom}\nGradilište: ${request.gradiliste}\nBroj kamiona: ${request.brojKamiona}\nDatum: ${request.prijevozNaDan}`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      console.log('Deleting transport request:', request._id);
+      await apiService.deleteTransportRequest(request._id);
+      alert('Zahtjev uspješno obrisan!');
+      // Refresh the list after deleting
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error deleting transport request:', error);
+      alert('Greška pri brisanju zahtjeva. Molimo pokušajte ponovno.');
+    }
+  };
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
@@ -333,9 +374,14 @@ const PrijevozPage: React.FC = () => {
                   </Td>
                   {isAdmin && (
                     <Td>
-                      <ActionButton onClick={() => handleEditClick(request)}>
-                        Uredi
-                      </ActionButton>
+                      <ActionButtons>
+                        <ActionButton onClick={() => handleEditClick(request)}>
+                          Uredi
+                        </ActionButton>
+                        <DeleteButton onClick={() => handleDeleteClick(request)}>
+                          Obriši
+                        </DeleteButton>
+                      </ActionButtons>
                     </Td>
                   )}
                 </tr>
