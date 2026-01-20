@@ -111,7 +111,8 @@ const StatusBadge = styled.span<{ status: string }>`
   border-radius: 12px;
   font-size: 0.875rem;
   font-weight: 500;
-  background-color: ${({ status, theme }) => {
+  display: inline-block;
+  background-color: ${({ status }) => {
     switch (status) {
       case 'approved':
         return '#d4edda';
@@ -119,8 +120,10 @@ const StatusBadge = styled.span<{ status: string }>`
         return '#f8d7da';
       case 'completed':
         return '#d1ecf1';
+      case 'pending':
+        return '#fef3cd';
       default:
-        return '#fff3cd';
+        return '#e9ecef';
     }
   }};
   color: ${({ status }) => {
@@ -131,8 +134,10 @@ const StatusBadge = styled.span<{ status: string }>`
         return '#721c24';
       case 'completed':
         return '#0c5460';
-      default:
+      case 'pending':
         return '#856404';
+      default:
+        return '#495057';
     }
   }};
 `;
