@@ -39,13 +39,14 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Get all transport requests (admin can see all, users see only their own)
+// Get all transport requests (admin and users with canAccessPrijevoz can see all, others see only their own)
 router.get('/', auth, async (req, res) => {
   try {
     let query = {};
 
-    // If not admin, only show user's own requests
-    if (req.user.role !== 'admin') {
+    // If not admin and doesn't have canAccessPrijevoz, only show user's own requests
+    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
+    if (!hasFullAccess) {
       query.userId = req.user._id.toString();
     }
 
@@ -76,7 +77,8 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     // Check if user has permission to view this request
-    if (req.user.role !== 'admin' && transportRequest.userId._id.toString() !== req.user._id.toString()) {
+    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
+    if (!hasFullAccess && transportRequest.userId._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -135,8 +137,9 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Only admin or the owner can delete
-    if (req.user.role !== 'admin' && transportRequest.userId.toString() !== req.user._id.toString()) {
+    // Only admin, users with canAccessPrijevoz, or the owner can delete
+    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
+    if (!hasFullAccess && transportRequest.userId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
