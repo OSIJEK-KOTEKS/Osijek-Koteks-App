@@ -605,6 +605,26 @@ export const apiService = {
     }
   },
 
+  updateTransportRequest: async (
+    id: string,
+    requestData: {
+      kamenolom: string;
+      gradiliste: string;
+      brojKamiona: number;
+      prijevozNaDan: string;
+      isplataPoT: number;
+    }
+  ): Promise<any> => {
+    try {
+      console.log('Updating transport request:', { id, requestData });
+      const response = await api.put(`/api/transport-requests/${id}`, requestData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating transport request:', error);
+      throw error;
+    }
+  },
+
   deleteTransportRequest: async (id: string): Promise<void> => {
     try {
       console.log('Deleting transport request:', id);

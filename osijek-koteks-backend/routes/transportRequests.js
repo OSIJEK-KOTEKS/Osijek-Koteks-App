@@ -92,6 +92,50 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// Update transport request (full update - admin, users with canAccessPrijevoz, or owner)
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const transportRequest = await TransportRequest.findById(req.params.id);
+
+    if (!transportRequest) {
+      return res.status(404).json({ message: 'Transport request not found' });
+    }
+
+    // Check permissions: admin, users with canAccessPrijevoz, or owner can update
+    const hasFullAccess = req.user.role === 'admin' || req.user.canAccessPrijevoz;
+    if (!hasFullAccess && transportRequest.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;
+
+    // Validate required fields
+    if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Update the transport request
+    transportRequest.kamenolom = kamenolom;
+    transportRequest.gradiliste = gradiliste;
+    transportRequest.brojKamiona = brojKamiona;
+    transportRequest.prijevozNaDan = prijevozNaDan;
+    transportRequest.isplataPoT = isplataPoT;
+
+    await transportRequest.save();
+
+    res.json({
+      message: 'Transport request updated successfully',
+      transportRequest,
+    });
+  } catch (error) {
+    console.error('Error updating transport request:', error);
+    res.status(500).json({
+      message: 'Server error while updating transport request',
+      error: error.message,
+    });
+  }
+});
+
 // Update transport request status (admin only)
 router.patch('/:id/status', auth, async (req, res) => {
   try {

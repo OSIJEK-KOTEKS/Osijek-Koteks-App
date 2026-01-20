@@ -5,6 +5,7 @@ import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 import NoviZahtjevModal from '../components/NoviZahtjevModal';
+import EditZahtjevModal from '../components/EditZahtjevModal';
 import { apiService } from '../utils/api';
 
 const Header = styled.div`
@@ -141,6 +142,23 @@ const EmptyState = styled.div`
   color: ${({ theme }) => theme.colors.gray};
 `;
 
+const ActionButton = styled.button`
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  background: white;
+  color: ${({ theme }) => theme.colors.primary};
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary};
+    color: white;
+  }
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -157,6 +175,8 @@ const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<TransportRequest | null>(null);
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -206,6 +226,35 @@ const PrijevozPage: React.FC = () => {
     } catch (error) {
       console.error('Error creating transport request:', error);
       alert('Greška pri kreiranju zahtjeva. Molimo pokušajte ponovno.');
+    }
+  };
+
+  const handleEditClick = (request: TransportRequest) => {
+    setEditingRequest(request);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (data: {
+    kamenolom: string;
+    gradiliste: string;
+    brojKamiona: number;
+    prijevozNaDan: string;
+    isplataPoT: number;
+  }) => {
+    if (!editingRequest) return;
+
+    try {
+      console.log('Updating transport request:', editingRequest._id, data);
+      await apiService.updateTransportRequest(editingRequest._id, data);
+      alert('Zahtjev uspješno ažuriran!');
+      // Refresh the list after updating
+      await fetchRequests();
+      setIsEditModalOpen(false);
+      setEditingRequest(null);
+    } catch (error) {
+      console.error('Error updating transport request:', error);
+      alert('Greška pri ažuriranju zahtjeva. Molimo pokušajte ponovno.');
+      throw error;
     }
   };
 
@@ -263,6 +312,7 @@ const PrijevozPage: React.FC = () => {
                 <Th>Prijevoz na dan</Th>
                 <Th>Isplata po t</Th>
                 <Th>Status</Th>
+                <Th>Akcije</Th>
               </tr>
             </thead>
             <tbody>
@@ -279,6 +329,11 @@ const PrijevozPage: React.FC = () => {
                       {getStatusLabel(request.status)}
                     </StatusBadge>
                   </Td>
+                  <Td>
+                    <ActionButton onClick={() => handleEditClick(request)}>
+                      Uredi
+                    </ActionButton>
+                  </Td>
                 </tr>
               ))}
             </tbody>
@@ -290,6 +345,16 @@ const PrijevozPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitZahtjev}
+      />
+
+      <EditZahtjevModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingRequest(null);
+        }}
+        onSubmit={handleEditSubmit}
+        request={editingRequest}
       />
     </S.PageContainer>
   );
