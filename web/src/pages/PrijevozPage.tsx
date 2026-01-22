@@ -817,8 +817,8 @@ const PrijevozPage: React.FC = () => {
 
         // Check if we have room (each unique first part = 1 truck)
         if (acceptingRequest && currentUniqueCount < acceptingRequest.brojKamiona) {
-          // Add the first full registration that matches (representing this truck)
-          return [...prev, fullRegs[0]];
+          // Add ALL full registrations that match this first part
+          return [...prev, ...fullRegs];
         }
 
         return prev;
@@ -832,7 +832,20 @@ const PrijevozPage: React.FC = () => {
     try {
       await apiService.acceptTransportRequest(acceptingRequest._id, selectedRegistrations);
 
-      alert(`Zahtjev prihvaćen sa ${selectedRegistrations.length} registracija! Čeka se odobrenje administratora.`);
+      // Extract unique first parts for display
+      const firstParts = selectedRegistrations.map(reg => getFirstPartOfRegistration(reg));
+      const uniqueFirstParts = Array.from(new Set(firstParts));
+
+      alert(
+        `✅ Zahtjev uspješno poslan!\n\n` +
+        `Detalji zahtjeva:\n` +
+        `• Kamenolom: ${acceptingRequest.kamenolom}\n` +
+        `• Gradilište: ${acceptingRequest.gradiliste}\n` +
+        `• Datum prijevoza: ${acceptingRequest.prijevozNaDan}\n` +
+        `• Isplata po t: ${acceptingRequest.isplataPoT}€\n\n` +
+        `Odabrane registracije:\n${uniqueFirstParts.join(', ')}\n\n` +
+        `Status: Čeka se odobrenje administratora.`
+      );
 
       setIsAcceptModalOpen(false);
       setAcceptingRequest(null);
