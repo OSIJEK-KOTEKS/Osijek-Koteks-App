@@ -1081,7 +1081,7 @@ const PrijevozPage: React.FC = () => {
                                       {acceptance.userId?.firstName} {acceptance.userId?.lastName}
                                     </AcceptanceItemUser>
                                     <AcceptanceItemStatus status={acceptance.status}>
-                                      {acceptance.status === 'approved' ? 'Odobreno' : acceptance.status === 'declined' ? 'Odbijeno' : 'Na čekanju'}
+                                      {acceptance.status === 'approved' ? 'Prihvaćeno' : acceptance.status === 'declined' ? 'Odbijeno' : 'Na čekanju'}
                                     </AcceptanceItemStatus>
                                   </AcceptanceItemHeader>
                                   <AcceptanceItemDetail>
@@ -1171,7 +1171,7 @@ const PrijevozPage: React.FC = () => {
                     </AcceptanceInfo>
                     <AcceptanceActions>
                       <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
-                        Odobri
+                        Prihvaćeno
                       </ApproveButton>
                       <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
                         Odbij
