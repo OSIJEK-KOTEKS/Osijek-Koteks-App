@@ -332,6 +332,20 @@ router.get('/:id/acceptances', auth, async (req, res) => {
   }
 });
 
+// Helper function to extract first part of registration (same logic as frontend)
+const getFirstPartOfRegistration = (registration) => {
+  // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
+  const withSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\s+\d+\s+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+  if (withSpaces) return withSpaces[1];
+
+  // Pattern 2: Without spaces - "NG341CP", "AB123CD"
+  const withoutSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\d+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+  if (withoutSpaces) return withoutSpaces[1];
+
+  // Fallback: return original if no pattern matches
+  return registration;
+};
+
 // User accepts transport request with registrations
 router.post('/:id/accept', auth, async (req, res) => {
   try {
@@ -362,12 +376,17 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(400).json({ message: 'You have already submitted an acceptance for this request' });
     }
 
+    // Calculate accepted count based on unique first parts (each unique first part = 1 truck)
+    const firstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
+    const uniqueFirstParts = [...new Set(firstParts)];
+    const acceptedCount = uniqueFirstParts.length;
+
     // Create acceptance record
     const acceptance = new TransportAcceptance({
       requestId: req.params.id,
       userId: req.user._id,
       registrations,
-      acceptedCount: registrations.length,
+      acceptedCount: acceptedCount,
       status: 'pending',
     });
 

@@ -904,48 +904,57 @@ const PrijevozPage: React.FC = () => {
           ) : pendingAcceptances.length === 0 ? (
             <EmptyAcceptances>Nema zahtjeva na čekanju</EmptyAcceptances>
           ) : (
-            pendingAcceptances.map((acceptance) => (
-              <AcceptanceCard key={acceptance._id}>
-                <AcceptanceHeader>
-                  <AcceptanceInfo>
-                    <AcceptanceUser>
-                      {acceptance.userId?.firstName} {acceptance.userId?.lastName}
-                    </AcceptanceUser>
-                    <AcceptanceDetail>
-                      Email: {acceptance.userId?.email}
-                    </AcceptanceDetail>
-                    <AcceptanceDetail>
-                      Firma: {acceptance.userId?.company}
-                    </AcceptanceDetail>
-                    <AcceptanceDetail>
-                      Kamenolom: {acceptance.requestId?.kamenolom}
-                    </AcceptanceDetail>
-                    <AcceptanceDetail>
-                      Gradilište: {acceptance.requestId?.gradiliste}
-                    </AcceptanceDetail>
-                    <AcceptanceDetail>
-                      Broj kamiona: {acceptance.acceptedCount}
-                    </AcceptanceDetail>
-                    <AcceptanceDetail>
-                      Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
-                    </AcceptanceDetail>
-                    <RegistrationTags>
-                      {acceptance.registrations.map((reg: string, idx: number) => (
-                        <RegistrationTag key={idx}>{reg}</RegistrationTag>
-                      ))}
-                    </RegistrationTags>
-                  </AcceptanceInfo>
-                  <AcceptanceActions>
-                    <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
-                      Odobri
-                    </ApproveButton>
-                    <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
-                      Odbij
-                    </DeclineButton>
-                  </AcceptanceActions>
-                </AcceptanceHeader>
-              </AcceptanceCard>
-            ))
+            pendingAcceptances.map((acceptance) => {
+              // Extract unique first parts from all registrations
+              const firstParts: string[] = acceptance.registrations.map((reg: string) => getFirstPartOfRegistration(reg));
+              const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+
+              return (
+                <AcceptanceCard key={acceptance._id}>
+                  <AcceptanceHeader>
+                    <AcceptanceInfo>
+                      <AcceptanceUser>
+                        {acceptance.userId?.firstName} {acceptance.userId?.lastName}
+                      </AcceptanceUser>
+                      <AcceptanceDetail>
+                        Email: {acceptance.userId?.email}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Firma: {acceptance.userId?.company}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Kamenolom: {acceptance.requestId?.kamenolom}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Gradilište: {acceptance.requestId?.gradiliste}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Broj kamiona: {acceptance.acceptedCount}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Isplata po t: {acceptance.requestId?.isplataPoT}€
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                      </AcceptanceDetail>
+                      <RegistrationTags>
+                        {uniqueFirstParts.map((firstPart: string, idx: number) => (
+                          <RegistrationTag key={idx}>{firstPart}</RegistrationTag>
+                        ))}
+                      </RegistrationTags>
+                    </AcceptanceInfo>
+                    <AcceptanceActions>
+                      <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
+                        Odobri
+                      </ApproveButton>
+                      <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
+                        Odbij
+                      </DeclineButton>
+                    </AcceptanceActions>
+                  </AcceptanceHeader>
+                </AcceptanceCard>
+              );
+            })
           )}
         </AcceptancesSection>
       )}
