@@ -545,6 +545,17 @@ export const apiService = {
     }
   },
 
+  //  Get unique registracija values for filtering
+  getUniqueRegistrations: async (): Promise<string[]> => {
+    try {
+      const response = await api.get<string[]>('/api/items/registrations');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unique registrations:', error);
+      throw error;
+    }
+  },
+
   markItemPaid: async (id: string, isPaid: boolean = true): Promise<Item> => {
     try {
       console.log('Marking item as paid:', { id, isPaid });

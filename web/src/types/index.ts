@@ -205,6 +205,7 @@ export interface ApiService {
   getUsers: () => Promise<User[]>;
   getUserProfile: () => Promise<User>;
   getUniqueCodes: () => Promise<string[]>;
+  getUniqueRegistrations: () => Promise<string[]>;
   createUser: (userData: RegistrationData) => Promise<User>;
   updateUser: (id: string, userData: Partial<Omit<User, '_id'>>) => Promise<User>;
   updateUserPassword: (userId: string, newPassword: string) => Promise<User>;

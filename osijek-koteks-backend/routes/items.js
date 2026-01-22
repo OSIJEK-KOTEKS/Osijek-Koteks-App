@@ -232,6 +232,36 @@ router.get('/carriers', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Get unique registrations (registracija values) - BEFORE /:id route
+router.get('/registrations', auth, async (req, res) => {
+  try {
+    // Apply the same filtering logic as the main items route
+    let query = {};
+
+    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      // Non-admin users: filter by their codes
+      query.code = { $in: req.user.codes };
+    } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
+      // Admin with codes assigned: filter by those codes
+      query.code = { $in: req.user.codes };
+    }
+    // If admin with no codes assigned (empty array or null), show all registrations (no filtering)
+
+    // Only get items that have a registracija field
+    query.registracija = { $exists: true, $ne: null, $ne: '' };
+
+    const uniqueRegistrations = await Item.distinct('registracija', query);
+
+    console.log('Registrations query:', query);
+    console.log('Found unique registrations:', uniqueRegistrations.length);
+
+    res.json(uniqueRegistrations.sort());
+  } catch (err) {
+    console.error('Error fetching unique registrations:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 //get items
 router.get('/', auth, async (req, res) => {
   try {
