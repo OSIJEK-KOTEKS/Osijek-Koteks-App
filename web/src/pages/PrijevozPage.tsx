@@ -842,16 +842,14 @@ const PrijevozPage: React.FC = () => {
       console.error('Error accepting request:', error);
 
       // Check if it's a duplicate registration error
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('same registrations')) {
-        // Extract unique first parts from selected registrations for display
-        const firstParts = selectedRegistrations.map(reg => getFirstPartOfRegistration(reg));
-        const uniqueFirstParts = Array.from(new Set(firstParts));
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('already used')) {
+        const overlapping = error.response?.data?.overlappingRegistrations || [];
 
         alert(
           `❌ Ne možete prihvatiti ovaj zahtjev\n\n` +
-          `Razlog: Već ste prihvatili ovaj zahtjev s istim registracijama.\n\n` +
-          `Odabrane registracije:\n${uniqueFirstParts.join(', ')}\n\n` +
-          `Napomena: Možete prihvatiti isti zahtjev s različitim registracijama ako želite.`
+          `Razlog: Već ste koristili neke od ovih registracija za ovaj zahtjev.\n\n` +
+          `Registracije koje su već korištene:\n${overlapping.join(', ')}\n\n` +
+          `Napomena: Možete prihvatiti ovaj zahtjev samo s registracijama koje niste već koristili.`
         );
       } else {
         alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');

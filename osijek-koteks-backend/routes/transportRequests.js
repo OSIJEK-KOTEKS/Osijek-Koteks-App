@@ -366,29 +366,31 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Check if user has already submitted an acceptance for this request with the same registrations
+    // Check if user has already submitted an acceptance for this request
     const existingAcceptances = await TransportAcceptance.find({
       requestId: req.params.id,
       userId: req.user._id,
     });
 
-    // Sort the new registrations for comparison
-    const newRegistrationsSorted = [...registrations].sort();
+    // Collect all registrations the user has already used for this request
+    const allUsedRegistrations = existingAcceptances.reduce((acc, acceptance) => {
+      return [...acc, ...acceptance.registrations];
+    }, []);
 
-    // Check if any existing acceptance has identical registrations
-    for (const existingAcceptance of existingAcceptances) {
-      const existingRegistrationsSorted = [...existingAcceptance.registrations].sort();
+    // Check if any of the new registrations overlap with already used ones
+    const overlappingRegistrations = registrations.filter(reg =>
+      allUsedRegistrations.includes(reg)
+    );
 
-      // Check if the registrations arrays are identical
-      const areRegistrationsIdentical =
-        existingRegistrationsSorted.length === newRegistrationsSorted.length &&
-        existingRegistrationsSorted.every((reg, index) => reg === newRegistrationsSorted[index]);
+    if (overlappingRegistrations.length > 0) {
+      // Extract unique first parts for a clearer error message
+      const overlappingFirstParts = overlappingRegistrations.map(reg => getFirstPartOfRegistration(reg));
+      const uniqueOverlappingFirstParts = [...new Set(overlappingFirstParts)];
 
-      if (areRegistrationsIdentical) {
-        return res.status(400).json({
-          message: 'You have already submitted an acceptance for this request with the same registrations'
-        });
-      }
+      return res.status(400).json({
+        message: 'You have already used some of these registrations for this request',
+        overlappingRegistrations: uniqueOverlappingFirstParts
+      });
     }
 
     // Calculate accepted count based on unique first parts (each unique first part = 1 truck)
