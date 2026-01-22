@@ -78,10 +78,12 @@ const RegistrationCard = styled.div`
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.gray};
   transition: all 0.2s;
+  cursor: pointer;
 
   &:hover {
     box-shadow: ${({ theme }) => theme.shadows.main};
     transform: translateY(-2px);
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -130,11 +132,130 @@ const StatValue = styled.div`
   font-weight: 600;
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0 0 1rem 0;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const ModalSubtitle = styled.p`
+  margin: 0 0 1.5rem 0;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.875rem;
+`;
+
+const UserList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+`;
+
+const UserItem = styled.div<{ selected?: boolean }>`
+  padding: 1rem;
+  background-color: ${({ selected, theme }) =>
+    selected ? theme.colors.primary + '20' : theme.colors.background};
+  border: 2px solid
+    ${({ selected, theme }) => (selected ? theme.colors.primary : theme.colors.gray)};
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    background-color: ${({ theme }) => theme.colors.primary + '10'};
+  }
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const UserName = styled.div`
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const UserEmail = styled.div`
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.gray};
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+`;
+
+const ModalButton = styled.button<{ primary?: boolean }>`
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.2s;
+  background: ${({ primary, theme }) => (primary ? theme.colors.primary : '#e9ecef')};
+  color: ${({ primary }) => (primary ? 'white' : '#495057')};
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+interface UserWithRegistrations {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  assignedRegistrations: string[];
+}
+
 const RegistracijePage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [registrations, setRegistrations] = useState<string[]>([]);
+  const [allFullRegistrations, setAllFullRegistrations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<string | null>(null);
+  const [users, setUsers] = useState<UserWithRegistrations[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -166,6 +287,9 @@ const RegistracijePage: React.FC = () => {
       setIsLoading(true);
       const data = await apiService.getUniqueRegistrations();
 
+      // Store all full registrations for matching later
+      setAllFullRegistrations(data);
+
       // Extract first part of each registration and remove duplicates
       const firstParts = data.map(reg => getFirstPartOfRegistration(reg));
       const uniqueFirstParts = Array.from(new Set(firstParts)).sort();
@@ -177,6 +301,73 @@ const RegistracijePage: React.FC = () => {
       console.error('Error fetching registrations:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const usersData = await apiService.getUsers();
+      // Sort users alphabetically by first name
+      const sortedUsers = usersData.sort((a, b) =>
+        a.firstName.localeCompare(b.firstName, 'hr')
+      );
+      setUsers(sortedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleRegistrationClick = async (registration: string) => {
+    setSelectedRegistration(registration);
+    setSelectedUserId(null);
+    setIsModalOpen(true);
+    await fetchUsers();
+  };
+
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+  };
+
+  const handleAssignRegistration = async () => {
+    if (!selectedRegistration || !selectedUserId) return;
+
+    try {
+      setIsAssigning(true);
+
+      // Find all full registrations that start with the selected registration
+      const matchingRegistrations = allFullRegistrations.filter(fullReg => {
+        const firstPart = getFirstPartOfRegistration(fullReg);
+        return firstPart === selectedRegistration;
+      });
+
+      console.log('Assigning registrations:', matchingRegistrations);
+
+      // Get the current user's assigned registrations
+      const selectedUser = users.find(u => u._id === selectedUserId);
+      if (!selectedUser) return;
+
+      // Merge with existing registrations and remove duplicates
+      const updatedRegistrations = Array.from(
+        new Set([...selectedUser.assignedRegistrations, ...matchingRegistrations])
+      );
+
+      // Update the user with the new registrations
+      await apiService.updateUser(selectedUserId, {
+        assignedRegistrations: updatedRegistrations,
+      });
+
+      alert(
+        `Successfully assigned ${matchingRegistrations.length} registration(s) to ${selectedUser.firstName} ${selectedUser.lastName}`
+      );
+
+      setIsModalOpen(false);
+      setSelectedRegistration(null);
+      setSelectedUserId(null);
+    } catch (error) {
+      console.error('Error assigning registration:', error);
+      alert('Failed to assign registration. Please try again.');
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -238,13 +429,51 @@ const RegistracijePage: React.FC = () => {
         ) : (
           <RegistrationGrid>
             {registrations.map((registration, index) => (
-              <RegistrationCard key={index}>
+              <RegistrationCard key={index} onClick={() => handleRegistrationClick(registration)}>
                 <RegistrationText>{registration}</RegistrationText>
               </RegistrationCard>
             ))}
           </RegistrationGrid>
         )}
       </DashboardContainer>
+
+      {/* Assignment Modal */}
+      {isModalOpen && (
+        <ModalOverlay onClick={() => setIsModalOpen(false)}>
+          <ModalContent onClick={e => e.stopPropagation()}>
+            <ModalTitle>Dodijeli registraciju: {selectedRegistration}</ModalTitle>
+            <ModalSubtitle>
+              Odaberite korisnika kojem želite dodijeliti ovu registraciju. Svi zapisi koji
+              započinju s "{selectedRegistration}" bit će dodijeljeni odabranom korisniku.
+            </ModalSubtitle>
+
+            <UserList>
+              {users.map(user => (
+                <UserItem
+                  key={user._id}
+                  selected={selectedUserId === user._id}
+                  onClick={() => handleUserSelect(user._id)}
+                >
+                  <UserName>
+                    {user.firstName} {user.lastName}
+                  </UserName>
+                </UserItem>
+              ))}
+            </UserList>
+
+            <ModalActions>
+              <ModalButton onClick={() => setIsModalOpen(false)}>Odustani</ModalButton>
+              <ModalButton
+                primary
+                onClick={handleAssignRegistration}
+                disabled={!selectedUserId || isAssigning}
+              >
+                {isAssigning ? 'Dodjeljivanje...' : 'Dodijeli'}
+              </ModalButton>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </S.PageContainer>
   );
 };
