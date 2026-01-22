@@ -246,6 +246,213 @@ const ModalCloseButton = styled.button`
   }
 `;
 
+const RegistrationCheckbox = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: ${({ theme }) => theme.colors.background};
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.gray};
+  }
+
+  input {
+    margin-right: 0.75rem;
+    cursor: pointer;
+  }
+
+  label {
+    cursor: pointer;
+    flex: 1;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+`;
+
+const ModalButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  flex: 1;
+  background: ${({ variant, theme }) =>
+    variant === 'primary' ? theme.colors.primary : '#6c757d'};
+  color: white;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const RequestInfo = styled.div`
+  background-color: ${({ theme }) => theme.colors.background};
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+`;
+
+const InfoRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const InfoLabel = styled.span`
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const InfoValue = styled.span`
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const RegistrationsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+`;
+
+const SelectionSummary = styled.div`
+  text-align: center;
+  padding: 0.75rem;
+  background-color: ${({ theme }) => theme.colors.primary}20;
+  border-radius: 4px;
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 500;
+  margin-bottom: 1rem;
+`;
+
+const AcceptancesSection = styled.div`
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.main};
+`;
+
+const AcceptancesTitle = styled.h2`
+  margin: 0 0 1.5rem 0;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1.5rem;
+`;
+
+const AcceptanceCard = styled.div`
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: ${({ theme }) => theme.colors.background};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+`;
+
+const AcceptanceHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1rem;
+`;
+
+const AcceptanceInfo = styled.div`
+  flex: 1;
+`;
+
+const AcceptanceUser = styled.div`
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: 0.5rem;
+`;
+
+const AcceptanceDetail = styled.div`
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+`;
+
+const AcceptanceActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const ApproveButton = styled.button`
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background-color: #218838;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const DeclineButton = styled.button`
+  padding: 0.5rem 1rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background-color: #c82333;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const RegistrationTags = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+`;
+
+const RegistrationTag = styled.span`
+  padding: 0.25rem 0.5rem;
+  background-color: ${({ theme }) => theme.colors.gray};
+  border-radius: 4px;
+  font-size: 0.85rem;
+`;
+
+const EmptyAcceptances = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: ${({ theme }) => theme.colors.gray};
+  font-style: italic;
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -266,11 +473,16 @@ const PrijevozPage: React.FC = () => {
   const [isSpecificDriversModalOpen, setIsSpecificDriversModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignedUsersModalOpen, setIsAssignedUsersModalOpen] = useState(false);
+  const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<TransportRequest | null>(null);
   const [selectedRequestForUsers, setSelectedRequestForUsers] = useState<TransportRequest | null>(null);
+  const [acceptingRequest, setAcceptingRequest] = useState<TransportRequest | null>(null);
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [assignedUsers, setAssignedUsers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([]);
+  const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
+  const [pendingAcceptances, setPendingAcceptances] = useState<any[]>([]);
+  const [isLoadingAcceptances, setIsLoadingAcceptances] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -327,8 +539,11 @@ const PrijevozPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchRequests();
+      if (isAdmin) {
+        fetchPendingAcceptances();
+      }
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   const handleSubmitZahtjev = async (data: {
     kamenolom: string;
@@ -461,6 +676,126 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  // Extract first part of registration (same logic as RegistracijePage)
+  const getFirstPartOfRegistration = (registration: string): string => {
+    // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
+    const withSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\s+\d+\s+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+    if (withSpaces) return withSpaces[1];
+
+    // Pattern 2: Without spaces - "NG341CP", "AB123CD"
+    const withoutSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\d+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+    if (withoutSpaces) return withoutSpaces[1];
+
+    // Fallback: return original if no pattern matches
+    return registration;
+  };
+
+  // Get unique first parts of user's registrations
+  const getUserUniqueRegistrations = (): string[] => {
+    if (!user?.assignedRegistrations) return [];
+
+    const firstParts = user.assignedRegistrations.map(reg => getFirstPartOfRegistration(reg));
+    return Array.from(new Set(firstParts)).sort();
+  };
+
+  // Get all full registrations that match a first part
+  const getFullRegistrationsForFirstPart = (firstPart: string): string[] => {
+    if (!user?.assignedRegistrations) return [];
+
+    return user.assignedRegistrations.filter(fullReg => {
+      const fp = getFirstPartOfRegistration(fullReg);
+      return fp === firstPart;
+    });
+  };
+
+  const handleAcceptClick = (request: TransportRequest) => {
+    setAcceptingRequest(request);
+    setSelectedRegistrations([]);
+    setIsAcceptModalOpen(true);
+  };
+
+  const handleRegistrationToggle = (firstPartRegistration: string) => {
+    setSelectedRegistrations(prev => {
+      // Get all full registrations that match this first part
+      const fullRegs = getFullRegistrationsForFirstPart(firstPartRegistration);
+
+      // Check if any of the full registrations are already selected
+      const isSelected = fullRegs.some(reg => prev.includes(reg));
+
+      if (isSelected) {
+        // Remove all full registrations that match this first part
+        return prev.filter(r => !fullRegs.includes(r));
+      } else {
+        // Count how many unique first parts are currently selected
+        const currentUniqueCount = getUserUniqueRegistrations().filter(fp => {
+          const regs = getFullRegistrationsForFirstPart(fp);
+          return regs.some(reg => prev.includes(reg));
+        }).length;
+
+        // Check if we have room (each unique first part = 1 truck)
+        if (acceptingRequest && currentUniqueCount < acceptingRequest.brojKamiona) {
+          // Add the first full registration that matches (representing this truck)
+          return [...prev, fullRegs[0]];
+        }
+
+        return prev;
+      }
+    });
+  };
+
+  const handleAcceptSubmit = async () => {
+    if (!acceptingRequest || selectedRegistrations.length === 0) return;
+
+    try {
+      await apiService.acceptTransportRequest(acceptingRequest._id, selectedRegistrations);
+
+      alert(`Zahtjev prihvaćen sa ${selectedRegistrations.length} registracija! Čeka se odobrenje administratora.`);
+
+      setIsAcceptModalOpen(false);
+      setAcceptingRequest(null);
+      setSelectedRegistrations([]);
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
+    }
+  };
+
+  const fetchPendingAcceptances = async () => {
+    try {
+      setIsLoadingAcceptances(true);
+      const acceptances = await apiService.getPendingAcceptances();
+      setPendingAcceptances(acceptances);
+    } catch (error) {
+      console.error('Error fetching pending acceptances:', error);
+    } finally {
+      setIsLoadingAcceptances(false);
+    }
+  };
+
+  const handleApproveAcceptance = async (acceptanceId: string) => {
+    try {
+      await apiService.reviewAcceptance(acceptanceId, 'approved');
+      alert('Zahtjev odobren!');
+      await fetchPendingAcceptances();
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error approving acceptance:', error);
+      alert('Greška pri odobravanju zahtjeva.');
+    }
+  };
+
+  const handleDeclineAcceptance = async (acceptanceId: string) => {
+    try {
+      await apiService.reviewAcceptance(acceptanceId, 'declined');
+      alert('Zahtjev odbijen!');
+      await fetchPendingAcceptances();
+    } catch (error) {
+      console.error('Error declining acceptance:', error);
+      alert('Greška pri odbijanju zahtjeva.');
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -508,7 +843,7 @@ const PrijevozPage: React.FC = () => {
                 <Th>Isplata po t</Th>
                 <Th>Prijevoznici</Th>
                 <Th>Status</Th>
-                {isAdmin && <Th>Akcije</Th>}
+                <Th>Akcije</Th>
               </tr>
             </thead>
             <tbody>
@@ -537,8 +872,8 @@ const PrijevozPage: React.FC = () => {
                       {getStatusLabel(request.status)}
                     </StatusBadge>
                   </Td>
-                  {isAdmin && (
-                    <Td>
+                  <Td>
+                    {isAdmin ? (
                       <ActionButtons>
                         <ActionButton onClick={() => handleEditClick(request)}>
                           Uredi
@@ -547,14 +882,73 @@ const PrijevozPage: React.FC = () => {
                           Obriši
                         </DeleteButton>
                       </ActionButtons>
-                    </Td>
-                  )}
+                    ) : (
+                      <ActionButton onClick={() => handleAcceptClick(request)}>
+                        Prihvati
+                      </ActionButton>
+                    )}
+                  </Td>
                 </tr>
               ))}
             </tbody>
           </Table>
         )}
       </RequestsContainer>
+
+      {/* Admin section for pending acceptances */}
+      {isAdmin && (
+        <AcceptancesSection>
+          <AcceptancesTitle>Zahtjevi korisnika za prihvaćanje</AcceptancesTitle>
+          {isLoadingAcceptances ? (
+            <EmptyAcceptances>Učitavanje...</EmptyAcceptances>
+          ) : pendingAcceptances.length === 0 ? (
+            <EmptyAcceptances>Nema zahtjeva na čekanju</EmptyAcceptances>
+          ) : (
+            pendingAcceptances.map((acceptance) => (
+              <AcceptanceCard key={acceptance._id}>
+                <AcceptanceHeader>
+                  <AcceptanceInfo>
+                    <AcceptanceUser>
+                      {acceptance.userId?.firstName} {acceptance.userId?.lastName}
+                    </AcceptanceUser>
+                    <AcceptanceDetail>
+                      Email: {acceptance.userId?.email}
+                    </AcceptanceDetail>
+                    <AcceptanceDetail>
+                      Firma: {acceptance.userId?.company}
+                    </AcceptanceDetail>
+                    <AcceptanceDetail>
+                      Kamenolom: {acceptance.requestId?.kamenolom}
+                    </AcceptanceDetail>
+                    <AcceptanceDetail>
+                      Gradilište: {acceptance.requestId?.gradiliste}
+                    </AcceptanceDetail>
+                    <AcceptanceDetail>
+                      Broj kamiona: {acceptance.acceptedCount}
+                    </AcceptanceDetail>
+                    <AcceptanceDetail>
+                      Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                    </AcceptanceDetail>
+                    <RegistrationTags>
+                      {acceptance.registrations.map((reg: string, idx: number) => (
+                        <RegistrationTag key={idx}>{reg}</RegistrationTag>
+                      ))}
+                    </RegistrationTags>
+                  </AcceptanceInfo>
+                  <AcceptanceActions>
+                    <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
+                      Odobri
+                    </ApproveButton>
+                    <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
+                      Odbij
+                    </DeclineButton>
+                  </AcceptanceActions>
+                </AcceptanceHeader>
+              </AcceptanceCard>
+            ))
+          )}
+        </AcceptancesSection>
+      )}
 
       <NoviZahtjevModal
         isOpen={isModalOpen}
@@ -592,6 +986,108 @@ const PrijevozPage: React.FC = () => {
             <ModalCloseButton onClick={() => setIsAssignedUsersModalOpen(false)}>
               Zatvori
             </ModalCloseButton>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {isAcceptModalOpen && acceptingRequest && (
+        <ModalOverlay onClick={() => setIsAcceptModalOpen(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>Prihvati zahtjev za prijevoz</ModalTitle>
+
+            <RequestInfo>
+              <InfoRow>
+                <InfoLabel>Kamenolom:</InfoLabel>
+                <InfoValue>{acceptingRequest.kamenolom}</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Gradilište:</InfoLabel>
+                <InfoValue>{acceptingRequest.gradiliste}</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Broj kamiona:</InfoLabel>
+                <InfoValue>{acceptingRequest.brojKamiona}</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Datum prijevoza:</InfoLabel>
+                <InfoValue>{acceptingRequest.prijevozNaDan}</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Isplata po t:</InfoLabel>
+                <InfoValue>{acceptingRequest.isplataPoT} €</InfoValue>
+              </InfoRow>
+            </RequestInfo>
+
+            <SelectionSummary>
+              Odabrano{' '}
+              {
+                getUserUniqueRegistrations().filter(fp => {
+                  const regs = getFullRegistrationsForFirstPart(fp);
+                  return regs.some(reg => selectedRegistrations.includes(reg));
+                }).length
+              }{' '}
+              od {acceptingRequest.brojKamiona} kamiona
+            </SelectionSummary>
+
+            <div style={{ marginBottom: '1rem', fontWeight: 500 }}>
+              Odaberite registracije (max {acceptingRequest.brojKamiona}):
+            </div>
+
+            {user?.assignedRegistrations && user.assignedRegistrations.length > 0 ? (
+              <RegistrationsList>
+                {getUserUniqueRegistrations().map((firstPart) => {
+                  const fullRegs = getFullRegistrationsForFirstPart(firstPart);
+                  const isChecked = fullRegs.some(reg => selectedRegistrations.includes(reg));
+
+                  // Count how many unique first parts are currently selected
+                  const currentUniqueCount = getUserUniqueRegistrations().filter(fp => {
+                    const regs = getFullRegistrationsForFirstPart(fp);
+                    return regs.some(reg => selectedRegistrations.includes(reg));
+                  }).length;
+
+                  const canSelect = currentUniqueCount < acceptingRequest.brojKamiona;
+
+                  return (
+                    <RegistrationCheckbox key={firstPart}>
+                      <input
+                        type="checkbox"
+                        id={`reg-${firstPart}`}
+                        checked={isChecked}
+                        onChange={() => handleRegistrationToggle(firstPart)}
+                        disabled={!isChecked && !canSelect}
+                      />
+                      <label htmlFor={`reg-${firstPart}`}>
+                        {firstPart}
+                      </label>
+                    </RegistrationCheckbox>
+                  );
+                })}
+              </RegistrationsList>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+                Nemate dodijeljene registracije. Kontaktirajte administratora.
+              </div>
+            )}
+
+            <ModalActions>
+              <ModalButton variant="secondary" onClick={() => setIsAcceptModalOpen(false)}>
+                Odustani
+              </ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={handleAcceptSubmit}
+                disabled={selectedRegistrations.length === 0}
+              >
+                Prihvati (
+                {
+                  getUserUniqueRegistrations().filter(fp => {
+                    const regs = getFullRegistrationsForFirstPart(fp);
+                    return regs.some(reg => selectedRegistrations.includes(reg));
+                  }).length
+                }
+                )
+              </ModalButton>
+            </ModalActions>
           </ModalContent>
         </ModalOverlay>
       )}

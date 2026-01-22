@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const TransportRequest = require('../models/TransportRequest');
+const TransportAcceptance = require('../models/TransportAcceptance');
 const auth = require('../middleware/auth');
 
 // Create a new transport request (admin with prijevoz access only)
@@ -219,6 +220,167 @@ router.delete('/:id', auth, async (req, res) => {
     console.error('Error deleting transport request:', error);
     res.status(500).json({
       message: 'Server error while deleting transport request',
+      error: error.message,
+    });
+  }
+});
+
+// Get all pending acceptances across all requests (admin only)
+// IMPORTANT: This route must come before /:id/acceptances to avoid route conflicts
+router.get('/acceptances/pending', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission and is admin
+    if (!req.user.canAccessPrijevoz || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    }
+
+    const acceptances = await TransportAcceptance.find({
+      status: 'pending',
+    })
+      .populate('userId', 'firstName lastName email company')
+      .populate('requestId')
+      .sort({ createdAt: -1 });
+
+    res.json(acceptances);
+  } catch (error) {
+    console.error('Error fetching pending acceptances:', error);
+    res.status(500).json({
+      message: 'Server error while fetching pending acceptances',
+      error: error.message,
+    });
+  }
+});
+
+// Admin approves or declines an acceptance
+router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission and is admin
+    if (!req.user.canAccessPrijevoz || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    }
+
+    const { status } = req.body;
+
+    if (!['approved', 'declined'].includes(status)) {
+      return res.status(400).json({ message: 'Status must be either "approved" or "declined"' });
+    }
+
+    const acceptance = await TransportAcceptance.findById(req.params.acceptanceId).populate('requestId');
+
+    if (!acceptance) {
+      return res.status(404).json({ message: 'Acceptance not found' });
+    }
+
+    if (acceptance.status !== 'pending') {
+      return res.status(400).json({ message: 'This acceptance has already been reviewed' });
+    }
+
+    // Update acceptance status
+    acceptance.status = status;
+    acceptance.reviewedBy = req.user._id;
+    acceptance.reviewedAt = new Date();
+    await acceptance.save();
+
+    // If approved, reduce brojKamiona in the transport request
+    if (status === 'approved') {
+      const transportRequest = await TransportRequest.findById(acceptance.requestId._id);
+      if (transportRequest) {
+        transportRequest.brojKamiona = Math.max(0, transportRequest.brojKamiona - acceptance.acceptedCount);
+        await transportRequest.save();
+      }
+    }
+
+    // Populate the acceptance for response
+    await acceptance.populate('userId', 'firstName lastName email company');
+    await acceptance.populate('reviewedBy', 'firstName lastName email');
+
+    res.json({
+      message: `Acceptance ${status} successfully`,
+      acceptance,
+    });
+  } catch (error) {
+    console.error('Error reviewing acceptance:', error);
+    res.status(500).json({
+      message: 'Server error while reviewing acceptance',
+      error: error.message,
+    });
+  }
+});
+
+// Get all pending acceptances for a transport request (admin only)
+router.get('/:id/acceptances', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission and is admin
+    if (!req.user.canAccessPrijevoz || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    }
+
+    const acceptances = await TransportAcceptance.find({
+      requestId: req.params.id,
+    })
+      .populate('userId', 'firstName lastName email company')
+      .populate('reviewedBy', 'firstName lastName email')
+      .sort({ createdAt: -1 });
+
+    res.json(acceptances);
+  } catch (error) {
+    console.error('Error fetching acceptances:', error);
+    res.status(500).json({
+      message: 'Server error while fetching acceptances',
+      error: error.message,
+    });
+  }
+});
+
+// User accepts transport request with registrations
+router.post('/:id/accept', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
+    const { registrations } = req.body;
+
+    if (!registrations || !Array.isArray(registrations) || registrations.length === 0) {
+      return res.status(400).json({ message: 'Registrations array is required' });
+    }
+
+    // Check if transport request exists
+    const transportRequest = await TransportRequest.findById(req.params.id);
+    if (!transportRequest) {
+      return res.status(404).json({ message: 'Transport request not found' });
+    }
+
+    // Check if user has already submitted an acceptance for this request
+    const existingAcceptance = await TransportAcceptance.findOne({
+      requestId: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (existingAcceptance) {
+      return res.status(400).json({ message: 'You have already submitted an acceptance for this request' });
+    }
+
+    // Create acceptance record
+    const acceptance = new TransportAcceptance({
+      requestId: req.params.id,
+      userId: req.user._id,
+      registrations,
+      acceptedCount: registrations.length,
+      status: 'pending',
+    });
+
+    await acceptance.save();
+
+    res.status(201).json({
+      message: 'Transport request acceptance submitted successfully',
+      acceptance,
+    });
+  } catch (error) {
+    console.error('Error accepting transport request:', error);
+    res.status(500).json({
+      message: 'Server error while accepting transport request',
       error: error.message,
     });
   }

@@ -197,6 +197,37 @@ export interface ApiServiceResponse<T = any> {
   message?: string;
 }
 
+export interface TransportAcceptance {
+  _id: string;
+  requestId: {
+    _id: string;
+    kamenolom: string;
+    gradiliste: string;
+    brojKamiona: number;
+    prijevozNaDan: string;
+    isplataPoT: number;
+  };
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    company: string;
+  };
+  registrations: string[];
+  acceptedCount: number;
+  status: 'pending' | 'approved' | 'declined';
+  reviewedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiService {
   // Auth methods
   login: (email: string, password: string) => Promise<LoginResponse>;

@@ -647,6 +647,48 @@ export const apiService = {
     }
   },
 
+  acceptTransportRequest: async (id: string, registrations: string[]): Promise<any> => {
+    try {
+      console.log('Accepting transport request:', { id, registrations });
+      const response = await api.post(`/api/transport-requests/${id}/accept`, { registrations });
+      return response.data;
+    } catch (error) {
+      console.error('Error accepting transport request:', error);
+      throw error;
+    }
+  },
+
+  getPendingAcceptances: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/transport-requests/acceptances/pending');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching pending acceptances:', error);
+      throw error;
+    }
+  },
+
+  getAcceptancesForRequest: async (requestId: string): Promise<any[]> => {
+    try {
+      const response = await api.get(`/api/transport-requests/${requestId}/acceptances`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching acceptances for request:', error);
+      throw error;
+    }
+  },
+
+  reviewAcceptance: async (acceptanceId: string, status: 'approved' | 'declined'): Promise<any> => {
+    try {
+      console.log('Reviewing acceptance:', { acceptanceId, status });
+      const response = await api.patch(`/api/transport-requests/acceptances/${acceptanceId}`, { status });
+      return response.data;
+    } catch (error) {
+      console.error('Error reviewing acceptance:', error);
+      throw error;
+    }
+  },
+
   getUsersWithPrijevozAccess: async (): Promise<Array<{ _id: string; firstName: string; lastName: string }>> => {
     try {
       const response = await api.get('/api/users/prijevoz/access');
