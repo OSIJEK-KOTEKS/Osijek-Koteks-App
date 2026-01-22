@@ -770,6 +770,10 @@ const Dashboard: React.FC = () => {
     navigate('/prijevoz');
   };
 
+  const handleNavigateToRegistracije = () => {
+    navigate('/registracije');
+  };
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -1012,6 +1016,13 @@ const Dashboard: React.FC = () => {
               paidStatus
             )}
           />
+          <PrintAllButton
+            items={items}
+            totalItems={totalItems}
+            totalWeight={totalWeight}
+            isLoading={loading}
+            onPrintAll={fetchAllItemsForPrinting}
+          />
           {/* Document creation buttons */}
           {(user?.role === 'admin' || user?.role === 'bot') && (
             <S.Button id="create_item" onClick={() => setCreateModalVisible(true)}>
@@ -1021,16 +1032,11 @@ const Dashboard: React.FC = () => {
 
           {/* User Management button - only for admins */}
           {user?.role === 'admin' && (
-            <S.Button onClick={() => navigate('/users')}>Upravljanje korisnicima</S.Button>
+            <>
+              <S.Button onClick={() => navigate('/users')}>Upravljanje korisnicima</S.Button>
+              <S.Button onClick={handleNavigateToRegistracije}>Registracije</S.Button>
+            </>
           )}
-
-          <PrintAllButton
-            items={items}
-            totalItems={totalItems}
-            totalWeight={totalWeight}
-            isLoading={loading}
-            onPrintAll={fetchAllItemsForPrinting}
-          />
 
           {canAccessRacuni && <S.Button onClick={handleNavigateToRacuni}>Racuni</S.Button>}
           {canAccessPrijevoz && <S.Button onClick={handleNavigateToPrijevoz}>Prijevoz</S.Button>}

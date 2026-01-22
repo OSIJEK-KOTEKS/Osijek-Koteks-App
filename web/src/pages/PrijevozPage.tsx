@@ -271,7 +271,6 @@ const PrijevozPage: React.FC = () => {
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [assignedUsers, setAssignedUsers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([]);
-  const [uniqueRegistrations, setUniqueRegistrations] = useState<string[]>([]);
 
   const isAdmin = user?.role === 'admin';
 
@@ -328,19 +327,8 @@ const PrijevozPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchRequests();
-      fetchUniqueRegistrations();
     }
   }, [user]);
-
-  const fetchUniqueRegistrations = async () => {
-    try {
-      const registrations = await apiService.getUniqueRegistrations();
-      setUniqueRegistrations(registrations);
-      console.log('Unique registrations:', registrations);
-    } catch (error) {
-      console.error('Error fetching unique registrations:', error);
-    }
-  };
 
   const handleSubmitZahtjev = async (data: {
     kamenolom: string;
@@ -500,25 +488,6 @@ const PrijevozPage: React.FC = () => {
         <ContentText>
           Upravljajte zahtjevima za prijevoz.
         </ContentText>
-        {uniqueRegistrations.length > 0 && (
-          <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-            <strong>Unique Registrations ({uniqueRegistrations.length}):</strong>
-            <div style={{ marginTop: '0.5rem' }}>
-              {uniqueRegistrations.map((reg, index) => (
-                <span key={index} style={{
-                  display: 'inline-block',
-                  padding: '0.25rem 0.5rem',
-                  margin: '0.25rem',
-                  backgroundColor: '#e9ecef',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem'
-                }}>
-                  {reg}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </DashboardContainer>
 
       <RequestsContainer>

@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
 import RacuniPage from './pages/RacuniPage';
 import PrijevozPage from './pages/PrijevozPage';
+import RegistracijePage from './pages/RegistracijePage';
 
 const App: React.FC = () => {
   return (
@@ -43,6 +44,14 @@ const App: React.FC = () => {
             element={
               <PrivateRoute requiresPrijevozAccess>
                 <PrijevozPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/registracije"
+            element={
+              <PrivateRoute adminOnly>
+                <RegistracijePage />
               </PrivateRoute>
             }
           />
