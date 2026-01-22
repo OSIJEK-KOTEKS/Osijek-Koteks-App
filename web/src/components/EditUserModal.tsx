@@ -206,6 +206,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         company: user.company,
         role: user.role,
         codes: [...user.codes],
+        assignedRegistrations: [...(user.assignedRegistrations || [])],
         isVerified: user.isVerified,
         hasFullAccess: user.hasFullAccess || false,
         canAccessRacuni: user.canAccessRacuni ?? false,
@@ -304,6 +305,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     setFormData(prev => ({
       ...prev,
       codes: prev.codes?.filter(c => c !== code) || [],
+    }));
+  };
+
+  const handleRemoveRegistration = (registration: string) => {
+    setFormData(prev => ({
+      ...prev,
+      assignedRegistrations: prev.assignedRegistrations?.filter(r => r !== registration) || [],
     }));
   };
 
@@ -456,6 +464,26 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   </RemoveCodeButton>
                 </CodeBadge>
               ))}
+            </CodesList>
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Dodijeljene registracije</Label>
+            <CodesList>
+              {formData.assignedRegistrations && formData.assignedRegistrations.length > 0 ? (
+                formData.assignedRegistrations.map(registration => (
+                  <CodeBadge key={registration}>
+                    {registration}
+                    <RemoveCodeButton
+                      type="button"
+                      onClick={() => handleRemoveRegistration(registration)}>
+                      ×
+                    </RemoveCodeButton>
+                  </CodeBadge>
+                ))
+              ) : (
+                <div style={{ color: '#999', fontStyle: 'italic' }}>Nema dodijeljenih registracija</div>
+              )}
             </CodesList>
           </FormGroup>
 

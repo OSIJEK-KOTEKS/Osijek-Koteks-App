@@ -137,8 +137,25 @@ const PaginationButton = styled.button<{ isActive?: boolean }>`
 
 const SortContainer = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 16px;
+`;
+
+const SearchInput = styled.input`
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  background-color: ${({ theme }) => theme.colors.white};
+  font-size: 1rem;
+  flex: 1;
+  max-width: 400px;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const SortSelect = styled.select`
@@ -158,6 +175,7 @@ const UserManagementPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState('name-asc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -170,10 +188,24 @@ const UserManagementPage: React.FC = () => {
     fetchUsers();
   }, []);
 
-  // Apply sorting and pagination when users or sort option changes
+  // Apply search, sorting and pagination when users, sort option, or search query changes
   useEffect(() => {
     if (allUsers.length > 0) {
-      const sortedUsers = [...allUsers].sort((a, b) => {
+      // First, filter by search query
+      let filteredUsers = allUsers;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        filteredUsers = allUsers.filter(
+          user =>
+            user.firstName.toLowerCase().includes(query) ||
+            user.lastName.toLowerCase().includes(query) ||
+            user.email.toLowerCase().includes(query) ||
+            user.company.toLowerCase().includes(query)
+        );
+      }
+
+      // Then sort the filtered users
+      const sortedUsers = [...filteredUsers].sort((a, b) => {
         switch (sortOption) {
           case 'name-asc':
             return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
@@ -204,7 +236,7 @@ const UserManagementPage: React.FC = () => {
       const indexOfFirstUser = indexOfLastUser - usersPerPage;
       setUsers(sortedUsers.slice(indexOfFirstUser, indexOfLastUser));
     }
-  }, [allUsers, currentPage, sortOption]);
+  }, [allUsers, currentPage, sortOption, searchQuery]);
 
   const updateAvailableCodes = (fetchedUsers: User[]) => {
     // Extract all codes from all users
@@ -246,6 +278,11 @@ const UserManagementPage: React.FC = () => {
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSortOption(e.target.value);
     setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page when search changes
   };
 
   const getRolePermissions = (role: User['role']) => {
@@ -420,8 +457,14 @@ const UserManagementPage: React.FC = () => {
 
       {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
 
-      {/* Sort controls */}
+      {/* Search and sort controls */}
       <SortContainer>
+        <SearchInput
+          type="text"
+          placeholder="Pretraži korisnike (ime, email, firma)..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+        />
         <SortSelect value={sortOption} onChange={handleSortChange}>
           <option value="name-asc">Ime (A-Ž)</option>
           <option value="name-desc">Ime (Ž-A)</option>
