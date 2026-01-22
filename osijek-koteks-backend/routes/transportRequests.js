@@ -366,14 +366,29 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Check if user has already submitted an acceptance for this request
-    const existingAcceptance = await TransportAcceptance.findOne({
+    // Check if user has already submitted an acceptance for this request with the same registrations
+    const existingAcceptances = await TransportAcceptance.find({
       requestId: req.params.id,
       userId: req.user._id,
     });
 
-    if (existingAcceptance) {
-      return res.status(400).json({ message: 'You have already submitted an acceptance for this request' });
+    // Sort the new registrations for comparison
+    const newRegistrationsSorted = [...registrations].sort();
+
+    // Check if any existing acceptance has identical registrations
+    for (const existingAcceptance of existingAcceptances) {
+      const existingRegistrationsSorted = [...existingAcceptance.registrations].sort();
+
+      // Check if the registrations arrays are identical
+      const areRegistrationsIdentical =
+        existingRegistrationsSorted.length === newRegistrationsSorted.length &&
+        existingRegistrationsSorted.every((reg, index) => reg === newRegistrationsSorted[index]);
+
+      if (areRegistrationsIdentical) {
+        return res.status(400).json({
+          message: 'You have already submitted an acceptance for this request with the same registrations'
+        });
+      }
     }
 
     // Calculate accepted count based on unique first parts (each unique first part = 1 truck)

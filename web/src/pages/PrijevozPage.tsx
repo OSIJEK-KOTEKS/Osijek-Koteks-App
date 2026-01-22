@@ -453,6 +453,86 @@ const EmptyAcceptances = styled.div`
   font-style: italic;
 `;
 
+const ExpandedRow = styled.tr`
+  background-color: ${({ theme }) => theme.colors.background};
+`;
+
+const ExpandedCell = styled.td`
+  padding: 1.5rem !important;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.gray};
+`;
+
+const AcceptancesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const AcceptanceItem = styled.div`
+  background-color: white;
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: 8px;
+  padding: 1rem;
+`;
+
+const AcceptanceItemHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+`;
+
+const AcceptanceItemUser = styled.div`
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const AcceptanceItemStatus = styled.span<{ status: string }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: ${({ status }) => {
+    switch (status) {
+      case 'approved':
+        return '#d4edda';
+      case 'declined':
+        return '#f8d7da';
+      case 'pending':
+        return '#fff3cd';
+      default:
+        return '#e9ecef';
+    }
+  }};
+  color: ${({ status }) => {
+    switch (status) {
+      case 'approved':
+        return '#155724';
+      case 'declined':
+        return '#721c24';
+      case 'pending':
+        return '#856404';
+      default:
+        return '#495057';
+    }
+  }};
+`;
+
+const AcceptanceItemDetail = styled.div`
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.text};
+  margin: 0.25rem 0;
+`;
+
+const ClickableRow = styled.tr`
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.background};
+  }
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -483,6 +563,9 @@ const PrijevozPage: React.FC = () => {
   const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
   const [pendingAcceptances, setPendingAcceptances] = useState<any[]>([]);
   const [isLoadingAcceptances, setIsLoadingAcceptances] = useState(false);
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
+  const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -796,6 +879,27 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleRequestClick = async (requestId: string) => {
+    if (expandedRequestId === requestId) {
+      // Collapse if already expanded
+      setExpandedRequestId(null);
+      setRequestAcceptances([]);
+    } else {
+      // Expand and fetch acceptances for this request
+      setExpandedRequestId(requestId);
+      setIsLoadingRequestAcceptances(true);
+      try {
+        const acceptances = await apiService.getAcceptancesForRequest(requestId);
+        setRequestAcceptances(acceptances);
+      } catch (error) {
+        console.error('Error fetching acceptances for request:', error);
+        setRequestAcceptances([]);
+      } finally {
+        setIsLoadingRequestAcceptances(false);
+      }
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -848,47 +952,143 @@ const PrijevozPage: React.FC = () => {
             </thead>
             <tbody>
               {requests.map((request) => (
-                <tr key={request._id}>
-                  <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
-                  <Td>{request.kamenolom}</Td>
-                  <Td>{request.gradiliste}</Td>
-                  <Td>{request.brojKamiona}</Td>
-                  <Td>{request.prijevozNaDan}</Td>
-                  <Td>{request.isplataPoT} €</Td>
-                  <Td>
-                    {request.assignedTo === 'All' ? (
-                      'Svi'
-                    ) : (
-                      <ActionButton
-                        onClick={() => handleShowAssignedUsers(request)}
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
-                        Prikaži prijevoznike
-                      </ActionButton>
-                    )}
-                  </Td>
-                  <Td>
-                    <StatusBadge status={request.status}>
-                      {getStatusLabel(request.status)}
-                    </StatusBadge>
-                  </Td>
-                  <Td>
-                    {isAdmin ? (
-                      <ActionButtons>
-                        <ActionButton onClick={() => handleEditClick(request)}>
-                          Uredi
+                <React.Fragment key={request._id}>
+                  {isAdmin ? (
+                    <ClickableRow onClick={() => handleRequestClick(request._id)}>
+                      <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
+                      <Td>{request.kamenolom}</Td>
+                      <Td>{request.gradiliste}</Td>
+                      <Td>{request.brojKamiona}</Td>
+                      <Td>{request.prijevozNaDan}</Td>
+                      <Td>{request.isplataPoT} €</Td>
+                      <Td>
+                        {request.assignedTo === 'All' ? (
+                          'Svi'
+                        ) : (
+                          <ActionButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowAssignedUsers(request);
+                            }}
+                            style={{ whiteSpace: 'nowrap' }}
+                          >
+                            Prikaži prijevoznike
+                          </ActionButton>
+                        )}
+                      </Td>
+                      <Td>
+                        <StatusBadge status={request.status}>
+                          {getStatusLabel(request.status)}
+                        </StatusBadge>
+                      </Td>
+                      <Td>
+                        <ActionButtons>
+                          <ActionButton onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(request);
+                          }}>
+                            Uredi
+                          </ActionButton>
+                          <DeleteButton onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(request);
+                          }}>
+                            Obriši
+                          </DeleteButton>
+                        </ActionButtons>
+                      </Td>
+                    </ClickableRow>
+                  ) : (
+                    <tr>
+                      <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
+                      <Td>{request.kamenolom}</Td>
+                      <Td>{request.gradiliste}</Td>
+                      <Td>{request.brojKamiona}</Td>
+                      <Td>{request.prijevozNaDan}</Td>
+                      <Td>{request.isplataPoT} €</Td>
+                      <Td>
+                        {request.assignedTo === 'All' ? (
+                          'Svi'
+                        ) : (
+                          <ActionButton
+                            onClick={() => handleShowAssignedUsers(request)}
+                            style={{ whiteSpace: 'nowrap' }}
+                          >
+                            Prikaži prijevoznike
+                          </ActionButton>
+                        )}
+                      </Td>
+                      <Td>
+                        <StatusBadge status={request.status}>
+                          {getStatusLabel(request.status)}
+                        </StatusBadge>
+                      </Td>
+                      <Td>
+                        <ActionButton onClick={() => handleAcceptClick(request)}>
+                          Prihvati
                         </ActionButton>
-                        <DeleteButton onClick={() => handleDeleteClick(request)}>
-                          Obriši
-                        </DeleteButton>
-                      </ActionButtons>
-                    ) : (
-                      <ActionButton onClick={() => handleAcceptClick(request)}>
-                        Prihvati
-                      </ActionButton>
-                    )}
-                  </Td>
-                </tr>
+                      </Td>
+                    </tr>
+                  )}
+                  {isAdmin && expandedRequestId === request._id && (
+                    <ExpandedRow>
+                      <ExpandedCell colSpan={9}>
+                        {isLoadingRequestAcceptances ? (
+                          <div style={{ textAlign: 'center', padding: '1rem', color: '#999' }}>
+                            Učitavanje prihvaćanja...
+                          </div>
+                        ) : requestAcceptances.length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '1rem', color: '#999', fontStyle: 'italic' }}>
+                            Nema prihvaćanja za ovaj zahtjev
+                          </div>
+                        ) : (
+                          <AcceptancesList>
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Prihvaćanja za ovaj zahtjev:</h4>
+                            {requestAcceptances.map((acceptance) => {
+                              const firstParts: string[] = acceptance.registrations.map((reg: string) => getFirstPartOfRegistration(reg));
+                              const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+
+                              return (
+                                <AcceptanceItem key={acceptance._id}>
+                                  <AcceptanceItemHeader>
+                                    <AcceptanceItemUser>
+                                      {acceptance.userId?.firstName} {acceptance.userId?.lastName}
+                                    </AcceptanceItemUser>
+                                    <AcceptanceItemStatus status={acceptance.status}>
+                                      {acceptance.status === 'approved' ? 'Odobreno' : acceptance.status === 'declined' ? 'Odbijeno' : 'Na čekanju'}
+                                    </AcceptanceItemStatus>
+                                  </AcceptanceItemHeader>
+                                  <AcceptanceItemDetail>
+                                    Email: {acceptance.userId?.email}
+                                  </AcceptanceItemDetail>
+                                  <AcceptanceItemDetail>
+                                    Firma: {acceptance.userId?.company}
+                                  </AcceptanceItemDetail>
+                                  <AcceptanceItemDetail>
+                                    Broj kamiona: {acceptance.acceptedCount}
+                                  </AcceptanceItemDetail>
+                                  <AcceptanceItemDetail>
+                                    Datum prihvaćanja: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                                  </AcceptanceItemDetail>
+                                  {acceptance.reviewedAt && (
+                                    <AcceptanceItemDetail>
+                                      Pregledano: {new Date(acceptance.reviewedAt).toLocaleDateString('hr-HR')}
+                                    </AcceptanceItemDetail>
+                                  )}
+                                  <RegistrationTags style={{ marginTop: '0.5rem' }}>
+                                    {uniqueFirstParts.map((firstPart: string, idx: number) => (
+                                      <RegistrationTag key={idx}>{firstPart}</RegistrationTag>
+                                    ))}
+                                  </RegistrationTags>
+                                </AcceptanceItem>
+                              );
+                            })}
+                          </AcceptancesList>
+                        )}
+                      </ExpandedCell>
+                    </ExpandedRow>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </Table>
