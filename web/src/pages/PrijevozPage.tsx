@@ -295,7 +295,28 @@ const PrijevozPage: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await apiService.getTransportRequests();
-      setRequests(data);
+
+      // Filter requests based on user role and assignment
+      let filteredData = data;
+      if (user) {
+        if (user.role === 'admin') {
+          // Admin sees all requests
+          filteredData = data;
+        } else {
+          // Regular user sees only requests assigned to "All" or containing their user ID
+          filteredData = data.filter((request: TransportRequest) => {
+            if (request.assignedTo === 'All') {
+              return true;
+            }
+            if (Array.isArray(request.assignedTo)) {
+              return request.assignedTo.includes(user._id);
+            }
+            return false;
+          });
+        }
+      }
+
+      setRequests(filteredData);
     } catch (error) {
       console.error('Error fetching transport requests:', error);
     } finally {
@@ -304,8 +325,10 @@ const PrijevozPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    if (user) {
+      fetchRequests();
+    }
+  }, [user]);
 
   const handleSubmitZahtjev = async (data: {
     kamenolom: string;
