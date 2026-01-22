@@ -838,9 +838,24 @@ const PrijevozPage: React.FC = () => {
       setAcceptingRequest(null);
       setSelectedRegistrations([]);
       await fetchRequests();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accepting request:', error);
-      alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
+
+      // Check if it's a duplicate registration error
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('same registrations')) {
+        // Extract unique first parts from selected registrations for display
+        const firstParts = selectedRegistrations.map(reg => getFirstPartOfRegistration(reg));
+        const uniqueFirstParts = Array.from(new Set(firstParts));
+
+        alert(
+          `❌ Ne možete prihvatiti ovaj zahtjev\n\n` +
+          `Razlog: Već ste prihvatili ovaj zahtjev s istim registracijama.\n\n` +
+          `Odabrane registracije:\n${uniqueFirstParts.join(', ')}\n\n` +
+          `Napomena: Možete prihvatiti isti zahtjev s različitim registracijama ako želite.`
+        );
+      } else {
+        alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
+      }
     }
   };
 
