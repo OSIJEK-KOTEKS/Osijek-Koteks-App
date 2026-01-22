@@ -145,38 +145,6 @@ const RegistracijePage: React.FC = () => {
     }
   }, [user, isAdmin, navigate]);
 
-  useEffect(() => {
-    if (user && isAdmin) {
-      fetchRegistrations();
-    }
-  }, [user, isAdmin]);
-
-  const fetchRegistrations = async () => {
-    try {
-      setIsLoading(true);
-      const data = await apiService.getUniqueRegistrations();
-      setRegistrations(data);
-      console.log('Fetched registrations:', data);
-    } catch (error) {
-      console.error('Error fetching registrations:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
-
-  const handleNavigateToDashboard = () => {
-    navigate('/dashboard');
-  };
-
   // Extract first part of registration (up to and including first letter code)
   const getFirstPartOfRegistration = (registration: string): string => {
     // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
@@ -191,6 +159,44 @@ const RegistracijePage: React.FC = () => {
 
     // Fallback: return original if no pattern matches
     return registration;
+  };
+
+  const fetchRegistrations = async () => {
+    try {
+      setIsLoading(true);
+      const data = await apiService.getUniqueRegistrations();
+
+      // Extract first part of each registration and remove duplicates
+      const firstParts = data.map(reg => getFirstPartOfRegistration(reg));
+      const uniqueFirstParts = Array.from(new Set(firstParts)).sort();
+
+      setRegistrations(uniqueFirstParts);
+      console.log('Fetched registrations:', data);
+      console.log('Unique first parts:', uniqueFirstParts);
+    } catch (error) {
+      console.error('Error fetching registrations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchRegistrations();
+    }
+  }, [user, isAdmin]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
+  const handleNavigateToDashboard = () => {
+    navigate('/dashboard');
   };
 
   // Don't render if not admin
@@ -233,7 +239,7 @@ const RegistracijePage: React.FC = () => {
           <RegistrationGrid>
             {registrations.map((registration, index) => (
               <RegistrationCard key={index}>
-                <RegistrationText>{getFirstPartOfRegistration(registration)}</RegistrationText>
+                <RegistrationText>{registration}</RegistrationText>
               </RegistrationCard>
             ))}
           </RegistrationGrid>
