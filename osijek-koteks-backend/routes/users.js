@@ -144,7 +144,7 @@ router.patch('/:id', auth, async (req, res) => {
     const updatableFields = ['firstName', 'lastName', 'company', 'phoneNumber'];
     if (req.user.role === 'admin') {
       // Admin can manage additional fields
-      updatableFields.push('role', 'isVerified', 'codes', 'hasFullAccess', 'canAccessRacuni', 'canAccessPrijevoz');
+      updatableFields.push('role', 'isVerified', 'codes', 'assignedRegistrations', 'hasFullAccess', 'canAccessRacuni', 'canAccessPrijevoz');
     }
 
     // Update allowed fields

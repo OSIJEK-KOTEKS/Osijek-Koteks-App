@@ -443,8 +443,7 @@ const RegistracijePage: React.FC = () => {
           <ModalContent onClick={e => e.stopPropagation()}>
             <ModalTitle>Dodijeli registraciju: {selectedRegistration}</ModalTitle>
             <ModalSubtitle>
-              Odaberite korisnika kojem želite dodijeliti ovu registraciju. Svi zapisi koji
-              započinju s "{selectedRegistration}" bit će dodijeljeni odabranom korisniku.
+              Odaberite korisnika kojem želite dodijeliti ovu registraciju.
             </ModalSubtitle>
 
             <UserList>
