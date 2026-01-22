@@ -177,6 +177,22 @@ const RegistracijePage: React.FC = () => {
     navigate('/dashboard');
   };
 
+  // Extract first part of registration (up to and including first letter code)
+  const getFirstPartOfRegistration = (registration: string): string => {
+    // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
+    // Match: letters + space + numbers + space + 1-4 letters (not followed by more digits)
+    const withSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\s+\d+\s+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+    if (withSpaces) return withSpaces[1];
+
+    // Pattern 2: Without spaces - "NG341CP", "AB123CD"
+    // Match: letters, then digits, then 1-4 letters
+    const withoutSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\d+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+    if (withoutSpaces) return withoutSpaces[1];
+
+    // Fallback: return original if no pattern matches
+    return registration;
+  };
+
   // Don't render if not admin
   if (!isAdmin) {
     return null;
@@ -217,7 +233,7 @@ const RegistracijePage: React.FC = () => {
           <RegistrationGrid>
             {registrations.map((registration, index) => (
               <RegistrationCard key={index}>
-                <RegistrationText>{registration}</RegistrationText>
+                <RegistrationText>{getFirstPartOfRegistration(registration)}</RegistrationText>
               </RegistrationCard>
             ))}
           </RegistrationGrid>
