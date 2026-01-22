@@ -18,6 +18,17 @@ const UserSchema = new mongoose.Schema({
     },
     default: [],
   },
+  assignedRegistrations: {
+    type: [String],
+    validate: {
+      validator: function (registrations) {
+        if (registrations.length === 0) return true;
+        return registrations.every(reg => reg && reg.trim().length > 0);
+      },
+      message: 'Each registration must be a non-empty string',
+    },
+    default: [],
+  },
   role: {
     type: String,
     enum: ['admin', 'user', 'bot', 'pc-user'],

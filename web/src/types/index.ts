@@ -5,6 +5,7 @@ export interface User {
   lastName: string;
   company: string;
   codes: string[];
+  assignedRegistrations: string[];
   role: 'admin' | 'user' | 'bot' | 'pc-user';
   isVerified: boolean;
   phoneNumber?: string;
@@ -21,6 +22,7 @@ export interface RegistrationData {
   company: string;
   role: 'admin' | 'user' | 'bot' | 'pc-user';
   codes: string[];
+  assignedRegistrations?: string[];
   hasFullAccess?: boolean;
   canAccessRacuni?: boolean;
   canAccessPrijevoz?: boolean;
