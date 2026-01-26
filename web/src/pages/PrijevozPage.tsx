@@ -1041,11 +1041,10 @@ const PrijevozPage: React.FC = () => {
                 <Th>Kamenolom</Th>
                 <Th>Gradilište</Th>
                 <Th>Broj dostupnih prijevoza</Th>
-                <Th>Dovezeni prijevozi</Th>
+                {isAdmin && <Th>Dovezeni prijevozi</Th>}
                 <Th>Prijevoz na dan</Th>
-                <Th>Isplata po t</Th>
+                <Th>Isplata po toni</Th>
                 <Th>Prijevoznici</Th>
-                <Th>Status</Th>
                 <Th>Akcije</Th>
               </tr>
             </thead>
@@ -1082,11 +1081,6 @@ const PrijevozPage: React.FC = () => {
                         )}
                       </Td>
                       <Td>
-                        <StatusBadge status={request.status}>
-                          {getStatusLabel(request.status)}
-                        </StatusBadge>
-                      </Td>
-                      <Td>
                         <ActionButtons>
                           <ActionButton onClick={(e) => {
                             e.stopPropagation();
@@ -1109,12 +1103,6 @@ const PrijevozPage: React.FC = () => {
                       <Td>{request.kamenolom}</Td>
                       <Td>{getCodeDescription(request.gradiliste)}</Td>
                       <Td>{request.brojKamiona}</Td>
-                      <Td>
-                        {(() => {
-                          const counts = deliveredCountsByRequest.get(request._id);
-                          return counts ? `${counts.delivered}/${counts.total}` : '0/0';
-                        })()}
-                      </Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
                       <Td>
@@ -1133,11 +1121,6 @@ const PrijevozPage: React.FC = () => {
                         )}
                       </Td>
                       <Td>
-                        <StatusBadge status={request.status}>
-                          {getStatusLabel(request.status)}
-                        </StatusBadge>
-                      </Td>
-                      <Td>
                         <ActionButton onClick={(e) => {
                           e.stopPropagation();
                           handleAcceptClick(request);
@@ -1149,7 +1132,7 @@ const PrijevozPage: React.FC = () => {
                   )}
                   {expandedRequestId === request._id && (
                     <ExpandedRow>
-                      <ExpandedCell colSpan={9}>
+                      <ExpandedCell colSpan={isAdmin ? 8 : 7}>
                         {isLoadingRequestAcceptances ? (
                           <div style={{ textAlign: 'center', padding: '1rem', color: '#999' }}>
                             Učitavanje prihvaćanja...
