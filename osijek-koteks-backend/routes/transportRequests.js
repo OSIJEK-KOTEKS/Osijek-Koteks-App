@@ -404,6 +404,7 @@ router.post('/:id/accept', auth, async (req, res) => {
       userId: req.user._id,
       registrations,
       acceptedCount: acceptedCount,
+      gradiliste: transportRequest.gradiliste,
       status: 'pending',
     });
 

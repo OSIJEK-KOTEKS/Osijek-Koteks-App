@@ -27,6 +27,10 @@ const TransportAcceptanceSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    gradiliste: {
+      type: String,
+      required: true,
+    },
     status: {
       type: String,
       enum: ['pending', 'approved', 'declined'],
