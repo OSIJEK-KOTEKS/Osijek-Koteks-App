@@ -169,7 +169,14 @@ router.get('/acceptance/:acceptanceId/registration/:registration', auth, async (
     })
       .populate('createdBy', 'firstName lastName email company')
       .populate('approvedBy', 'firstName lastName')
-      .populate('paidBy', 'firstName lastName');
+      .populate('paidBy', 'firstName lastName')
+      .populate({
+        path: 'transportAcceptanceId',
+        populate: {
+          path: 'requestId',
+          select: 'isplataPoT'
+        }
+      });
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });

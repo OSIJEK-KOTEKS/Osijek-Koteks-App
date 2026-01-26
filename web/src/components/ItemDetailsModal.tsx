@@ -198,20 +198,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, isOpen, onClo
           </ItemDetail>
         )}
 
-        {item.neto !== undefined && item.approvalStatus === 'odobreno' && (
+        {item.tezina !== undefined &&
+         item.transportAcceptanceId?.requestId?.isplataPoT !== undefined && (
           <ItemDetail>
-            <strong>Razlika u vaganju:</strong>{' '}
-            {item.neto > 1000 ? (
-              <span>/</span>
-            ) : (
-              <span
-                style={{
-                  color: item.neto < -5 ? '#f44336' : item.neto > 5 ? '#4caf50' : 'inherit',
-                  fontWeight: item.neto < -5 || item.neto > 5 ? '600' : 'normal',
-                }}>
-                {item.neto}%
-              </span>
-            )}
+            <strong>Isplata:</strong>{' '}
+            {(item.transportAcceptanceId.requestId.isplataPoT * (item.tezina / 1000)).toFixed(2)} €
           </ItemDetail>
         )}
 

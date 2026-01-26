@@ -88,6 +88,13 @@ export interface Item {
     lastName: string;
     email?: string;
   } | null;
+  transportAcceptanceId?: {
+    _id: string;
+    requestId?: {
+      _id: string;
+      isplataPoT: number;
+    };
+  };
 }
 
 export interface ItemUser {
