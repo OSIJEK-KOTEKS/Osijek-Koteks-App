@@ -963,16 +963,12 @@ const PrijevozPage: React.FC = () => {
       try {
         const acceptances = await apiService.getAcceptancesForRequest(requestId);
 
-        // Filter acceptances based on user role
-        const filteredAcceptances = isAdmin
-          ? acceptances
-          : acceptances.filter(acceptance => acceptance.userId === user?._id);
-
-        setRequestAcceptances(filteredAcceptances);
+        // Backend already filters by userId for non-admin users
+        setRequestAcceptances(acceptances);
 
         // Fetch approved registrations for each acceptance
         const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
-        for (const acceptance of filteredAcceptances) {
+        for (const acceptance of acceptances) {
           try {
             const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
             approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
