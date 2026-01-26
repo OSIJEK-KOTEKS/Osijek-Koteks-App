@@ -333,6 +333,37 @@ router.get('/:id/acceptances', auth, async (req, res) => {
   }
 });
 
+// Get delivered count for a transport request
+router.get('/:id/delivered-count', auth, async (req, res) => {
+  try {
+    // Get all approved acceptances for this request
+    const approvedAcceptances = await TransportAcceptance.find({
+      requestId: req.params.id,
+      status: 'approved'
+    });
+
+    // Calculate total accepted count
+    const totalAccepted = approvedAcceptances.reduce((sum, acceptance) => sum + acceptance.acceptedCount, 0);
+
+    // Count how many items are linked and approved
+    const deliveredCount = await Item.countDocuments({
+      transportAcceptanceId: { $in: approvedAcceptances.map(a => a._id) },
+      approvalStatus: 'odobreno'
+    });
+
+    res.json({
+      delivered: deliveredCount,
+      total: totalAccepted
+    });
+  } catch (error) {
+    console.error('Error fetching delivered count:', error);
+    res.status(500).json({
+      message: 'Server error while fetching delivered count',
+      error: error.message,
+    });
+  }
+});
+
 // Helper function to extract first part of registration (same logic as frontend)
 const getFirstPartOfRegistration = (registration) => {
   // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"

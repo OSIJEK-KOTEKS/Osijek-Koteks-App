@@ -718,6 +718,16 @@ export const apiService = {
       throw error;
     }
   },
+
+  getDeliveredCountForRequest: async (requestId: string): Promise<{ delivered: number; total: number }> => {
+    try {
+      const response = await api.get(`/api/transport-requests/${requestId}/delivered-count`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching delivered count:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;

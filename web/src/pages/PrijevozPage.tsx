@@ -583,6 +583,7 @@ const PrijevozPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [deliveredCountsByRequest, setDeliveredCountsByRequest] = useState<Map<string, { delivered: number; total: number }>>(new Map());
 
   const isAdmin = user?.role === 'admin';
 
@@ -629,6 +630,19 @@ const PrijevozPage: React.FC = () => {
       }
 
       setRequests(filteredData);
+
+      // Fetch delivered counts for all requests
+      const deliveredCountsMap = new Map<string, { delivered: number; total: number }>();
+      for (const request of filteredData) {
+        try {
+          const counts = await apiService.getDeliveredCountForRequest(request._id);
+          deliveredCountsMap.set(request._id, counts);
+        } catch (error) {
+          console.error(`Error fetching delivered count for request ${request._id}:`, error);
+          deliveredCountsMap.set(request._id, { delivered: 0, total: 0 });
+        }
+      }
+      setDeliveredCountsByRequest(deliveredCountsMap);
     } catch (error) {
       console.error('Error fetching transport requests:', error);
     } finally {
@@ -917,6 +931,8 @@ const PrijevozPage: React.FC = () => {
       await apiService.reviewAcceptance(acceptanceId, 'approved');
       alert('Zahtjev odobren!');
       await fetchPendingAcceptances();
+      // Small delay to ensure database is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchRequests();
     } catch (error) {
       console.error('Error approving acceptance:', error);
@@ -1022,7 +1038,8 @@ const PrijevozPage: React.FC = () => {
                 <Th>Datum</Th>
                 <Th>Kamenolom</Th>
                 <Th>Gradilište</Th>
-                <Th>Broj kamiona</Th>
+                <Th>Broj dostupnih prijevoza</Th>
+                <Th>Dovezeni prijevozi</Th>
                 <Th>Prijevoz na dan</Th>
                 <Th>Isplata po t</Th>
                 <Th>Prijevoznici</Th>
@@ -1039,6 +1056,12 @@ const PrijevozPage: React.FC = () => {
                       <Td>{request.kamenolom}</Td>
                       <Td>{getCodeDescription(request.gradiliste)}</Td>
                       <Td>{request.brojKamiona}</Td>
+                      <Td>
+                        {(() => {
+                          const counts = deliveredCountsByRequest.get(request._id);
+                          return counts ? `${counts.delivered}/${counts.total}` : '0/0';
+                        })()}
+                      </Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
                       <Td>
@@ -1084,6 +1107,12 @@ const PrijevozPage: React.FC = () => {
                       <Td>{request.kamenolom}</Td>
                       <Td>{getCodeDescription(request.gradiliste)}</Td>
                       <Td>{request.brojKamiona}</Td>
+                      <Td>
+                        {(() => {
+                          const counts = deliveredCountsByRequest.get(request._id);
+                          return counts ? `${counts.delivered}/${counts.total}` : '0/0';
+                        })()}
+                      </Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
                       <Td>
