@@ -1172,7 +1172,7 @@ const PrijevozPage: React.FC = () => {
                     </AcceptanceInfo>
                     <AcceptanceActions>
                       <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
-                        Prihvaćeno
+                        Prihvati
                       </ApproveButton>
                       <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
                         Odbij
