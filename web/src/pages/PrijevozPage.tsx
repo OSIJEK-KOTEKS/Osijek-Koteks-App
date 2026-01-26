@@ -8,6 +8,7 @@ import NoviZahtjevModal from '../components/NoviZahtjevModal';
 import NoviZahtjevZaPrijevoznike from '../components/NoviZahtjevZaPrijevoznike';
 import EditZahtjevModal from '../components/EditZahtjevModal';
 import { apiService } from '../utils/api';
+import { getCodeDescription } from '../utils/codeMapping';
 
 const Header = styled.div`
   display: flex;
@@ -983,7 +984,7 @@ const PrijevozPage: React.FC = () => {
                     <ClickableRow onClick={() => handleRequestClick(request._id)}>
                       <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
                       <Td>{request.kamenolom}</Td>
-                      <Td>{request.gradiliste}</Td>
+                      <Td>{getCodeDescription(request.gradiliste)}</Td>
                       <Td>{request.brojKamiona}</Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
@@ -1028,7 +1029,7 @@ const PrijevozPage: React.FC = () => {
                     <tr>
                       <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
                       <Td>{request.kamenolom}</Td>
-                      <Td>{request.gradiliste}</Td>
+                      <Td>{getCodeDescription(request.gradiliste)}</Td>
                       <Td>{request.brojKamiona}</Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
@@ -1152,7 +1153,7 @@ const PrijevozPage: React.FC = () => {
                         Kamenolom: {acceptance.requestId?.kamenolom}
                       </AcceptanceDetail>
                       <AcceptanceDetail>
-                        Gradilište: {acceptance.requestId?.gradiliste}
+                        Gradilište: {getCodeDescription(acceptance.requestId?.gradiliste)}
                       </AcceptanceDetail>
                       <AcceptanceDetail>
                         Broj kamiona: {acceptance.acceptedCount}
@@ -1237,7 +1238,7 @@ const PrijevozPage: React.FC = () => {
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Gradilište:</InfoLabel>
-                <InfoValue>{acceptingRequest.gradiliste}</InfoValue>
+                <InfoValue>{getCodeDescription(acceptingRequest.gradiliste)}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Broj kamiona:</InfoLabel>
