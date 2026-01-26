@@ -443,19 +443,19 @@ const RegistrationTags = styled.div`
   margin-top: 0.5rem;
 `;
 
-const RegistrationTag = styled.span<{ hasApprovedItem?: boolean }>`
+const RegistrationTag = styled.span<{ $hasApprovedItem?: boolean }>`
   padding: 0.25rem 0.5rem;
-  background-color: ${({ hasApprovedItem, theme }) =>
-    hasApprovedItem ? '#28a745' : theme.colors.gray};
-  color: ${({ hasApprovedItem }) =>
-    hasApprovedItem ? 'white' : 'inherit'};
+  background-color: ${({ $hasApprovedItem, theme }) =>
+    $hasApprovedItem ? '#28a745' : theme.colors.gray};
+  color: ${({ $hasApprovedItem }) =>
+    $hasApprovedItem ? 'white' : 'inherit'};
   border-radius: 4px;
   font-size: 0.85rem;
-  cursor: ${({ hasApprovedItem }) => (hasApprovedItem ? 'pointer' : 'default')};
+  cursor: ${({ $hasApprovedItem }) => ($hasApprovedItem ? 'pointer' : 'default')};
   transition: opacity 0.2s;
 
   &:hover {
-    opacity: ${({ hasApprovedItem }) => (hasApprovedItem ? '0.8' : '1')};
+    opacity: ${({ $hasApprovedItem }) => ($hasApprovedItem ? '0.8' : '1')};
   }
 `;
 
@@ -1198,7 +1198,7 @@ const PrijevozPage: React.FC = () => {
                                       return (
                                         <RegistrationTag
                                           key={idx}
-                                          hasApprovedItem={hasApprovedItem}
+                                          $hasApprovedItem={hasApprovedItem}
                                           onClick={() => {
                                             if (hasApprovedItem) {
                                               handleRegistrationClick(acceptance._id, firstPart);
@@ -1273,7 +1273,7 @@ const PrijevozPage: React.FC = () => {
                           return (
                             <RegistrationTag
                               key={idx}
-                              hasApprovedItem={hasApprovedItem}
+                              $hasApprovedItem={hasApprovedItem}
                               onClick={() => {
                                 if (hasApprovedItem) {
                                   handleRegistrationClick(acceptance._id, firstPart);
