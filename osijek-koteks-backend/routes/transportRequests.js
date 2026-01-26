@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const TransportRequest = require('../models/TransportRequest');
 const TransportAcceptance = require('../models/TransportAcceptance');
+const Item = require('../models/Item');
 const auth = require('../middleware/auth');
 
 // Create a new transport request (admin with prijevoz access only)

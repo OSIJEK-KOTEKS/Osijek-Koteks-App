@@ -6,6 +6,7 @@ const fs = require('fs');
 const sharp = require('sharp');
 const Item = require('../models/Item');
 const User = require('../models/User');
+const TransportAcceptance = require('../models/TransportAcceptance');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
@@ -34,6 +35,23 @@ const extractRNFromFilename = (filename, defaultCode) => {
   // No special pattern found, return the default code
   return defaultCode;
 };
+
+// Helper function to extract first part of registration (same logic as transportRequests)
+const getFirstPartOfRegistration = (registration) => {
+  if (!registration) return '';
+
+  // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
+  const withSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\s+\d+\s+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+  if (withSpaces) return withSpaces[1];
+
+  // Pattern 2: Without spaces - "NG341CP", "AB123CD"
+  const withoutSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\d+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
+  if (withoutSpaces) return withoutSpaces[1];
+
+  // Fallback: return original if no pattern matches
+  return registration;
+};
+
 const normalizeCarrierName = name => {
   if (!name) return '';
   return (
@@ -643,6 +661,51 @@ router.post('/', auth, async (req, res) => {
       prijevoznik: newItem.prijevoznik,
       createdBy: newItem.createdBy, // LOG the creator
     });
+
+    // After saving the item, check if there's an approved transport acceptance with matching registration
+    if (newItem.registracija) {
+      const itemFirstPart = getFirstPartOfRegistration(newItem.registracija);
+
+      // Find an approved transport acceptance that:
+      // 1. Has status 'approved'
+      // 2. Contains a registration that matches this item's registration
+      // 3. Hasn't been used by another item yet (or has room for more items)
+      const matchingAcceptance = await TransportAcceptance.findOne({
+        status: 'approved',
+        registrations: {
+          $elemMatch: {
+            $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+          }
+        }
+      }).sort({ createdAt: 1 }); // Get the oldest matching acceptance first
+
+      if (matchingAcceptance) {
+        // Check if this specific registration in the acceptance has already been used
+        const matchingReg = matchingAcceptance.registrations.find(reg => {
+          const regFirstPart = getFirstPartOfRegistration(reg);
+          return regFirstPart.toLowerCase() === itemFirstPart.toLowerCase();
+        });
+
+        if (matchingReg) {
+          // Check if another item already used this exact registration from this acceptance
+          const existingItemWithSameReg = await Item.findOne({
+            transportAcceptanceId: matchingAcceptance._id,
+            registracija: { $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+          });
+
+          if (!existingItemWithSameReg) {
+            // Link this item to the transport acceptance
+            newItem.transportAcceptanceId = matchingAcceptance._id;
+            await newItem.save();
+            console.log('Linked item to transport acceptance:', {
+              itemId: newItem._id,
+              acceptanceId: matchingAcceptance._id,
+              registration: newItem.registracija
+            });
+          }
+        }
+      }
+    }
 
     res.status(201).json(newItem);
   } catch (err) {

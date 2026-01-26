@@ -74,6 +74,11 @@ const ItemSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    transportAcceptanceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TransportAcceptance',
+      default: null,
+    },
     approvalStatus: {
       type: String,
       enum: ['na čekanju', 'odobreno', 'odbijen'],
