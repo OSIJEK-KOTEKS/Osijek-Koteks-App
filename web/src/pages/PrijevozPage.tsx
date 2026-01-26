@@ -1157,7 +1157,7 @@ const PrijevozPage: React.FC = () => {
         )}
       </RequestsContainer>
 
-      {/* Admin section for pending acceptances */}
+      {/* Admin section for pending acceptances*/}
       {isAdmin && (
         <AcceptancesSection>
           <AcceptancesTitle>Zahtjevi korisnika za prihvaćanje</AcceptancesTitle>
