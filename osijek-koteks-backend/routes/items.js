@@ -132,6 +132,31 @@ const upload = multer({
   },
 });
 
+// Get registrations with approved items for an acceptance
+router.get('/acceptance/:acceptanceId/approved-registrations', auth, async (req, res) => {
+  try {
+    const { acceptanceId } = req.params;
+
+    // Find all approved items linked to this acceptance
+    const items = await Item.find({
+      transportAcceptanceId: acceptanceId,
+      approvalStatus: 'odobreno'
+    }).select('registracija');
+
+    // Extract unique registration first parts
+    const registrations = items
+      .filter(item => item.registracija)
+      .map(item => getFirstPartOfRegistration(item.registracija));
+
+    const uniqueRegistrations = [...new Set(registrations)];
+
+    res.json({ approvedRegistrations: uniqueRegistrations });
+  } catch (error) {
+    console.error('Error fetching approved registrations:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get unique codes here
 router.get('/codes', auth, async (req, res) => {
   try {

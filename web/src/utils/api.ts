@@ -698,6 +698,16 @@ export const apiService = {
       throw error;
     }
   },
+
+  getApprovedRegistrationsForAcceptance: async (acceptanceId: string): Promise<string[]> => {
+    try {
+      const response = await api.get(`/api/items/acceptance/${acceptanceId}/approved-registrations`);
+      return response.data.approvedRegistrations;
+    } catch (error) {
+      console.error('Error fetching approved registrations:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;

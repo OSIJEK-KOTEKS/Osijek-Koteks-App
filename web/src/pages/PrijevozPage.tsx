@@ -440,9 +440,12 @@ const RegistrationTags = styled.div`
   margin-top: 0.5rem;
 `;
 
-const RegistrationTag = styled.span`
+const RegistrationTag = styled.span<{ hasApprovedItem?: boolean }>`
   padding: 0.25rem 0.5rem;
-  background-color: ${({ theme }) => theme.colors.gray};
+  background-color: ${({ hasApprovedItem, theme }) =>
+    hasApprovedItem ? '#28a745' : theme.colors.gray};
+  color: ${({ hasApprovedItem }) =>
+    hasApprovedItem ? 'white' : 'inherit'};
   border-radius: 4px;
   font-size: 0.85rem;
 `;
@@ -567,6 +570,7 @@ const PrijevozPage: React.FC = () => {
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
   const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
   const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
+  const [approvedRegistrationsByAcceptance, setApprovedRegistrationsByAcceptance] = useState<Map<string, Set<string>>>(new Map());
 
   const isAdmin = user?.role === 'admin';
 
@@ -876,6 +880,19 @@ const PrijevozPage: React.FC = () => {
       setIsLoadingAcceptances(true);
       const acceptances = await apiService.getPendingAcceptances();
       setPendingAcceptances(acceptances);
+
+      // Fetch approved registrations for each acceptance
+      const approvedRegsMap = new Map<string, Set<string>>();
+      for (const acceptance of acceptances) {
+        try {
+          const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+        } catch (error) {
+          console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
+          approvedRegsMap.set(acceptance._id, new Set());
+        }
+      }
+      setApprovedRegistrationsByAcceptance(approvedRegsMap);
     } catch (error) {
       console.error('Error fetching pending acceptances:', error);
     } finally {
@@ -918,6 +935,19 @@ const PrijevozPage: React.FC = () => {
       try {
         const acceptances = await apiService.getAcceptancesForRequest(requestId);
         setRequestAcceptances(acceptances);
+
+        // Fetch approved registrations for each acceptance
+        const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
+        for (const acceptance of acceptances) {
+          try {
+            const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+            approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+          } catch (error) {
+            console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
+            approvedRegsMap.set(acceptance._id, new Set());
+          }
+        }
+        setApprovedRegistrationsByAcceptance(approvedRegsMap);
       } catch (error) {
         console.error('Error fetching acceptances for request:', error);
         setRequestAcceptances([]);
@@ -1103,9 +1133,14 @@ const PrijevozPage: React.FC = () => {
                                     </AcceptanceItemDetail>
                                   )}
                                   <RegistrationTags style={{ marginTop: '0.5rem' }}>
-                                    {uniqueFirstParts.map((firstPart: string, idx: number) => (
-                                      <RegistrationTag key={idx}>{firstPart}</RegistrationTag>
-                                    ))}
+                                    {uniqueFirstParts.map((firstPart: string, idx: number) => {
+                                      const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
+                                      return (
+                                        <RegistrationTag key={idx} hasApprovedItem={hasApprovedItem}>
+                                          {firstPart}
+                                        </RegistrationTag>
+                                      );
+                                    })}
                                   </RegistrationTags>
                                 </AcceptanceItem>
                               );
@@ -1165,9 +1200,14 @@ const PrijevozPage: React.FC = () => {
                         Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
                       </AcceptanceDetail>
                       <RegistrationTags>
-                        {uniqueFirstParts.map((firstPart: string, idx: number) => (
-                          <RegistrationTag key={idx}>{firstPart}</RegistrationTag>
-                        ))}
+                        {uniqueFirstParts.map((firstPart: string, idx: number) => {
+                          const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
+                          return (
+                            <RegistrationTag key={idx} hasApprovedItem={hasApprovedItem}>
+                              {firstPart}
+                            </RegistrationTag>
+                          );
+                        })}
                       </RegistrationTags>
                     </AcceptanceInfo>
                     <AcceptanceActions>
