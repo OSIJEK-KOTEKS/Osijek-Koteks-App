@@ -7,8 +7,11 @@ import { useAuth } from '../contexts/AuthContext';
 import NoviZahtjevModal from '../components/NoviZahtjevModal';
 import NoviZahtjevZaPrijevoznike from '../components/NoviZahtjevZaPrijevoznike';
 import EditZahtjevModal from '../components/EditZahtjevModal';
+import ItemDetailsModal from '../components/ItemDetailsModal';
+import ImageViewerModal from '../components/ImageViewerModal';
 import { apiService } from '../utils/api';
 import { getCodeDescription } from '../utils/codeMapping';
+import { Item } from '../types';
 
 const Header = styled.div`
   display: flex;
@@ -448,6 +451,12 @@ const RegistrationTag = styled.span<{ hasApprovedItem?: boolean }>`
     hasApprovedItem ? 'white' : 'inherit'};
   border-radius: 4px;
   font-size: 0.85rem;
+  cursor: ${({ hasApprovedItem }) => (hasApprovedItem ? 'pointer' : 'default')};
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: ${({ hasApprovedItem }) => (hasApprovedItem ? '0.8' : '1')};
+  }
 `;
 
 const EmptyAcceptances = styled.div`
@@ -571,6 +580,9 @@ const PrijevozPage: React.FC = () => {
   const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
   const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
   const [approvedRegistrationsByAcceptance, setApprovedRegistrationsByAcceptance] = useState<Map<string, Set<string>>>(new Map());
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -957,6 +969,17 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleRegistrationClick = async (acceptanceId: string, registration: string) => {
+    try {
+      const item = await apiService.getItemByAcceptanceAndRegistration(acceptanceId, registration);
+      setSelectedItem(item);
+      setIsItemModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching item details:', error);
+      alert('Greška pri učitavanju stavke.');
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -1136,7 +1159,15 @@ const PrijevozPage: React.FC = () => {
                                     {uniqueFirstParts.map((firstPart: string, idx: number) => {
                                       const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
                                       return (
-                                        <RegistrationTag key={idx} hasApprovedItem={hasApprovedItem}>
+                                        <RegistrationTag
+                                          key={idx}
+                                          hasApprovedItem={hasApprovedItem}
+                                          onClick={() => {
+                                            if (hasApprovedItem) {
+                                              handleRegistrationClick(acceptance._id, firstPart);
+                                            }
+                                          }}
+                                        >
                                           {firstPart}
                                         </RegistrationTag>
                                       );
@@ -1203,7 +1234,15 @@ const PrijevozPage: React.FC = () => {
                         {uniqueFirstParts.map((firstPart: string, idx: number) => {
                           const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
                           return (
-                            <RegistrationTag key={idx} hasApprovedItem={hasApprovedItem}>
+                            <RegistrationTag
+                              key={idx}
+                              hasApprovedItem={hasApprovedItem}
+                              onClick={() => {
+                                if (hasApprovedItem) {
+                                  handleRegistrationClick(acceptance._id, firstPart);
+                                }
+                              }}
+                            >
                               {firstPart}
                             </RegistrationTag>
                           );
@@ -1366,6 +1405,24 @@ const PrijevozPage: React.FC = () => {
             </ModalActions>
           </ModalContent>
         </ModalOverlay>
+      )}
+
+      <ItemDetailsModal
+        item={selectedItem}
+        isOpen={isItemModalOpen}
+        onClose={() => {
+          setIsItemModalOpen(false);
+          setSelectedItem(null);
+        }}
+        onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+      />
+
+      {selectedImage && (
+        <ImageViewerModal
+          imageUrl={selectedImage}
+          token={localStorage.getItem('userToken') || ''}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
     </S.PageContainer>
   );

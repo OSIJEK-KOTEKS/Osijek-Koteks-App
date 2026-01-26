@@ -708,6 +708,16 @@ export const apiService = {
       throw error;
     }
   },
+
+  getItemByAcceptanceAndRegistration: async (acceptanceId: string, registration: string): Promise<Item> => {
+    try {
+      const response = await api.get(`/api/items/acceptance/${acceptanceId}/registration/${registration}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching item:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;

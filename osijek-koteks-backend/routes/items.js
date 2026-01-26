@@ -157,6 +157,31 @@ router.get('/acceptance/:acceptanceId/approved-registrations', auth, async (req,
   }
 });
 
+// Get item by acceptance ID and registration
+router.get('/acceptance/:acceptanceId/registration/:registration', auth, async (req, res) => {
+  try {
+    const { acceptanceId, registration } = req.params;
+
+    // Find the item with this acceptance and registration
+    const item = await Item.findOne({
+      transportAcceptanceId: acceptanceId,
+      registracija: { $regex: new RegExp('^' + registration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+    })
+      .populate('createdBy', 'firstName lastName email company')
+      .populate('approvedBy', 'firstName lastName')
+      .populate('paidBy', 'firstName lastName');
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    res.json(item);
+  } catch (error) {
+    console.error('Error fetching item:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get unique codes here
 router.get('/codes', auth, async (req, res) => {
   try {
@@ -687,16 +712,18 @@ router.post('/', auth, async (req, res) => {
       createdBy: newItem.createdBy, // LOG the creator
     });
 
-    // After saving the item, check if there's an approved transport acceptance with matching registration
-    if (newItem.registracija) {
+    // After saving the item, check if there's an approved transport acceptance with matching registration AND code
+    if (newItem.registracija && newItem.code) {
       const itemFirstPart = getFirstPartOfRegistration(newItem.registracija);
 
       // Find an approved transport acceptance that:
       // 1. Has status 'approved'
-      // 2. Contains a registration that matches this item's registration
-      // 3. Hasn't been used by another item yet (or has room for more items)
+      // 2. Has matching gradiliste (code)
+      // 3. Contains a registration that matches this item's registration
+      // 4. Hasn't been used by another item yet (or has room for more items)
       const matchingAcceptance = await TransportAcceptance.findOne({
         status: 'approved',
+        gradiliste: newItem.code,
         registrations: {
           $elemMatch: {
             $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
@@ -1383,6 +1410,45 @@ router.patch(
         console.log('Item saved successfully:', updatedItem._id);
         console.log('Final status:', updatedItem.approvalStatus);
         console.log('========================');
+
+        // If item was approved and has a registration, try to link it to a transport acceptance
+        if (updatedItem.approvalStatus === 'odobreno' && updatedItem.registracija && updatedItem.code && !updatedItem.transportAcceptanceId) {
+          const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
+
+          const matchingAcceptance = await TransportAcceptance.findOne({
+            status: 'approved',
+            gradiliste: updatedItem.code,
+            registrations: {
+              $elemMatch: {
+                $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+              }
+            }
+          }).sort({ createdAt: 1 });
+
+          if (matchingAcceptance) {
+            const matchingReg = matchingAcceptance.registrations.find(reg => {
+              const regFirstPart = getFirstPartOfRegistration(reg);
+              return regFirstPart.toLowerCase() === itemFirstPart.toLowerCase();
+            });
+
+            if (matchingReg) {
+              const existingItemWithSameReg = await Item.findOne({
+                transportAcceptanceId: matchingAcceptance._id,
+                registracija: { $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+              });
+
+              if (!existingItemWithSameReg) {
+                updatedItem.transportAcceptanceId = matchingAcceptance._id;
+                await updatedItem.save();
+                console.log('Linked approved item to transport acceptance:', {
+                  itemId: updatedItem._id,
+                  acceptanceId: matchingAcceptance._id,
+                  registration: updatedItem.registracija
+                });
+              }
+            }
+          }
+        }
 
         // Return the updated item
         res.json(updatedItem);
