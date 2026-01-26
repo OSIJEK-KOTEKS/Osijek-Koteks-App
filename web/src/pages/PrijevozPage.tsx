@@ -962,11 +962,17 @@ const PrijevozPage: React.FC = () => {
       setIsLoadingRequestAcceptances(true);
       try {
         const acceptances = await apiService.getAcceptancesForRequest(requestId);
-        setRequestAcceptances(acceptances);
+
+        // Filter acceptances based on user role
+        const filteredAcceptances = isAdmin
+          ? acceptances
+          : acceptances.filter(acceptance => acceptance.userId === user?._id);
+
+        setRequestAcceptances(filteredAcceptances);
 
         // Fetch approved registrations for each acceptance
         const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
-        for (const acceptance of acceptances) {
+        for (const acceptance of filteredAcceptances) {
           try {
             const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
             approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
@@ -1102,7 +1108,7 @@ const PrijevozPage: React.FC = () => {
                       </Td>
                     </ClickableRow>
                   ) : (
-                    <tr>
+                    <ClickableRow onClick={() => handleRequestClick(request._id)}>
                       <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
                       <Td>{request.kamenolom}</Td>
                       <Td>{getCodeDescription(request.gradiliste)}</Td>
@@ -1120,7 +1126,10 @@ const PrijevozPage: React.FC = () => {
                           'Svi'
                         ) : (
                           <ActionButton
-                            onClick={() => handleShowAssignedUsers(request)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowAssignedUsers(request);
+                            }}
                             style={{ whiteSpace: 'nowrap' }}
                           >
                             Prikaži prijevoznike
@@ -1133,13 +1142,16 @@ const PrijevozPage: React.FC = () => {
                         </StatusBadge>
                       </Td>
                       <Td>
-                        <ActionButton onClick={() => handleAcceptClick(request)}>
+                        <ActionButton onClick={(e) => {
+                          e.stopPropagation();
+                          handleAcceptClick(request);
+                        }}>
                           Prihvati
                         </ActionButton>
                       </Td>
-                    </tr>
+                    </ClickableRow>
                   )}
-                  {isAdmin && expandedRequestId === request._id && (
+                  {expandedRequestId === request._id && (
                     <ExpandedRow>
                       <ExpandedCell colSpan={9}>
                         {isLoadingRequestAcceptances ? (

@@ -308,17 +308,25 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
   }
 });
 
-// Get all pending acceptances for a transport request (admin only)
+// Get all acceptances for a transport request
 router.get('/:id/acceptances', auth, async (req, res) => {
   try {
-    // Check if user has canAccessPrijevoz permission and is admin
-    if (!req.user.canAccessPrijevoz || req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
     }
 
-    const acceptances = await TransportAcceptance.find({
+    // Build query based on user role
+    const query = {
       requestId: req.params.id,
-    })
+    };
+
+    // If not admin, only show user's own acceptances
+    if (req.user.role !== 'admin') {
+      query.userId = req.user._id;
+    }
+
+    const acceptances = await TransportAcceptance.find(query)
       .populate('userId', 'firstName lastName email company')
       .populate('reviewedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
