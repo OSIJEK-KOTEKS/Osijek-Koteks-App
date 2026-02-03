@@ -625,6 +625,7 @@ export const apiService = {
       brojKamiona: number;
       prijevozNaDan: string;
       isplataPoT: number;
+      status?: string;
     }
   ): Promise<any> => {
     try {

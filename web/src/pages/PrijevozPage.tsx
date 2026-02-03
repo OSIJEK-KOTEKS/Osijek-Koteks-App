@@ -827,6 +827,7 @@ const PrijevozPage: React.FC = () => {
     brojKamiona: number;
     prijevozNaDan: string;
     isplataPoT: number;
+    status: string;
   }) => {
     if (!editingRequest) return;
 
@@ -866,14 +867,10 @@ const PrijevozPage: React.FC = () => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'Na čekanju';
-      case 'approved':
-        return 'Odobreno';
-      case 'rejected':
-        return 'Odbijeno';
-      case 'completed':
-        return 'Završeno';
+      case 'Aktivno':
+        return 'Aktivno';
+      case 'Neaktivno':
+        return 'Neaktivno';
       default:
         return status;
     }
@@ -1210,6 +1207,7 @@ const PrijevozPage: React.FC = () => {
                 {isAdmin && <Th>Dovezeni prijevozi</Th>}
                 <Th>Prijevoz na dan</Th>
                 <Th>Isplata po toni</Th>
+                <Th>Status</Th>
                 <Th>Prijevoznici</Th>
                 <Th>Akcije</Th>
               </tr>
@@ -1231,6 +1229,11 @@ const PrijevozPage: React.FC = () => {
                       </Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
+                      <Td>
+                        <StatusBadge status={request.status === 'Aktivno' ? 'approved' : 'rejected'}>
+                          {getStatusLabel(request.status)}
+                        </StatusBadge>
+                      </Td>
                       <Td>
                         {request.assignedTo === 'All' ? (
                           'Svi'
@@ -1272,6 +1275,11 @@ const PrijevozPage: React.FC = () => {
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
                       <Td>
+                        <StatusBadge status={request.status === 'Aktivno' ? 'approved' : 'rejected'}>
+                          {getStatusLabel(request.status)}
+                        </StatusBadge>
+                      </Td>
+                      <Td>
                         {request.assignedTo === 'All' ? (
                           'Svi'
                         ) : (
@@ -1298,7 +1306,7 @@ const PrijevozPage: React.FC = () => {
                   )}
                   {expandedRequestId === request._id && (
                     <ExpandedRow>
-                      <ExpandedCell colSpan={isAdmin ? 8 : 7}>
+                      <ExpandedCell colSpan={isAdmin ? 9 : 8}>
                         {isLoadingRequestAcceptances ? (
                           <div style={{ textAlign: 'center', padding: '1rem', color: '#999' }}>
                             Učitavanje prihvaćanja...

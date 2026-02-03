@@ -149,6 +149,7 @@ interface EditZahtjevModalProps {
     brojKamiona: number;
     prijevozNaDan: string;
     isplataPoT: number;
+    status: string;
   }) => Promise<void>;
   request: TransportRequest | null;
 }
@@ -171,6 +172,7 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
   const [brojKamiona, setBrojKamiona] = useState('');
   const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
   const [isplataPoT, setIsplataPoT] = useState('');
+  const [status, setStatus] = useState('Aktivno');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -181,6 +183,7 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
       setGradiliste(request.gradiliste);
       setBrojKamiona(request.brojKamiona.toString());
       setIsplataPoT(request.isplataPoT.toString());
+      setStatus(request.status || 'Aktivno');
 
       // Parse the date from dd/MM/yyyy format
       try {
@@ -236,6 +239,7 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
         brojKamiona: brojKamionaNum,
         prijevozNaDan: formattedDate,
         isplataPoT: isplataPoTNum,
+        status,
       });
       onClose();
     } catch (err) {
@@ -331,6 +335,18 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
               placeholder="Unesite iznos (npr. 0.55, 2, 6)"
               required
             />
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="status">Status</Label>
+            <Select
+              id="status"
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              required>
+              <option value="Aktivno">Aktivno</option>
+              <option value="Neaktivno">Neaktivno</option>
+            </Select>
           </FormGroup>
 
           {error && <ErrorMessage>{error}</ErrorMessage>}

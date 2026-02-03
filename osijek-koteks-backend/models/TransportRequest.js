@@ -37,8 +37,8 @@ const TransportRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'completed'],
-      default: 'pending',
+      enum: ['Aktivno', 'Neaktivno'],
+      default: 'Aktivno',
     },
     assignedTo: {
       type: mongoose.Schema.Types.Mixed,

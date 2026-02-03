@@ -125,11 +125,16 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT } = req.body;
+    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT, status } = req.body;
 
     // Validate required fields
     if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined) {
       return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Validate status if provided
+    if (status && !['Aktivno', 'Neaktivno'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
     }
 
     // Update the transport request
@@ -138,6 +143,9 @@ router.put('/:id', auth, async (req, res) => {
     transportRequest.brojKamiona = brojKamiona;
     transportRequest.prijevozNaDan = prijevozNaDan;
     transportRequest.isplataPoT = isplataPoT;
+    if (status) {
+      transportRequest.status = status;
+    }
 
     await transportRequest.save();
 
@@ -168,7 +176,7 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     const { status } = req.body;
 
-    if (!['pending', 'approved', 'rejected', 'completed'].includes(status)) {
+    if (!['Aktivno', 'Neaktivno'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
