@@ -1107,6 +1107,19 @@ const PrijevozPage: React.FC = () => {
       setIsLoadingUserAcceptances(true);
       const acceptances = await apiService.getUserAcceptances();
       setUserAcceptances(acceptances);
+
+      // Fetch approved registrations for each acceptance
+      const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
+      for (const acceptance of acceptances) {
+        try {
+          const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+        } catch (error) {
+          console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
+          approvedRegsMap.set(acceptance._id, new Set());
+        }
+      }
+      setApprovedRegistrationsByAcceptance(approvedRegsMap);
     } catch (error) {
       console.error('Error fetching user acceptances:', error);
     } finally {
@@ -1673,9 +1686,22 @@ const PrijevozPage: React.FC = () => {
                           <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
                           <ListaPrijevozaValue>
                             <RegistrationTags>
-                              {uniqueFirstParts.map((fp: string, idx: number) => (
-                                <RegistrationTag key={idx}>{fp}</RegistrationTag>
-                              ))}
+                              {uniqueFirstParts.map((fp: string, idx: number) => {
+                                const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(fp) || false;
+                                return (
+                                  <RegistrationTag
+                                    key={idx}
+                                    $hasApprovedItem={hasApprovedItem}
+                                    onClick={() => {
+                                      if (hasApprovedItem) {
+                                        handleRegistrationClick(acceptance._id, fp);
+                                      }
+                                    }}
+                                  >
+                                    {fp}
+                                  </RegistrationTag>
+                                );
+                              })}
                             </RegistrationTags>
                           </ListaPrijevozaValue>
                         </ListaPrijevozaDetail>
