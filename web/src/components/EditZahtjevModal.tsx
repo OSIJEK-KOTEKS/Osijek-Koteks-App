@@ -224,7 +224,7 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
 
     const isplataPoTNum = parseFloat(isplataPoT);
     if (!isplataPoT || isNaN(isplataPoTNum) || isplataPoTNum < 0) {
-      setError('Isplata po t mora biti pozitivan broj');
+      setError('Isplata po (t) mora biti pozitivan broj');
       return;
     }
 

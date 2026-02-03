@@ -266,7 +266,7 @@ const NoviZahtjevZaPrijevoznike: React.FC<NoviZahtjevZaPrijevoznike> = ({
 
     const isplataPoTNum = parseFloat(isplataPoT);
     if (!isplataPoT || isNaN(isplataPoTNum) || isplataPoTNum < 0) {
-      setError('Isplata po t mora biti pozitivan broj');
+      setError('Isplata po (t) mora biti pozitivan broj');
       return;
     }
 
@@ -384,7 +384,7 @@ const NoviZahtjevZaPrijevoznike: React.FC<NoviZahtjevZaPrijevoznike> = ({
           </FormGroup>
 
           <FormGroup>
-            <Label htmlFor="isplataPoT">Isplata po t za ovu relaciju</Label>
+            <Label htmlFor="isplataPoT">Isplata po (t) za ovu relaciju</Label>
             <Input
               id="isplataPoT"
               type="number"

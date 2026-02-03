@@ -1526,7 +1526,7 @@ const PrijevozPage: React.FC = () => {
                 <InfoValue>{acceptingRequest.prijevozNaDan}</InfoValue>
               </InfoRow>
               <InfoRow>
-                <InfoLabel>Isplata po t:</InfoLabel>
+                <InfoLabel>Isplata po (t):</InfoLabel>
                 <InfoValue>{acceptingRequest.isplataPoT} €</InfoValue>
               </InfoRow>
             </RequestInfo>
@@ -1660,7 +1660,7 @@ const PrijevozPage: React.FC = () => {
                           <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
                         </ListaPrijevozaDetail>
                         <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Isplata po t:</ListaPrijevozaLabel>
+                          <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
                           <ListaPrijevozaValue>{acceptance.requestId?.isplataPoT} €</ListaPrijevozaValue>
                         </ListaPrijevozaDetail>
                         <ListaPrijevozaDetail>
