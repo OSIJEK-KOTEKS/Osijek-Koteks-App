@@ -1295,12 +1295,16 @@ const PrijevozPage: React.FC = () => {
                         )}
                       </Td>
                       <Td>
-                        <ActionButton onClick={(e) => {
-                          e.stopPropagation();
-                          handleAcceptClick(request);
-                        }}>
-                          Prihvati
-                        </ActionButton>
+                        {request.status === 'Aktivno' ? (
+                          <ActionButton onClick={(e) => {
+                            e.stopPropagation();
+                            handleAcceptClick(request);
+                          }}>
+                            Prihvati
+                          </ActionButton>
+                        ) : (
+                          <span style={{ color: '#999', fontStyle: 'italic' }}>Neaktivno</span>
+                        )}
                       </Td>
                     </ClickableRow>
                   )}
