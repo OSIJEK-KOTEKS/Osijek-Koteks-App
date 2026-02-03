@@ -251,7 +251,33 @@ router.get('/acceptances/my', auth, async (req, res) => {
       .populate('reviewedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
-    res.json(acceptances);
+    // Calculate total payout for each acceptance based on approved items
+    const acceptancesWithPayout = await Promise.all(
+      acceptances.map(async (acceptance) => {
+        const acceptanceObj = acceptance.toObject();
+
+        // Find all approved items linked to this acceptance
+        const approvedItems = await Item.find({
+          transportAcceptanceId: acceptance._id,
+          approvalStatus: 'odobreno'
+        });
+
+        // Calculate total payout: sum of (isplataPoT * neto / 1000) for each approved item
+        const isplataPoT = acceptance.requestId?.isplataPoT || 0;
+        let ukupnaIsplata = 0;
+
+        for (const item of approvedItems) {
+          if (item.neto) {
+            ukupnaIsplata += isplataPoT * (item.neto / 1000);
+          }
+        }
+
+        acceptanceObj.ukupnaIsplata = Math.round(ukupnaIsplata * 100) / 100; // Round to 2 decimal places
+        return acceptanceObj;
+      })
+    );
+
+    res.json(acceptancesWithPayout);
   } catch (error) {
     console.error('Error fetching user acceptances:', error);
     res.status(500).json({

@@ -1664,6 +1664,12 @@ const PrijevozPage: React.FC = () => {
                           <ListaPrijevozaValue>{acceptance.requestId?.isplataPoT} €</ListaPrijevozaValue>
                         </ListaPrijevozaDetail>
                         <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Ukupna isplata:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue style={{ fontWeight: 600, color: '#28a745' }}>
+                            {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
+                          </ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
                           <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
                           <ListaPrijevozaValue>
                             <RegistrationTags>
