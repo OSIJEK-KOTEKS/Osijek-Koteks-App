@@ -226,6 +226,33 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// Get current user's own acceptances (for "Lista prijevoza" feature)
+// IMPORTANT: This route must come before /:id/acceptances to avoid route conflicts
+router.get('/acceptances/my', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission
+    if (!req.user.canAccessPrijevoz) {
+      return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
+    }
+
+    const acceptances = await TransportAcceptance.find({
+      userId: req.user._id,
+    })
+      .populate('userId', 'firstName lastName email company')
+      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate('reviewedBy', 'firstName lastName email')
+      .sort({ createdAt: -1 });
+
+    res.json(acceptances);
+  } catch (error) {
+    console.error('Error fetching user acceptances:', error);
+    res.status(500).json({
+      message: 'Server error while fetching user acceptances',
+      error: error.message,
+    });
+  }
+});
+
 // Get all pending acceptances across all requests (admin only)
 // IMPORTANT: This route must come before /:id/acceptances to avoid route conflicts
 router.get('/acceptances/pending', auth, async (req, res) => {

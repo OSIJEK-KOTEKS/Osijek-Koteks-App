@@ -728,6 +728,17 @@ export const apiService = {
       throw error;
     }
   },
+
+  // Get current user's own acceptances (for "Lista prijevoza" feature)
+  getUserAcceptances: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/transport-requests/acceptances/my');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user acceptances:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;

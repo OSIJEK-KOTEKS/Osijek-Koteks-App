@@ -546,6 +546,109 @@ const ClickableRow = styled.tr`
   }
 `;
 
+const ListaPrijevozaModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 95%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow-y: auto;
+`;
+
+const ListaPrijevozaTitle = styled.h2`
+  margin: 0 0 1.5rem 0;
+  color: ${({ theme }) => theme.colors.text};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ListaPrijevozaGroup = styled.div`
+  margin-bottom: 1.5rem;
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const ListaPrijevozaGroupHeader = styled.div`
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: white;
+  padding: 1rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+`;
+
+const ListaPrijevozaItem = styled.div`
+  padding: 1rem;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.gray};
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ListaPrijevozaDetail = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+`;
+
+const ListaPrijevozaLabel = styled.span`
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const ListaPrijevozaValue = styled.span`
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const ListaPrijevozaStatus = styled.span<{ status: string }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: ${({ status }) => {
+    switch (status) {
+      case 'approved':
+        return '#d4edda';
+      case 'declined':
+        return '#f8d7da';
+      case 'pending':
+        return '#fff3cd';
+      default:
+        return '#e9ecef';
+    }
+  }};
+  color: ${({ status }) => {
+    switch (status) {
+      case 'approved':
+        return '#155724';
+      case 'declined':
+        return '#721c24';
+      case 'pending':
+        return '#856404';
+      default:
+        return '#495057';
+    }
+  }};
+`;
+
+const ListaPrijevozaEmpty = styled.div`
+  text-align: center;
+  padding: 3rem;
+  color: ${({ theme }) => theme.colors.gray};
+  font-style: italic;
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -584,6 +687,9 @@ const PrijevozPage: React.FC = () => {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [deliveredCountsByRequest, setDeliveredCountsByRequest] = useState<Map<string, { delivered: number; total: number }>>(new Map());
+  const [isListaPrijevozaOpen, setIsListaPrijevozaOpen] = useState(false);
+  const [userAcceptances, setUserAcceptances] = useState<any[]>([]);
+  const [isLoadingUserAcceptances, setIsLoadingUserAcceptances] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -998,6 +1104,62 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  // Fetch user's own acceptances for "Lista prijevoza"
+  const fetchUserAcceptances = async () => {
+    try {
+      setIsLoadingUserAcceptances(true);
+      const acceptances = await apiService.getUserAcceptances();
+      setUserAcceptances(acceptances);
+    } catch (error) {
+      console.error('Error fetching user acceptances:', error);
+    } finally {
+      setIsLoadingUserAcceptances(false);
+    }
+  };
+
+  const handleOpenListaPrijevoza = () => {
+    setIsListaPrijevozaOpen(true);
+    fetchUserAcceptances();
+  };
+
+  // Group acceptances by date for better organization
+  const groupAcceptancesByDate = (acceptances: any[]) => {
+    const grouped: { [key: string]: any[] } = {};
+
+    acceptances.forEach(acceptance => {
+      const date = acceptance.requestId?.prijevozNaDan || 'Nepoznat datum';
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(acceptance);
+    });
+
+    // Sort dates (newest first)
+    const sortedDates = Object.keys(grouped).sort((a, b) => {
+      if (a === 'Nepoznat datum') return 1;
+      if (b === 'Nepoznat datum') return -1;
+      return new Date(b).getTime() - new Date(a).getTime();
+    });
+
+    return sortedDates.map(date => ({
+      date,
+      acceptances: grouped[date]
+    }));
+  };
+
+  const getAcceptanceStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'Odobreno';
+      case 'declined':
+        return 'Odbijeno';
+      case 'pending':
+        return 'Na čekanju';
+      default:
+        return status;
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -1013,12 +1175,16 @@ const PrijevozPage: React.FC = () => {
       <DashboardContainer>
         <ContentHeader>
           <ContentTitle>Prijevoz</ContentTitle>
-          {isAdmin && (
+          {isAdmin ? (
             <ButtonSection>
               <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
               <SmallButton onClick={() => setIsSpecificDriversModalOpen(true)}>
                 Novi zahtjev za određene prijevoznike
               </SmallButton>
+            </ButtonSection>
+          ) : (
+            <ButtonSection>
+              <SmallButton onClick={handleOpenListaPrijevoza}>Lista prijevoza</SmallButton>
             </ButtonSection>
           )}
         </ContentHeader>
@@ -1443,6 +1609,90 @@ const PrijevozPage: React.FC = () => {
           token={localStorage.getItem('userToken') || ''}
           onClose={() => setSelectedImage(null)}
         />
+      )}
+
+      {/* Lista prijevoza modal for regular users */}
+      {isListaPrijevozaOpen && (
+        <ModalOverlay onClick={() => setIsListaPrijevozaOpen(false)}>
+          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+            <ListaPrijevozaTitle>
+              📋 Lista prijevoza
+            </ListaPrijevozaTitle>
+
+            {isLoadingUserAcceptances ? (
+              <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
+            ) : userAcceptances.length === 0 ? (
+              <ListaPrijevozaEmpty>Nemate prihvaćenih zahtjeva za prijevoz</ListaPrijevozaEmpty>
+            ) : (
+              groupAcceptancesByDate(userAcceptances).map(group => (
+                <ListaPrijevozaGroup key={group.date}>
+                  <ListaPrijevozaGroupHeader>
+                    📅 Datum prijevoza: {group.date}
+                  </ListaPrijevozaGroupHeader>
+                  {group.acceptances.map((acceptance: any) => {
+                    const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
+                    const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+
+                    return (
+                      <ListaPrijevozaItem key={acceptance._id}>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Kamenolom:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue>{acceptance.requestId?.kamenolom || '-'}</ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Gradilište:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue>{getCodeDescription(acceptance.requestId?.gradiliste) || '-'}</ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Broj kamiona:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Isplata po t:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue>{acceptance.requestId?.isplataPoT} €</ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue>
+                            <RegistrationTags>
+                              {uniqueFirstParts.map((fp: string, idx: number) => (
+                                <RegistrationTag key={idx}>{fp}</RegistrationTag>
+                              ))}
+                            </RegistrationTags>
+                          </ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Status:</ListaPrijevozaLabel>
+                          <ListaPrijevozaStatus status={acceptance.status}>
+                            {getAcceptanceStatusLabel(acceptance.status)}
+                          </ListaPrijevozaStatus>
+                        </ListaPrijevozaDetail>
+                        <ListaPrijevozaDetail>
+                          <ListaPrijevozaLabel>Datum prihvaćanja:</ListaPrijevozaLabel>
+                          <ListaPrijevozaValue>
+                            {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                          </ListaPrijevozaValue>
+                        </ListaPrijevozaDetail>
+                        {acceptance.reviewedAt && (
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Pregledano:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>
+                              {new Date(acceptance.reviewedAt).toLocaleDateString('hr-HR')}
+                            </ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                        )}
+                      </ListaPrijevozaItem>
+                    );
+                  })}
+                </ListaPrijevozaGroup>
+              ))
+            )}
+
+            <ModalCloseButton onClick={() => setIsListaPrijevozaOpen(false)}>
+              Zatvori
+            </ModalCloseButton>
+          </ListaPrijevozaModalContent>
+        </ModalOverlay>
       )}
     </S.PageContainer>
   );
