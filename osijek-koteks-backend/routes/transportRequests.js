@@ -478,10 +478,32 @@ router.post('/:id/accept', auth, async (req, res) => {
       return [...acc, ...acceptance.registrations];
     }, []);
 
-    // Check if any of the new registrations overlap with already used ones
-    const overlappingRegistrations = registrations.filter(reg =>
-      allUsedRegistrations.includes(reg)
+    // Get all acceptance IDs for this user and request
+    const acceptanceIds = existingAcceptances.map(acc => acc._id);
+
+    // Find registrations that have been completed (have approved items)
+    // These registrations should be available for re-use
+    const completedItems = await Item.find({
+      transportAcceptanceId: { $in: acceptanceIds },
+      approvalStatus: 'odobreno'
+    }).select('registracija');
+
+    // Get unique first parts of completed registrations
+    const completedFirstParts = new Set(
+      completedItems
+        .filter(item => item.registracija)
+        .map(item => getFirstPartOfRegistration(item.registracija))
     );
+
+    // Check if any of the new registrations overlap with already used ones
+    // BUT exclude registrations that have been completed (are green)
+    const overlappingRegistrations = registrations.filter(reg => {
+      const isUsed = allUsedRegistrations.includes(reg);
+      const firstPart = getFirstPartOfRegistration(reg);
+      const isCompleted = completedFirstParts.has(firstPart);
+      // Only block if used AND not completed
+      return isUsed && !isCompleted;
+    });
 
     if (overlappingRegistrations.length > 0) {
       // Extract unique first parts for a clearer error message
