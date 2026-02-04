@@ -287,7 +287,7 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
               value={gradiliste}
               onChange={e => setGradiliste(e.target.value)}
               required>
-              <option value="">Odaberite gradilište...</option>
+              <option value="">Odaberite gradilište... </option>
               {Object.keys(codeToTextMapping).sort().map(code => (
                 <option key={code} value={code}>
                   {getFormattedCode(code)}
