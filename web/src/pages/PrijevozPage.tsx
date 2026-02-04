@@ -152,6 +152,17 @@ const EmptyState = styled.div`
   color: ${({ theme }) => theme.colors.gray};
 `;
 
+const CompletedTag = styled.span`
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #28a745;
+  color: white;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+`;
+
 const ActionButton = styled.button`
   padding: 0.375rem 0.75rem;
   border-radius: 4px;
@@ -1338,12 +1349,16 @@ const PrijevozPage: React.FC = () => {
                             {requestAcceptances.map((acceptance) => {
                               const firstParts: string[] = acceptance.registrations.map((reg: string) => getFirstPartOfRegistration(reg));
                               const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+                              const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
+                              const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
+                                uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
 
                               return (
                                 <AcceptanceItem key={acceptance._id}>
                                   <AcceptanceItemHeader>
                                     <AcceptanceItemUser>
                                       {acceptance.userId?.firstName} {acceptance.userId?.lastName}
+                                      {allRegistrationsApproved && <CompletedTag>Materijal prevežen</CompletedTag>}
                                     </AcceptanceItemUser>
                                     <AcceptanceItemStatus status={acceptance.status}>
                                       {acceptance.status === 'approved' ? 'Prihvaćeno' : acceptance.status === 'declined' ? 'Odbijeno' : 'Na čekanju'}
@@ -1657,9 +1672,17 @@ const PrijevozPage: React.FC = () => {
                   {group.acceptances.map((acceptance: any) => {
                     const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
                     const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+                    const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
+                    const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
+                      uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
 
                     return (
                       <ListaPrijevozaItem key={acceptance._id}>
+                        {allRegistrationsApproved && (
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            <CompletedTag>Materijal prevežen</CompletedTag>
+                          </div>
+                        )}
                         <ListaPrijevozaDetail>
                           <ListaPrijevozaLabel>Kamenolom:</ListaPrijevozaLabel>
                           <ListaPrijevozaValue>{acceptance.requestId?.kamenolom || '-'}</ListaPrijevozaValue>
