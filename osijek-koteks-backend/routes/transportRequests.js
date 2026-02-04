@@ -467,14 +467,14 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Find ALL approved acceptances (from any user) that contain any of the requested registrations
+    // Find ALL active acceptances (pending or approved, not declined) that contain any of the requested registrations
     // We need to check if these registrations are currently "busy" (in use but not completed)
     const requestedFirstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
     const uniqueRequestedFirstParts = [...new Set(requestedFirstParts)];
 
-    // Get all approved acceptances that might have these registrations
-    const allApprovedAcceptances = await TransportAcceptance.find({
-      status: 'approved'
+    // Get all active acceptances (pending or approved) that might have these registrations
+    const allActiveAcceptances = await TransportAcceptance.find({
+      status: { $in: ['pending', 'approved'] }
     });
 
     // For each requested registration, check if it's currently busy
@@ -482,7 +482,7 @@ router.post('/:id/accept', auth, async (req, res) => {
 
     for (const firstPart of uniqueRequestedFirstParts) {
       // Find acceptances that contain this registration
-      const acceptancesWithReg = allApprovedAcceptances.filter(acc => {
+      const acceptancesWithReg = allActiveAcceptances.filter(acc => {
         return acc.registrations.some(reg => getFirstPartOfRegistration(reg) === firstPart);
       });
 
