@@ -588,6 +588,15 @@ const ListaPrijevozaGroupHeader = styled.div`
   padding: 1rem;
   font-weight: 600;
   font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.primaryDark || '#1a5a96'};
+  }
 `;
 
 const ListaPrijevozaItem = styled.div`
@@ -701,6 +710,7 @@ const PrijevozPage: React.FC = () => {
   const [isListaPrijevozaOpen, setIsListaPrijevozaOpen] = useState(false);
   const [userAcceptances, setUserAcceptances] = useState<any[]>([]);
   const [isLoadingUserAcceptances, setIsLoadingUserAcceptances] = useState(false);
+  const [expandedListaDates, setExpandedListaDates] = useState<Set<string>>(new Set());
 
   const isAdmin = user?.role === 'admin';
 
@@ -1664,95 +1674,111 @@ const PrijevozPage: React.FC = () => {
             ) : userAcceptances.length === 0 ? (
               <ListaPrijevozaEmpty>Nemate prihvaćenih zahtjeva za prijevoz</ListaPrijevozaEmpty>
             ) : (
-              groupAcceptancesByDate(userAcceptances).map(group => (
-                <ListaPrijevozaGroup key={group.date}>
-                  <ListaPrijevozaGroupHeader>
-                    📅 Datum prijevoza: {group.date}
-                  </ListaPrijevozaGroupHeader>
-                  {group.acceptances.map((acceptance: any) => {
-                    const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
-                    const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
-                    const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                    const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
-                      uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
+              groupAcceptancesByDate(userAcceptances).map(group => {
+                const isExpanded = expandedListaDates.has(group.date);
+                return (
+                  <ListaPrijevozaGroup key={group.date}>
+                    <ListaPrijevozaGroupHeader
+                      onClick={() => {
+                        setExpandedListaDates(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(group.date)) {
+                            newSet.delete(group.date);
+                          } else {
+                            newSet.add(group.date);
+                          }
+                          return newSet;
+                        });
+                      }}
+                    >
+                      <span>📅 {group.date} ({group.acceptances.length} prijevoz{group.acceptances.length === 1 ? '' : 'a'})</span>
+                      <span>{isExpanded ? '▲' : '▼'}</span>
+                    </ListaPrijevozaGroupHeader>
+                    {isExpanded && group.acceptances.map((acceptance: any) => {
+                      const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
+                      const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+                      const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
+                      const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
+                        uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
 
-                    return (
-                      <ListaPrijevozaItem key={acceptance._id}>
-                        {allRegistrationsApproved && (
-                          <div style={{ marginBottom: '0.5rem' }}>
-                            <CompletedTag>Materijal prevežen</CompletedTag>
-                          </div>
-                        )}
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Kamenolom:</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue>{acceptance.requestId?.kamenolom || '-'}</ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Gradilište:</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue>{getCodeDescription(acceptance.requestId?.gradiliste) || '-'}</ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Broj kamiona:</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue>{acceptance.requestId?.isplataPoT} €</ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Ukupna isplata:</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue style={{ fontWeight: 600, color: '#28a745' }}>
-                            {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
-                          </ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue>
-                            <RegistrationTags>
-                              {uniqueFirstParts.map((fp: string, idx: number) => {
-                                const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(fp) || false;
-                                return (
-                                  <RegistrationTag
-                                    key={idx}
-                                    $hasApprovedItem={hasApprovedItem}
-                                    onClick={() => {
-                                      if (hasApprovedItem) {
-                                        handleRegistrationClick(acceptance._id, fp);
-                                      }
-                                    }}
-                                  >
-                                    {fp}
-                                  </RegistrationTag>
-                                );
-                              })}
-                            </RegistrationTags>
-                          </ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Status:</ListaPrijevozaLabel>
-                          <ListaPrijevozaStatus status={acceptance.status}>
-                            {getAcceptanceStatusLabel(acceptance.status)}
-                          </ListaPrijevozaStatus>
-                        </ListaPrijevozaDetail>
-                        <ListaPrijevozaDetail>
-                          <ListaPrijevozaLabel>Datum prihvaćanja:</ListaPrijevozaLabel>
-                          <ListaPrijevozaValue>
-                            {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
-                          </ListaPrijevozaValue>
-                        </ListaPrijevozaDetail>
-                        {acceptance.reviewedAt && (
+                      return (
+                        <ListaPrijevozaItem key={acceptance._id}>
+                          {allRegistrationsApproved && (
+                            <div style={{ marginBottom: '0.5rem' }}>
+                              <CompletedTag>Materijal prevežen</CompletedTag>
+                            </div>
+                          )}
                           <ListaPrijevozaDetail>
-                            <ListaPrijevozaLabel>Pregledano:</ListaPrijevozaLabel>
-                            <ListaPrijevozaValue>
-                              {new Date(acceptance.reviewedAt).toLocaleDateString('hr-HR')}
+                            <ListaPrijevozaLabel>Kamenolom:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>{acceptance.requestId?.kamenolom || '-'}</ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Gradilište:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>{getCodeDescription(acceptance.requestId?.gradiliste) || '-'}</ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Broj kamiona:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>{acceptance.requestId?.isplataPoT} €</ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Ukupna isplata:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue style={{ fontWeight: 600, color: '#28a745' }}>
+                              {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
                             </ListaPrijevozaValue>
                           </ListaPrijevozaDetail>
-                        )}
-                      </ListaPrijevozaItem>
-                    );
-                  })}
-                </ListaPrijevozaGroup>
-              ))
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>
+                              <RegistrationTags>
+                                {uniqueFirstParts.map((fp: string, idx: number) => {
+                                  const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(fp) || false;
+                                  return (
+                                    <RegistrationTag
+                                      key={idx}
+                                      $hasApprovedItem={hasApprovedItem}
+                                      onClick={() => {
+                                        if (hasApprovedItem) {
+                                          handleRegistrationClick(acceptance._id, fp);
+                                        }
+                                      }}
+                                    >
+                                      {fp}
+                                    </RegistrationTag>
+                                  );
+                                })}
+                              </RegistrationTags>
+                            </ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Status:</ListaPrijevozaLabel>
+                            <ListaPrijevozaStatus status={acceptance.status}>
+                              {getAcceptanceStatusLabel(acceptance.status)}
+                            </ListaPrijevozaStatus>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Datum prihvaćanja:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>
+                              {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                            </ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          {acceptance.reviewedAt && (
+                            <ListaPrijevozaDetail>
+                              <ListaPrijevozaLabel>Pregledano:</ListaPrijevozaLabel>
+                              <ListaPrijevozaValue>
+                                {new Date(acceptance.reviewedAt).toLocaleDateString('hr-HR')}
+                              </ListaPrijevozaValue>
+                            </ListaPrijevozaDetail>
+                          )}
+                        </ListaPrijevozaItem>
+                      );
+                    })}
+                  </ListaPrijevozaGroup>
+                );
+              })
             )}
 
             <ModalCloseButton onClick={() => setIsListaPrijevozaOpen(false)}>
