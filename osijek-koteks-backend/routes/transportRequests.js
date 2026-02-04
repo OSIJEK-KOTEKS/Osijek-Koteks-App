@@ -467,22 +467,23 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Find ALL active acceptances (pending or approved, not declined) that contain any of the requested registrations
-    // We need to check if these registrations are currently "busy" (in use but not completed)
+    // Check if this user has any active acceptances (pending or approved) with these registrations
+    // that haven't been completed (turned green) yet
     const requestedFirstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
     const uniqueRequestedFirstParts = [...new Set(requestedFirstParts)];
 
-    // Get all active acceptances (pending or approved) that might have these registrations
-    const allActiveAcceptances = await TransportAcceptance.find({
+    // Get all active acceptances for THIS USER (pending or approved, not declined)
+    const userActiveAcceptances = await TransportAcceptance.find({
+      userId: req.user._id,
       status: { $in: ['pending', 'approved'] }
     });
 
-    // For each requested registration, check if it's currently busy
+    // For each requested registration, check if it's currently busy for this user
     const busyRegistrations = [];
 
     for (const firstPart of uniqueRequestedFirstParts) {
-      // Find acceptances that contain this registration
-      const acceptancesWithReg = allActiveAcceptances.filter(acc => {
+      // Find this user's acceptances that contain this registration
+      const acceptancesWithReg = userActiveAcceptances.filter(acc => {
         return acc.registrations.some(reg => getFirstPartOfRegistration(reg) === firstPart);
       });
 
@@ -496,7 +497,7 @@ router.post('/:id/accept', auth, async (req, res) => {
           registracija: { $regex: new RegExp('^' + firstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
         });
 
-        // If no completed item found, this registration is still busy
+        // If no completed item found, this registration is still busy for this user
         if (!completedItem) {
           busyRegistrations.push(firstPart);
         }
@@ -505,7 +506,7 @@ router.post('/:id/accept', auth, async (req, res) => {
 
     if (busyRegistrations.length > 0) {
       return res.status(400).json({
-        message: 'Some registrations are currently in use and not yet completed',
+        message: 'Neke registracije su još uvijek u upotrebi i nisu dovršene',
         overlappingRegistrations: busyRegistrations
       });
     }
