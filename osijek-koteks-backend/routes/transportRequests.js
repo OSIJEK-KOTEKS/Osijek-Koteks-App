@@ -467,52 +467,46 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Check if user has already submitted an acceptance for this request
-    const existingAcceptances = await TransportAcceptance.find({
-      requestId: req.params.id,
-      userId: req.user._id,
+    // Find ALL approved acceptances (from any user) that contain any of the requested registrations
+    // We need to check if these registrations are currently "busy" (in use but not completed)
+    const requestedFirstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
+    const uniqueRequestedFirstParts = [...new Set(requestedFirstParts)];
+
+    // Get all approved acceptances that might have these registrations
+    const allApprovedAcceptances = await TransportAcceptance.find({
+      status: 'approved'
     });
 
-    // Collect all registrations the user has already used for this request
-    const allUsedRegistrations = existingAcceptances.reduce((acc, acceptance) => {
-      return [...acc, ...acceptance.registrations];
-    }, []);
+    // For each requested registration, check if it's currently busy
+    const busyRegistrations = [];
 
-    // Get all acceptance IDs for this user and request
-    const acceptanceIds = existingAcceptances.map(acc => acc._id);
+    for (const firstPart of uniqueRequestedFirstParts) {
+      // Find acceptances that contain this registration
+      const acceptancesWithReg = allApprovedAcceptances.filter(acc => {
+        return acc.registrations.some(reg => getFirstPartOfRegistration(reg) === firstPart);
+      });
 
-    // Find registrations that have been completed (have approved items)
-    // These registrations should be available for re-use
-    const completedItems = await Item.find({
-      transportAcceptanceId: { $in: acceptanceIds },
-      approvalStatus: 'odobreno'
-    }).select('registracija');
+      if (acceptancesWithReg.length > 0) {
+        // Check if ANY of these acceptances has a completed (approved) item for this registration
+        const acceptanceIds = acceptancesWithReg.map(acc => acc._id);
 
-    // Get unique first parts of completed registrations
-    const completedFirstParts = new Set(
-      completedItems
-        .filter(item => item.registracija)
-        .map(item => getFirstPartOfRegistration(item.registracija))
-    );
+        const completedItem = await Item.findOne({
+          transportAcceptanceId: { $in: acceptanceIds },
+          approvalStatus: 'odobreno',
+          registracija: { $regex: new RegExp('^' + firstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+        });
 
-    // Check if any of the new registrations overlap with already used ones
-    // BUT exclude registrations that have been completed (are green)
-    const overlappingRegistrations = registrations.filter(reg => {
-      const isUsed = allUsedRegistrations.includes(reg);
-      const firstPart = getFirstPartOfRegistration(reg);
-      const isCompleted = completedFirstParts.has(firstPart);
-      // Only block if used AND not completed
-      return isUsed && !isCompleted;
-    });
+        // If no completed item found, this registration is still busy
+        if (!completedItem) {
+          busyRegistrations.push(firstPart);
+        }
+      }
+    }
 
-    if (overlappingRegistrations.length > 0) {
-      // Extract unique first parts for a clearer error message
-      const overlappingFirstParts = overlappingRegistrations.map(reg => getFirstPartOfRegistration(reg));
-      const uniqueOverlappingFirstParts = [...new Set(overlappingFirstParts)];
-
+    if (busyRegistrations.length > 0) {
       return res.status(400).json({
-        message: 'You have already used some of these registrations for this request',
-        overlappingRegistrations: uniqueOverlappingFirstParts
+        message: 'Some registrations are currently in use and not yet completed',
+        overlappingRegistrations: busyRegistrations
       });
     }
 
