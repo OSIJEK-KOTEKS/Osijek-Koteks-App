@@ -472,11 +472,23 @@ router.post('/:id/accept', auth, async (req, res) => {
     const requestedFirstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
     const uniqueRequestedFirstParts = [...new Set(requestedFirstParts)];
 
+    console.log('=== ACCEPT VALIDATION DEBUG ===');
+    console.log('User ID:', req.user._id);
+    console.log('Requested registrations:', registrations);
+    console.log('Requested first parts:', uniqueRequestedFirstParts);
+
     // Get all active acceptances for THIS USER (pending or approved, not declined)
     const userActiveAcceptances = await TransportAcceptance.find({
       userId: req.user._id,
       status: { $in: ['pending', 'approved'] }
     });
+
+    console.log('User active acceptances count:', userActiveAcceptances.length);
+    console.log('User active acceptances:', userActiveAcceptances.map(a => ({
+      id: a._id,
+      status: a.status,
+      registrations: a.registrations
+    })));
 
     // For each requested registration, check if it's currently busy for this user
     const busyRegistrations = [];
@@ -486,6 +498,8 @@ router.post('/:id/accept', auth, async (req, res) => {
       const acceptancesWithReg = userActiveAcceptances.filter(acc => {
         return acc.registrations.some(reg => getFirstPartOfRegistration(reg) === firstPart);
       });
+
+      console.log(`Checking firstPart "${firstPart}": found in ${acceptancesWithReg.length} acceptances`);
 
       if (acceptancesWithReg.length > 0) {
         // Check if ANY of these acceptances has a completed (approved) item for this registration
@@ -497,12 +511,17 @@ router.post('/:id/accept', auth, async (req, res) => {
           registracija: { $regex: new RegExp('^' + firstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
         });
 
+        console.log(`Completed item for "${firstPart}":`, completedItem ? 'FOUND' : 'NOT FOUND');
+
         // If no completed item found, this registration is still busy for this user
         if (!completedItem) {
           busyRegistrations.push(firstPart);
         }
       }
     }
+
+    console.log('Busy registrations:', busyRegistrations);
+    console.log('=== END DEBUG ===');
 
     if (busyRegistrations.length > 0) {
       return res.status(400).json({
