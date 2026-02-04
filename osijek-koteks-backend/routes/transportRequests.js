@@ -502,19 +502,21 @@ router.post('/:id/accept', auth, async (req, res) => {
       console.log(`Checking firstPart "${firstPart}": found in ${acceptancesWithReg.length} acceptances`);
 
       if (acceptancesWithReg.length > 0) {
-        // Check if ANY of these acceptances has a completed (approved) item for this registration
+        // Count how many of these acceptances have a completed item for this registration
+        // Each completed item "frees up" one acceptance for reuse
         const acceptanceIds = acceptancesWithReg.map(acc => acc._id);
 
-        const completedItem = await Item.findOne({
+        const completedItemsCount = await Item.countDocuments({
           transportAcceptanceId: { $in: acceptanceIds },
           approvalStatus: 'odobreno',
           registracija: { $regex: new RegExp('^' + firstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
         });
 
-        console.log(`Completed item for "${firstPart}":`, completedItem ? 'FOUND' : 'NOT FOUND');
+        console.log(`Acceptances with "${firstPart}": ${acceptancesWithReg.length}, Completed items: ${completedItemsCount}`);
 
-        // If no completed item found, this registration is still busy for this user
-        if (!completedItem) {
+        // If completed items < acceptances count, this registration is still busy
+        // (there's at least one acceptance without a completed item)
+        if (completedItemsCount < acceptancesWithReg.length) {
           busyRegistrations.push(firstPart);
         }
       }
