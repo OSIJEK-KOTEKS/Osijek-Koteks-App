@@ -78,6 +78,9 @@ export const codeToTextMapping: Record<string, string> = {
   '25099': 'Farma Belje Popovac',
   '25100': 'Tranzit Eurospin Retfala',
   '25104': 'Belišće igralište',
+  '25112': 'O.Š. Vladimir Nazor Đakovo',
+  '25119': 'Pripremni i zemljani radovi u Sljemenskoj',  
+  '26002': 'Pevex Požega',
   '5014': 'Betonara',
 };
 
