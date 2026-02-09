@@ -206,7 +206,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         prijevozNaDan: formattedDate,
         isplataPoT: isplataPoTNum,
       });
-      // Reset form 
+      // Reset form  
       setKamenolom('');
       setGradiliste('');
       setBrojKamiona('');
