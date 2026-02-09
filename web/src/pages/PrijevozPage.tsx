@@ -1895,7 +1895,7 @@ const PrijevozPage: React.FC = () => {
                   <option value="">-- Odaberite prijevoznika --</option>
                   {driverListUsers.map((driverUser) => (
                     <option key={driverUser._id} value={driverUser._id}>
-                      {driverUser.firstName} {driverUser.lastName} ({driverUser.company || driverUser.email})
+                      {driverUser.firstName} {driverUser.lastName}{driverUser.company ? ` (${driverUser.company})` : driverUser.email ? ` (${driverUser.email})` : ''}
                     </option>
                   ))}
                 </select>

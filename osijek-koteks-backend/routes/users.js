@@ -26,7 +26,7 @@ router.get('/prijevoz/access', auth, async (req, res) => {
     const users = await User.find({
       canAccessPrijevoz: true,
       role: { $ne: 'admin' }
-    }).select('firstName lastName _id');
+    }).select('firstName lastName _id email company');
     res.json(users);
   } catch (error) {
     console.error('Error fetching prijevoz users:', error);
