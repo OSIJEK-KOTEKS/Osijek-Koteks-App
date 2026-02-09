@@ -422,6 +422,46 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
   }
 });
 
+// Admin updates payment status of an acceptance
+router.patch('/acceptances/:acceptanceId/payment', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission and is admin
+    if (!req.user.canAccessPrijevoz || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    }
+
+    const { paymentStatus } = req.body;
+
+    if (!['Plaćeno', 'Nije plaćeno'].includes(paymentStatus)) {
+      return res.status(400).json({ message: 'paymentStatus must be "Plaćeno" or "Nije plaćeno"' });
+    }
+
+    const acceptance = await TransportAcceptance.findByIdAndUpdate(
+      req.params.acceptanceId,
+      { paymentStatus },
+      { new: true }
+    )
+      .populate('userId', 'firstName lastName email company')
+      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate('reviewedBy', 'firstName lastName email');
+
+    if (!acceptance) {
+      return res.status(404).json({ message: 'Acceptance not found' });
+    }
+
+    res.json({
+      message: `Payment status updated to "${paymentStatus}"`,
+      acceptance,
+    });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({
+      message: 'Server error while updating payment status',
+      error: error.message,
+    });
+  }
+});
+
 // Get all acceptances for a transport request
 router.get('/:id/acceptances', auth, async (req, res) => {
   try {

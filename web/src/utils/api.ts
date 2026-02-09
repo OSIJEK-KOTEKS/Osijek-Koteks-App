@@ -741,6 +741,17 @@ export const apiService = {
     }
   },
 
+  // Update payment status of an acceptance (admin only)
+  updateAcceptancePaymentStatus: async (acceptanceId: string, paymentStatus: 'Plaćeno' | 'Nije plaćeno'): Promise<any> => {
+    try {
+      const response = await api.patch(`/api/transport-requests/acceptances/${acceptanceId}/payment`, { paymentStatus });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      throw error;
+    }
+  },
+
   // Get current user's own acceptances (for "Lista prijevoza" feature)
   getUserAcceptances: async (): Promise<any[]> => {
     try {

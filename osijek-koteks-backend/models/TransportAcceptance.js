@@ -43,6 +43,11 @@ const TransportAcceptanceSchema = new mongoose.Schema(
     reviewedAt: {
       type: Date,
     },
+    paymentStatus: {
+      type: String,
+      enum: ['Nije plaćeno', 'Plaćeno'],
+      default: 'Nije plaćeno',
+    },
   },
   {
     timestamps: true,

@@ -163,6 +163,38 @@ const CompletedTag = styled.span`
   white-space: nowrap;
 `;
 
+const PaymentBadge = styled.button<{ $isPaid: boolean }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  background-color: ${({ $isPaid }) => ($isPaid ? '#28a745' : '#dc3545')};
+  color: white;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+const PaymentBadgeReadOnly = styled.span<{ $isPaid: boolean }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background-color: ${({ $isPaid }) => ($isPaid ? '#d4edda' : '#f8d7da')};
+  color: ${({ $isPaid }) => ($isPaid ? '#155724' : '#721c24')};
+`;
+
 const ActionButton = styled.button`
   padding: 0.375rem 0.75rem;
   border-radius: 4px;
@@ -1208,6 +1240,32 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  // Toggle payment status of an acceptance (admin only)
+  const handleTogglePaymentStatus = async (acceptanceId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'Plaćeno' ? 'Nije plaćeno' : 'Plaćeno';
+    try {
+      await apiService.updateAcceptancePaymentStatus(acceptanceId, newStatus as 'Plaćeno' | 'Nije plaćeno');
+
+      // Update in requestAcceptances (expanded row)
+      setRequestAcceptances(prev =>
+        prev.map(a => a._id === acceptanceId ? { ...a, paymentStatus: newStatus } : a)
+      );
+
+      // Update in pendingAcceptances (admin section)
+      setPendingAcceptances(prev =>
+        prev.map(a => a._id === acceptanceId ? { ...a, paymentStatus: newStatus } : a)
+      );
+
+      // Update in driverAcceptances (driver list modal)
+      setDriverAcceptances(prev =>
+        prev.map(a => a._id === acceptanceId ? { ...a, paymentStatus: newStatus } : a)
+      );
+    } catch (error) {
+      console.error('Error toggling payment status:', error);
+      alert('Greška pri ažuriranju statusa plaćanja.');
+    }
+  };
+
   // Group acceptances by date for better organization
   const groupAcceptancesByDate = (acceptances: any[]) => {
     const grouped: { [key: string]: any[] } = {};
@@ -1452,6 +1510,24 @@ const PrijevozPage: React.FC = () => {
                                       Pregledano: {new Date(acceptance.reviewedAt).toLocaleDateString('hr-HR')}
                                     </AcceptanceItemDetail>
                                   )}
+                                  <AcceptanceItemDetail>
+                                    Plaćanje:{' '}
+                                    {isAdmin ? (
+                                      <PaymentBadge
+                                        $isPaid={acceptance.paymentStatus === 'Plaćeno'}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleTogglePaymentStatus(acceptance._id, acceptance.paymentStatus || 'Nije plaćeno');
+                                        }}
+                                      >
+                                        {acceptance.paymentStatus || 'Nije plaćeno'}
+                                      </PaymentBadge>
+                                    ) : (
+                                      <PaymentBadgeReadOnly $isPaid={acceptance.paymentStatus === 'Plaćeno'}>
+                                        {acceptance.paymentStatus || 'Nije plaćeno'}
+                                      </PaymentBadgeReadOnly>
+                                    )}
+                                  </AcceptanceItemDetail>
                                   <RegistrationTags style={{ marginTop: '0.5rem' }}>
                                     {uniqueFirstParts.map((firstPart: string, idx: number) => {
                                       const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
@@ -1529,6 +1605,15 @@ const PrijevozPage: React.FC = () => {
                       </AcceptanceDetail>
                       <AcceptanceDetail>
                         Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Plaćanje:{' '}
+                        <PaymentBadge
+                          $isPaid={acceptance.paymentStatus === 'Plaćeno'}
+                          onClick={() => handleTogglePaymentStatus(acceptance._id, acceptance.paymentStatus || 'Nije plaćeno')}
+                        >
+                          {acceptance.paymentStatus || 'Nije plaćeno'}
+                        </PaymentBadge>
                       </AcceptanceDetail>
                       <RegistrationTags>
                         {uniqueFirstParts.map((firstPart: string, idx: number) => {
@@ -1837,6 +1922,14 @@ const PrijevozPage: React.FC = () => {
                               </ListaPrijevozaValue>
                             </ListaPrijevozaDetail>
                           )}
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Plaćanje:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>
+                              <PaymentBadgeReadOnly $isPaid={acceptance.paymentStatus === 'Plaćeno'}>
+                                {acceptance.paymentStatus || 'Nije plaćeno'}
+                              </PaymentBadgeReadOnly>
+                            </ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
                         </ListaPrijevozaItem>
                       );
                     })}
@@ -2018,6 +2111,17 @@ const PrijevozPage: React.FC = () => {
                                   </ListaPrijevozaValue>
                                 </ListaPrijevozaDetail>
                               )}
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Plaćanje:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>
+                                  <PaymentBadge
+                                    $isPaid={acceptance.paymentStatus === 'Plaćeno'}
+                                    onClick={() => handleTogglePaymentStatus(acceptance._id, acceptance.paymentStatus || 'Nije plaćeno')}
+                                  >
+                                    {acceptance.paymentStatus || 'Nije plaćeno'}
+                                  </PaymentBadge>
+                                </ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
                             </ListaPrijevozaItem>
                           );
                         })}
