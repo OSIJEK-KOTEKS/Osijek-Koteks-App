@@ -82,6 +82,7 @@ const LoadingDisplay = () => (
   </View>
 );
 
+// This is where the magic happens - the main App component orchestrating everything
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState<string | null>(null);

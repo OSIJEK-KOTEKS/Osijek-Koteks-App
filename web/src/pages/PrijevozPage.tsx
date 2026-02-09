@@ -1375,6 +1375,9 @@ const PrijevozPage: React.FC = () => {
                                     </AcceptanceItemStatus>
                                   </AcceptanceItemHeader>
                                   <AcceptanceItemDetail>
+                                    ID: {acceptance._id}
+                                  </AcceptanceItemDetail>
+                                  <AcceptanceItemDetail>
                                     Email: {acceptance.userId?.email}
                                   </AcceptanceItemDetail>
                                   <AcceptanceItemDetail>
@@ -1445,6 +1448,9 @@ const PrijevozPage: React.FC = () => {
                       <AcceptanceUser>
                         {acceptance.userId?.firstName} {acceptance.userId?.lastName}
                       </AcceptanceUser>
+                      <AcceptanceDetail>
+                        ID: {acceptance._id}
+                      </AcceptanceDetail>
                       <AcceptanceDetail>
                         Email: {acceptance.userId?.email}
                       </AcceptanceDetail>
