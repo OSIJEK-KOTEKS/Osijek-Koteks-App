@@ -711,6 +711,14 @@ const PrijevozPage: React.FC = () => {
   const [userAcceptances, setUserAcceptances] = useState<any[]>([]);
   const [isLoadingUserAcceptances, setIsLoadingUserAcceptances] = useState(false);
   const [expandedListaDates, setExpandedListaDates] = useState<Set<string>>(new Set());
+  const [isDriverListModalOpen, setIsDriverListModalOpen] = useState(false);
+  const [driverListUsers, setDriverListUsers] = useState<Array<{ _id: string; firstName: string; lastName: string; email: string; company: string }>>([]);
+  const [isLoadingDriverListUsers, setIsLoadingDriverListUsers] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [selectedDriverName, setSelectedDriverName] = useState<string>('');
+  const [driverAcceptances, setDriverAcceptances] = useState<any[]>([]);
+  const [isLoadingDriverAcceptances, setIsLoadingDriverAcceptances] = useState(false);
+  const [expandedDriverDates, setExpandedDriverDates] = useState<Set<string>>(new Set());
 
   const isAdmin = user?.role === 'admin';
 
@@ -1153,6 +1161,53 @@ const PrijevozPage: React.FC = () => {
     fetchUserAcceptances();
   };
 
+  // Open the "Lista prijevoza po prijevozniku" modal (admin only)
+  const handleOpenDriverListModal = async () => {
+    setIsDriverListModalOpen(true);
+    setSelectedDriverId(null);
+    setSelectedDriverName('');
+    setDriverAcceptances([]);
+    setExpandedDriverDates(new Set());
+    setIsLoadingDriverListUsers(true);
+    try {
+      const users = await apiService.getUsersWithPrijevozAccess();
+      setDriverListUsers(users as any);
+    } catch (error) {
+      console.error('Error fetching driver users:', error);
+    } finally {
+      setIsLoadingDriverListUsers(false);
+    }
+  };
+
+  // When admin selects a driver, fetch their acceptances
+  const handleSelectDriver = async (driverId: string, driverName: string) => {
+    setSelectedDriverId(driverId);
+    setSelectedDriverName(driverName);
+    setExpandedDriverDates(new Set());
+    setIsLoadingDriverAcceptances(true);
+    try {
+      const acceptances = await apiService.getAcceptancesByUserId(driverId);
+      setDriverAcceptances(acceptances);
+
+      // Fetch approved registrations for each acceptance
+      const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
+      for (const acceptance of acceptances) {
+        try {
+          const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+        } catch (error) {
+          console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
+          approvedRegsMap.set(acceptance._id, new Set());
+        }
+      }
+      setApprovedRegistrationsByAcceptance(approvedRegsMap);
+    } catch (error) {
+      console.error('Error fetching driver acceptances:', error);
+    } finally {
+      setIsLoadingDriverAcceptances(false);
+    }
+  };
+
   // Group acceptances by date for better organization
   const groupAcceptancesByDate = (acceptances: any[]) => {
     const grouped: { [key: string]: any[] } = {};
@@ -1211,6 +1266,9 @@ const PrijevozPage: React.FC = () => {
               <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
               <SmallButton onClick={() => setIsSpecificDriversModalOpen(true)}>
                 Novi zahtjev za određene prijevoznike
+              </SmallButton>
+              <SmallButton onClick={handleOpenDriverListModal}>
+                Lista prijevoza po prijevozniku
               </SmallButton>
             </ButtonSection>
           ) : (
@@ -1788,6 +1846,189 @@ const PrijevozPage: React.FC = () => {
             )}
 
             <ModalCloseButton onClick={() => setIsListaPrijevozaOpen(false)}>
+              Zatvori
+            </ModalCloseButton>
+          </ListaPrijevozaModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Admin: Lista prijevoza po prijevozniku modal */}
+      {isDriverListModalOpen && (
+        <ModalOverlay onClick={() => setIsDriverListModalOpen(false)}>
+          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+            <ListaPrijevozaTitle>
+              🚛 Lista prijevoza po prijevozniku
+            </ListaPrijevozaTitle>
+
+            {/* User selector */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ fontWeight: 500, marginBottom: '0.5rem' }}>Odaberite prijevoznika:</div>
+              {isLoadingDriverListUsers ? (
+                <div style={{ textAlign: 'center', padding: '1rem', color: '#999' }}>
+                  Učitavanje prijevoznika...
+                </div>
+              ) : (
+                <select
+                  value={selectedDriverId || ''}
+                  onChange={(e) => {
+                    const userId = e.target.value;
+                    if (userId) {
+                      const selectedUser = driverListUsers.find(u => u._id === userId);
+                      if (selectedUser) {
+                        handleSelectDriver(userId, `${selectedUser.firstName} ${selectedUser.lastName}`);
+                      }
+                    } else {
+                      setSelectedDriverId(null);
+                      setSelectedDriverName('');
+                      setDriverAcceptances([]);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '4px',
+                    border: '1px solid #ccc',
+                    fontSize: '1rem',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  <option value="">-- Odaberite prijevoznika --</option>
+                  {driverListUsers.map((driverUser) => (
+                    <option key={driverUser._id} value={driverUser._id}>
+                      {driverUser.firstName} {driverUser.lastName} ({driverUser.company || driverUser.email})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Driver's acceptances */}
+            {selectedDriverId && (
+              <>
+                <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>
+                  Prijevozi za: {selectedDriverName}
+                </h3>
+                {isLoadingDriverAcceptances ? (
+                  <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
+                ) : driverAcceptances.length === 0 ? (
+                  <ListaPrijevozaEmpty>
+                    Ovaj prijevoznik nema prihvaćenih zahtjeva za prijevoz
+                  </ListaPrijevozaEmpty>
+                ) : (
+                  groupAcceptancesByDate(driverAcceptances).map(group => {
+                    const isExpanded = expandedDriverDates.has(group.date);
+                    return (
+                      <ListaPrijevozaGroup key={group.date}>
+                        <ListaPrijevozaGroupHeader
+                          onClick={() => {
+                            setExpandedDriverDates(prev => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(group.date)) {
+                                newSet.delete(group.date);
+                              } else {
+                                newSet.add(group.date);
+                              }
+                              return newSet;
+                            });
+                          }}
+                        >
+                          <span>📅 {group.date} ({group.acceptances.length} prijevoz{group.acceptances.length === 1 ? '' : 'a'})</span>
+                          <span>{isExpanded ? '▲' : '▼'}</span>
+                        </ListaPrijevozaGroupHeader>
+                        {isExpanded && group.acceptances.map((acceptance: any) => {
+                          const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
+                          const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+                          const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
+                          const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
+                            uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
+
+                          return (
+                            <ListaPrijevozaItem key={acceptance._id}>
+                              {allRegistrationsApproved && (
+                                <div style={{ marginBottom: '0.5rem' }}>
+                                  <CompletedTag>Materijal prevežen</CompletedTag>
+                                </div>
+                              )}
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>ID:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>{acceptance._id}</ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Kamenolom:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>{acceptance.requestId?.kamenolom || '-'}</ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Gradilište:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>{getCodeDescription(acceptance.requestId?.gradiliste) || '-'}</ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Broj kamiona:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>{acceptance.requestId?.isplataPoT} €</ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Ukupna isplata:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue style={{ fontWeight: 600, color: '#28a745' }}>
+                                  {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
+                                </ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>
+                                  <RegistrationTags>
+                                    {uniqueFirstParts.map((fp: string, idx: number) => {
+                                      const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(fp) || false;
+                                      return (
+                                        <RegistrationTag
+                                          key={idx}
+                                          $hasApprovedItem={hasApprovedItem}
+                                          onClick={() => {
+                                            if (hasApprovedItem) {
+                                              handleRegistrationClick(acceptance._id, fp);
+                                            }
+                                          }}
+                                        >
+                                          {fp}
+                                        </RegistrationTag>
+                                      );
+                                    })}
+                                  </RegistrationTags>
+                                </ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Status:</ListaPrijevozaLabel>
+                                <ListaPrijevozaStatus status={acceptance.status}>
+                                  {getAcceptanceStatusLabel(acceptance.status)}
+                                </ListaPrijevozaStatus>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Datum prihvaćanja:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue>
+                                  {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                                </ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              {acceptance.reviewedAt && (
+                                <ListaPrijevozaDetail>
+                                  <ListaPrijevozaLabel>Pregledano:</ListaPrijevozaLabel>
+                                  <ListaPrijevozaValue>
+                                    {new Date(acceptance.reviewedAt).toLocaleDateString('hr-HR')}
+                                  </ListaPrijevozaValue>
+                                </ListaPrijevozaDetail>
+                              )}
+                            </ListaPrijevozaItem>
+                          );
+                        })}
+                      </ListaPrijevozaGroup>
+                    );
+                  })
+                )}
+              </>
+            )}
+
+            <ModalCloseButton onClick={() => setIsDriverListModalOpen(false)}>
               Zatvori
             </ModalCloseButton>
           </ListaPrijevozaModalContent>

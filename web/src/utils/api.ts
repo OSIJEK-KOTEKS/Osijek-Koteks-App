@@ -730,6 +730,17 @@ export const apiService = {
     }
   },
 
+  // Get all acceptances for a specific user (admin only, for "Lista prijevoza po prijevozniku")
+  getAcceptancesByUserId: async (userId: string): Promise<any[]> => {
+    try {
+      const response = await api.get(`/api/transport-requests/acceptances/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching acceptances by user:', error);
+      throw error;
+    }
+  },
+
   // Get current user's own acceptances (for "Lista prijevoza" feature)
   getUserAcceptances: async (): Promise<any[]> => {
     try {

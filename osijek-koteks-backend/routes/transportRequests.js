@@ -287,6 +287,59 @@ router.get('/acceptances/my', auth, async (req, res) => {
   }
 });
 
+// Get all acceptances for a specific user (admin only)
+// IMPORTANT: This route must come before /:id/acceptances to avoid route conflicts
+router.get('/acceptances/user/:userId', auth, async (req, res) => {
+  try {
+    // Check if user has canAccessPrijevoz permission and is admin
+    if (!req.user.canAccessPrijevoz || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    }
+
+    const acceptances = await TransportAcceptance.find({
+      userId: req.params.userId,
+    })
+      .populate('userId', 'firstName lastName email company')
+      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate('reviewedBy', 'firstName lastName email')
+      .sort({ createdAt: -1 });
+
+    // Calculate total payout for each acceptance based on approved items
+    const acceptancesWithPayout = await Promise.all(
+      acceptances.map(async (acceptance) => {
+        const acceptanceObj = acceptance.toObject();
+
+        // Find all approved items linked to this acceptance
+        const approvedItems = await Item.find({
+          transportAcceptanceId: acceptance._id,
+          approvalStatus: 'odobreno'
+        });
+
+        // Calculate total payout: sum of (isplataPoT * neto / 1000) for each approved item
+        const isplataPoT = acceptance.requestId?.isplataPoT || 0;
+        let ukupnaIsplata = 0;
+
+        for (const item of approvedItems) {
+          if (item.neto) {
+            ukupnaIsplata += isplataPoT * (item.neto / 1000);
+          }
+        }
+
+        acceptanceObj.ukupnaIsplata = Math.round(ukupnaIsplata * 100) / 100;
+        return acceptanceObj;
+      })
+    );
+
+    res.json(acceptancesWithPayout);
+  } catch (error) {
+    console.error('Error fetching user acceptances:', error);
+    res.status(500).json({
+      message: 'Server error while fetching user acceptances',
+      error: error.message,
+    });
+  }
+});
+
 // Get all pending acceptances across all requests (admin only)
 // IMPORTANT: This route must come before /:id/acceptances to avoid route conflicts
 router.get('/acceptances/pending', auth, async (req, res) => {
