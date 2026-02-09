@@ -281,6 +281,20 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, isOpen, onClo
               materijal
             </ActionButton>
           )}
+
+          {item.approvalLocation?.coordinates && (
+            <ActionButton
+              onClick={() => {
+                const { latitude, longitude } = item.approvalLocation!.coordinates;
+                window.open(
+                  `https://www.google.com/maps?q=${latitude},${longitude}`,
+                  '_blank'
+                );
+              }}
+              style={{ backgroundColor: '#34a853' }}>
+              📍 Lokacija
+            </ActionButton>
+          )}
         </ButtonGroup>
       </ModalContent>
     </ModalOverlay>

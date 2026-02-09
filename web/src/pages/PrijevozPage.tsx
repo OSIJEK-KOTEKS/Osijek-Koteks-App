@@ -751,6 +751,7 @@ const PrijevozPage: React.FC = () => {
   const [driverAcceptances, setDriverAcceptances] = useState<any[]>([]);
   const [isLoadingDriverAcceptances, setIsLoadingDriverAcceptances] = useState(false);
   const [expandedDriverDates, setExpandedDriverDates] = useState<Set<string>>(new Set());
+  const [driverPaymentFilter, setDriverPaymentFilter] = useState<'all' | 'Plaćeno' | 'Nije plaćeno'>('all');
 
   const isAdmin = user?.role === 'admin';
 
@@ -1200,6 +1201,7 @@ const PrijevozPage: React.FC = () => {
     setSelectedDriverName('');
     setDriverAcceptances([]);
     setExpandedDriverDates(new Set());
+    setDriverPaymentFilter('all');
     setIsLoadingDriverListUsers(true);
     try {
       const users = await apiService.getUsersWithPrijevozAccess();
@@ -1998,17 +2000,46 @@ const PrijevozPage: React.FC = () => {
             {/* Driver's acceptances */}
             {selectedDriverId && (
               <>
-                <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>
-                  Prijevozi za: {selectedDriverName}
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <h3 style={{ margin: 0, color: '#333' }}>
+                    Prijevozi za: {selectedDriverName}
+                  </h3>
+                  <select
+                    value={driverPaymentFilter}
+                    onChange={(e) => setDriverPaymentFilter(e.target.value as 'all' | 'Plaćeno' | 'Nije plaćeno')}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      fontSize: '0.875rem',
+                      backgroundColor: 'white',
+                    }}
+                  >
+                    <option value="all">Svi statusi plaćanja</option>
+                    <option value="Plaćeno">Plaćeno</option>
+                    <option value="Nije plaćeno">Nije plaćeno</option>
+                  </select>
+                </div>
                 {isLoadingDriverAcceptances ? (
                   <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
                 ) : driverAcceptances.length === 0 ? (
                   <ListaPrijevozaEmpty>
                     Ovaj prijevoznik nema prihvaćenih zahtjeva za prijevoz
                   </ListaPrijevozaEmpty>
-                ) : (
-                  groupAcceptancesByDate(driverAcceptances).map(group => {
+                ) : (() => {
+                  const filteredAcceptances = driverPaymentFilter === 'all'
+                    ? driverAcceptances
+                    : driverAcceptances.filter(a => (a.paymentStatus || 'Nije plaćeno') === driverPaymentFilter);
+
+                  if (filteredAcceptances.length === 0) {
+                    return (
+                      <ListaPrijevozaEmpty>
+                        Nema prijevoza s odabranim statusom plaćanja
+                      </ListaPrijevozaEmpty>
+                    );
+                  }
+
+                  return groupAcceptancesByDate(filteredAcceptances).map(group => {
                     const isExpanded = expandedDriverDates.has(group.date);
                     return (
                       <ListaPrijevozaGroup key={group.date}>
@@ -2127,8 +2158,8 @@ const PrijevozPage: React.FC = () => {
                         })}
                       </ListaPrijevozaGroup>
                     );
-                  })
-                )}
+                  });
+                })()}
               </>
             )}
 
