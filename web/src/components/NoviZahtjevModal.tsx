@@ -300,7 +300,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
           </FormGroup>
 
           <FormGroup>
-            <Label htmlFor="isplataPoT">Isplata po t za ovu relaciju</Label>
+            <Label htmlFor="isplataPoT">Isplata po (t) za ovu relaciju</Label>
             <Input
               id="isplataPoT"
               type="number"
