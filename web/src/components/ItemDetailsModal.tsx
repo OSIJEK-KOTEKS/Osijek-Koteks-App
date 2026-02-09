@@ -278,7 +278,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, isOpen, onClo
                   onImageClick(getImageUrl(imageUrl));
                 }
               }}>
-              materijal
+              Materijal
             </ActionButton>
           )}
 
