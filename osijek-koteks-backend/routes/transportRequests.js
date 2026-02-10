@@ -482,10 +482,35 @@ router.get('/:id/acceptances', auth, async (req, res) => {
 
     const acceptances = await TransportAcceptance.find(query)
       .populate('userId', 'firstName lastName email company')
+      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
       .populate('reviewedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
-    res.json(acceptances);
+    // Calculate total payout for each acceptance based on approved items
+    const acceptancesWithPayout = await Promise.all(
+      acceptances.map(async (acceptance) => {
+        const acceptanceObj = acceptance.toObject();
+
+        const approvedItems = await Item.find({
+          transportAcceptanceId: acceptance._id,
+          approvalStatus: 'odobreno'
+        });
+
+        const isplataPoT = acceptance.requestId?.isplataPoT || 0;
+        let ukupnaIsplata = 0;
+
+        for (const item of approvedItems) {
+          if (item.neto) {
+            ukupnaIsplata += isplataPoT * (item.neto / 1000);
+          }
+        }
+
+        acceptanceObj.ukupnaIsplata = Math.round(ukupnaIsplata * 100) / 100;
+        return acceptanceObj;
+      })
+    );
+
+    res.json(acceptancesWithPayout);
   } catch (error) {
     console.error('Error fetching acceptances:', error);
     res.status(500).json({

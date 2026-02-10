@@ -1505,6 +1505,12 @@ const PrijevozPage: React.FC = () => {
                                     Broj kamiona: {acceptance.acceptedCount}
                                   </AcceptanceItemDetail>
                                   <AcceptanceItemDetail>
+                                    Ukupna isplata:{' '}
+                                    <span style={{ fontWeight: 600, color: '#28a745' }}>
+                                      {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
+                                    </span>
+                                  </AcceptanceItemDetail>
+                                  <AcceptanceItemDetail>
                                     Datum prihvaćanja: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
                                   </AcceptanceItemDetail>
                                   {acceptance.reviewedAt && (
