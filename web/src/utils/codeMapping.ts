@@ -81,6 +81,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25112': 'O.Š. Vladimir Nazor Đakovo',
   '25119': 'Pripremni i zemljani radovi u Sljemenskoj',  
   '26002': 'Pevex Požega',
+  '26003':'OŠ M. P. KATANČIĆA - Valpovo',
   '5014': 'Betonara',
 };
 
