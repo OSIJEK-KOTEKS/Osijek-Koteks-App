@@ -729,6 +729,7 @@ const PrijevozPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [assignedUsers, setAssignedUsers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([]);
   const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
+  const [acceptCount, setAcceptCount] = useState<number>(1);
   const [pendingAcceptances, setPendingAcceptances] = useState<any[]>([]);
   const [isLoadingAcceptances, setIsLoadingAcceptances] = useState(false);
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
@@ -989,7 +990,7 @@ const PrijevozPage: React.FC = () => {
 
   const handleAcceptClick = (request: TransportRequest) => {
     setAcceptingRequest(request);
-    setSelectedRegistrations([]);
+    setAcceptCount(1);
     setIsAcceptModalOpen(true);
   };
 
@@ -1023,14 +1024,10 @@ const PrijevozPage: React.FC = () => {
   };
 
   const handleAcceptSubmit = async () => {
-    if (!acceptingRequest || selectedRegistrations.length === 0) return;
+    if (!acceptingRequest || acceptCount < 1) return;
 
     try {
-      await apiService.acceptTransportRequest(acceptingRequest._id, selectedRegistrations);
-
-      // Extract unique first parts for display
-      const firstParts = selectedRegistrations.map(reg => getFirstPartOfRegistration(reg));
-      const uniqueFirstParts = Array.from(new Set(firstParts));
+      await apiService.acceptTransportRequest(acceptingRequest._id, acceptCount);
 
       alert(
         `✅ Zahtjev uspješno poslan!\n\n` +
@@ -1038,31 +1035,18 @@ const PrijevozPage: React.FC = () => {
         `• Kamenolom: ${acceptingRequest.kamenolom}\n` +
         `• Gradilište: ${acceptingRequest.gradiliste}\n` +
         `• Datum prijevoza: ${acceptingRequest.prijevozNaDan}\n` +
-        `• Isplata po t: ${acceptingRequest.isplataPoT}€\n\n` +
-        `Odabrane registracije:\n${uniqueFirstParts.join(', ')}\n\n` +
+        `• Isplata po t: ${acceptingRequest.isplataPoT}€\n` +
+        `• Rezervirano prijevoza: ${acceptCount}\n\n` +
         `Status: Čeka se odobrenje administratora.`
       );
 
       setIsAcceptModalOpen(false);
       setAcceptingRequest(null);
-      setSelectedRegistrations([]);
+      setAcceptCount(1);
       await fetchRequests();
     } catch (error: any) {
       console.error('Error accepting request:', error);
-
-      // Check if it's a duplicate registration error
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('already used')) {
-        const overlapping = error.response?.data?.overlappingRegistrations || [];
-
-        alert(
-          `❌ Ne možete prihvatiti ovaj zahtjev\n\n` +
-          `Razlog: Već ste koristili neke od ovih registracija za ovaj zahtjev.\n\n` +
-          `Registracije koje su već korištene:\n${overlapping.join(', ')}\n\n` +
-          `Napomena: Možete prihvatiti ovaj zahtjev samo s registracijama koje niste već koristili.`
-        );
-      } else {
-        alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
-      }
+      alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
     }
   };
 
@@ -1475,18 +1459,16 @@ const PrijevozPage: React.FC = () => {
                           <AcceptancesList>
                             <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Prihvaćanja za ovaj zahtjev:</h4>
                             {requestAcceptances.map((acceptance) => {
-                              const firstParts: string[] = acceptance.registrations.map((reg: string) => getFirstPartOfRegistration(reg));
-                              const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
                               const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                              const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
-                                uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
+                              const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
+                              const allCompleted = approvedRegsList.length >= acceptance.acceptedCount;
 
                               return (
                                 <AcceptanceItem key={acceptance._id}>
                                   <AcceptanceItemHeader>
                                     <AcceptanceItemUser>
                                       {acceptance.userId?.firstName} {acceptance.userId?.lastName}
-                                      {allRegistrationsApproved && <CompletedTag>Materijal prevežen</CompletedTag>}
+                                      {allCompleted && <CompletedTag>Materijal prevežen</CompletedTag>}
                                     </AcceptanceItemUser>
                                     <AcceptanceItemStatus status={acceptance.status}>
                                       {acceptance.status === 'approved' ? 'Prihvaćeno' : acceptance.status === 'declined' ? 'Odbijeno' : 'Na čekanju'}
@@ -1536,24 +1518,22 @@ const PrijevozPage: React.FC = () => {
                                       </PaymentBadgeReadOnly>
                                     )}
                                   </AcceptanceItemDetail>
-                                  <RegistrationTags style={{ marginTop: '0.5rem' }}>
-                                    {uniqueFirstParts.map((firstPart: string, idx: number) => {
-                                      const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
-                                      return (
+                                  <AcceptanceItemDetail>
+                                    Doveženo: {approvedRegsList.length} / {acceptance.acceptedCount}
+                                  </AcceptanceItemDetail>
+                                  {approvedRegsList.length > 0 && (
+                                    <RegistrationTags style={{ marginTop: '0.5rem' }}>
+                                      {approvedRegsList.map((firstPart: string, idx: number) => (
                                         <RegistrationTag
                                           key={idx}
-                                          $hasApprovedItem={hasApprovedItem}
-                                          onClick={() => {
-                                            if (hasApprovedItem) {
-                                              handleRegistrationClick(acceptance._id, firstPart);
-                                            }
-                                          }}
+                                          $hasApprovedItem={true}
+                                          onClick={() => handleRegistrationClick(acceptance._id, firstPart)}
                                         >
                                           {firstPart}
                                         </RegistrationTag>
-                                      );
-                                    })}
-                                  </RegistrationTags>
+                                      ))}
+                                    </RegistrationTags>
+                                  )}
                                 </AcceptanceItem>
                               );
                             })}
@@ -1579,9 +1559,8 @@ const PrijevozPage: React.FC = () => {
             <EmptyAcceptances>Nema zahtjeva na čekanju</EmptyAcceptances>
           ) : (
             pendingAcceptances.map((acceptance) => {
-              // Extract unique first parts from all registrations
-              const firstParts: string[] = acceptance.registrations.map((reg: string) => getFirstPartOfRegistration(reg));
-              const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
+              const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
+              const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
 
               return (
                 <AcceptanceCard key={acceptance._id}>
@@ -1606,7 +1585,10 @@ const PrijevozPage: React.FC = () => {
                         Gradilište: {getCodeDescription(acceptance.requestId?.gradiliste)}
                       </AcceptanceDetail>
                       <AcceptanceDetail>
-                        Broj kamiona: {acceptance.acceptedCount}
+                        Rezervirano prijevoza: {acceptance.acceptedCount}
+                      </AcceptanceDetail>
+                      <AcceptanceDetail>
+                        Doveženo: {approvedRegsList.length} / {acceptance.acceptedCount}
                       </AcceptanceDetail>
                       <AcceptanceDetail>
                         Isplata po t: {acceptance.requestId?.isplataPoT}€
@@ -1623,24 +1605,19 @@ const PrijevozPage: React.FC = () => {
                           {acceptance.paymentStatus || 'Nije plaćeno'}
                         </PaymentBadge>
                       </AcceptanceDetail>
-                      <RegistrationTags>
-                        {uniqueFirstParts.map((firstPart: string, idx: number) => {
-                          const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(firstPart) || false;
-                          return (
+                      {approvedRegsList.length > 0 && (
+                        <RegistrationTags>
+                          {approvedRegsList.map((firstPart: string, idx: number) => (
                             <RegistrationTag
                               key={idx}
-                              $hasApprovedItem={hasApprovedItem}
-                              onClick={() => {
-                                if (hasApprovedItem) {
-                                  handleRegistrationClick(acceptance._id, firstPart);
-                                }
-                              }}
+                              $hasApprovedItem={true}
+                              onClick={() => handleRegistrationClick(acceptance._id, firstPart)}
                             >
                               {firstPart}
                             </RegistrationTag>
-                          );
-                        })}
-                      </RegistrationTags>
+                          ))}
+                        </RegistrationTags>
+                      )}
                     </AcceptanceInfo>
                     <AcceptanceActions>
                       <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
@@ -1726,56 +1703,30 @@ const PrijevozPage: React.FC = () => {
               </InfoRow>
             </RequestInfo>
 
-            <SelectionSummary>
-              Odabrano{' '}
-              {
-                getUserUniqueRegistrations().filter(fp => {
-                  const regs = getFullRegistrationsForFirstPart(fp);
-                  return regs.some(reg => selectedRegistrations.includes(reg));
-                }).length
-              }{' '}
-              od {acceptingRequest.brojKamiona} kamiona
-            </SelectionSummary>
-
             <div style={{ marginBottom: '1rem', fontWeight: 500 }}>
-              Odaberite registracije (max {acceptingRequest.brojKamiona}):
+              Koliko prijevoza želite rezervirati? (max {acceptingRequest.brojKamiona})
             </div>
 
-            {user?.assignedRegistrations && user.assignedRegistrations.length > 0 ? (
-              <RegistrationsList>
-                {getUserUniqueRegistrations().map((firstPart) => {
-                  const fullRegs = getFullRegistrationsForFirstPart(firstPart);
-                  const isChecked = fullRegs.some(reg => selectedRegistrations.includes(reg));
-
-                  // Count how many unique first parts are currently selected
-                  const currentUniqueCount = getUserUniqueRegistrations().filter(fp => {
-                    const regs = getFullRegistrationsForFirstPart(fp);
-                    return regs.some(reg => selectedRegistrations.includes(reg));
-                  }).length;
-
-                  const canSelect = currentUniqueCount < acceptingRequest.brojKamiona;
-
-                  return (
-                    <RegistrationCheckbox key={firstPart}>
-                      <input
-                        type="checkbox"
-                        id={`reg-${firstPart}`}
-                        checked={isChecked}
-                        onChange={() => handleRegistrationToggle(firstPart)}
-                        disabled={!isChecked && !canSelect}
-                      />
-                      <label htmlFor={`reg-${firstPart}`}>
-                        {firstPart}
-                      </label>
-                    </RegistrationCheckbox>
-                  );
-                })}
-              </RegistrationsList>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
-                Nemate dodijeljene registracije. Kontaktirajte administratora.
-              </div>
-            )}
+            <input
+              type="number"
+              min={1}
+              max={acceptingRequest.brojKamiona}
+              value={acceptCount}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 1 && val <= acceptingRequest.brojKamiona) {
+                  setAcceptCount(val);
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                fontSize: '1rem',
+                marginBottom: '1rem',
+              }}
+            />
 
             <ModalActions>
               <ModalButton variant="secondary" onClick={() => setIsAcceptModalOpen(false)}>
@@ -1784,16 +1735,9 @@ const PrijevozPage: React.FC = () => {
               <ModalButton
                 variant="primary"
                 onClick={handleAcceptSubmit}
-                disabled={selectedRegistrations.length === 0}
+                disabled={acceptCount < 1}
               >
-                Prihvati (
-                {
-                  getUserUniqueRegistrations().filter(fp => {
-                    const regs = getFullRegistrationsForFirstPart(fp);
-                    return regs.some(reg => selectedRegistrations.includes(reg));
-                  }).length
-                }
-                )
+                Prihvati ({acceptCount})
               </ModalButton>
             </ModalActions>
           </ModalContent>
@@ -1852,15 +1796,13 @@ const PrijevozPage: React.FC = () => {
                       <span>{isExpanded ? '▲' : '▼'}</span>
                     </ListaPrijevozaGroupHeader>
                     {isExpanded && group.acceptances.map((acceptance: any) => {
-                      const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
-                      const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
                       const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                      const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
-                        uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
+                      const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
+                      const allCompleted = approvedRegsList.length >= acceptance.acceptedCount;
 
                       return (
                         <ListaPrijevozaItem key={acceptance._id}>
-                          {allRegistrationsApproved && (
+                          {allCompleted && (
                             <div style={{ marginBottom: '0.5rem' }}>
                               <CompletedTag>Materijal prevežen</CompletedTag>
                             </div>
@@ -1874,8 +1816,12 @@ const PrijevozPage: React.FC = () => {
                             <ListaPrijevozaValue>{getCodeDescription(acceptance.requestId?.gradiliste) || '-'}</ListaPrijevozaValue>
                           </ListaPrijevozaDetail>
                           <ListaPrijevozaDetail>
-                            <ListaPrijevozaLabel>Broj kamiona:</ListaPrijevozaLabel>
+                            <ListaPrijevozaLabel>Rezervirano prijevoza:</ListaPrijevozaLabel>
                             <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
+                          </ListaPrijevozaDetail>
+                          <ListaPrijevozaDetail>
+                            <ListaPrijevozaLabel>Doveženo:</ListaPrijevozaLabel>
+                            <ListaPrijevozaValue>{approvedRegsList.length} / {acceptance.acceptedCount}</ListaPrijevozaValue>
                           </ListaPrijevozaDetail>
                           <ListaPrijevozaDetail>
                             <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
@@ -1887,29 +1833,24 @@ const PrijevozPage: React.FC = () => {
                               {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
                             </ListaPrijevozaValue>
                           </ListaPrijevozaDetail>
-                          <ListaPrijevozaDetail>
-                            <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
-                            <ListaPrijevozaValue>
-                              <RegistrationTags>
-                                {uniqueFirstParts.map((fp: string, idx: number) => {
-                                  const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(fp) || false;
-                                  return (
+                          {approvedRegsList.length > 0 && (
+                            <ListaPrijevozaDetail>
+                              <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
+                              <ListaPrijevozaValue>
+                                <RegistrationTags>
+                                  {approvedRegsList.map((fp: string, idx: number) => (
                                     <RegistrationTag
                                       key={idx}
-                                      $hasApprovedItem={hasApprovedItem}
-                                      onClick={() => {
-                                        if (hasApprovedItem) {
-                                          handleRegistrationClick(acceptance._id, fp);
-                                        }
-                                      }}
+                                      $hasApprovedItem={true}
+                                      onClick={() => handleRegistrationClick(acceptance._id, fp)}
                                     >
                                       {fp}
                                     </RegistrationTag>
-                                  );
-                                })}
-                              </RegistrationTags>
-                            </ListaPrijevozaValue>
-                          </ListaPrijevozaDetail>
+                                  ))}
+                                </RegistrationTags>
+                              </ListaPrijevozaValue>
+                            </ListaPrijevozaDetail>
+                          )}
                           <ListaPrijevozaDetail>
                             <ListaPrijevozaLabel>Status:</ListaPrijevozaLabel>
                             <ListaPrijevozaStatus status={acceptance.status}>
@@ -2066,15 +2007,13 @@ const PrijevozPage: React.FC = () => {
                           <span>{isExpanded ? '▲' : '▼'}</span>
                         </ListaPrijevozaGroupHeader>
                         {isExpanded && group.acceptances.map((acceptance: any) => {
-                          const firstParts: string[] = acceptance.registrations?.map((reg: string) => getFirstPartOfRegistration(reg)) || [];
-                          const uniqueFirstParts: string[] = Array.from(new Set(firstParts));
                           const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                          const allRegistrationsApproved = uniqueFirstParts.length > 0 &&
-                            uniqueFirstParts.every((fp: string) => approvedRegs?.has(fp));
+                          const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
+                          const allCompleted = approvedRegsList.length >= acceptance.acceptedCount;
 
                           return (
                             <ListaPrijevozaItem key={acceptance._id}>
-                              {allRegistrationsApproved && (
+                              {allCompleted && (
                                 <div style={{ marginBottom: '0.5rem' }}>
                                   <CompletedTag>Materijal prevežen</CompletedTag>
                                 </div>
@@ -2092,8 +2031,14 @@ const PrijevozPage: React.FC = () => {
                                 <ListaPrijevozaValue>{getCodeDescription(acceptance.requestId?.gradiliste) || '-'}</ListaPrijevozaValue>
                               </ListaPrijevozaDetail>
                               <ListaPrijevozaDetail>
-                                <ListaPrijevozaLabel>Broj kamiona:</ListaPrijevozaLabel>
+                                <ListaPrijevozaLabel>Rezervirano prijevoza:</ListaPrijevozaLabel>
                                 <ListaPrijevozaValue>{acceptance.acceptedCount}</ListaPrijevozaValue>
+                              </ListaPrijevozaDetail>
+                              <ListaPrijevozaDetail>
+                                <ListaPrijevozaLabel>Doveženo:</ListaPrijevozaLabel>
+                                <ListaPrijevozaValue style={{ fontWeight: 600, color: approvedRegsList.length >= acceptance.acceptedCount ? '#28a745' : '#dc3545' }}>
+                                  {approvedRegsList.length} / {acceptance.acceptedCount}
+                                </ListaPrijevozaValue>
                               </ListaPrijevozaDetail>
                               <ListaPrijevozaDetail>
                                 <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
@@ -2109,22 +2054,15 @@ const PrijevozPage: React.FC = () => {
                                 <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
                                 <ListaPrijevozaValue>
                                   <RegistrationTags>
-                                    {uniqueFirstParts.map((fp: string, idx: number) => {
-                                      const hasApprovedItem = approvedRegistrationsByAcceptance.get(acceptance._id)?.has(fp) || false;
-                                      return (
-                                        <RegistrationTag
-                                          key={idx}
-                                          $hasApprovedItem={hasApprovedItem}
-                                          onClick={() => {
-                                            if (hasApprovedItem) {
-                                              handleRegistrationClick(acceptance._id, fp);
-                                            }
-                                          }}
-                                        >
-                                          {fp}
-                                        </RegistrationTag>
-                                      );
-                                    })}
+                                    {approvedRegsList.map((fp: string, idx: number) => (
+                                      <RegistrationTag
+                                        key={idx}
+                                        $hasApprovedItem={true}
+                                        onClick={() => handleRegistrationClick(acceptance._id, fp)}
+                                      >
+                                        {fp}
+                                      </RegistrationTag>
+                                    ))}
                                   </RegistrationTags>
                                 </ListaPrijevozaValue>
                               </ListaPrijevozaDetail>

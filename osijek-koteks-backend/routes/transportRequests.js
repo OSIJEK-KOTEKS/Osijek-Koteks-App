@@ -565,7 +565,7 @@ const getFirstPartOfRegistration = (registration) => {
   return registration;
 };
 
-// User accepts transport request with registrations
+// User accepts transport request by reserving a number of transports
 router.post('/:id/accept', auth, async (req, res) => {
   try {
     // Check if user has canAccessPrijevoz permission
@@ -573,10 +573,10 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Prijevoz access required.' });
     }
 
-    const { registrations } = req.body;
+    const { count } = req.body;
 
-    if (!registrations || !Array.isArray(registrations) || registrations.length === 0) {
-      return res.status(400).json({ message: 'Registrations array is required' });
+    if (!count || count < 1) {
+      return res.status(400).json({ message: 'Count must be at least 1' });
     }
 
     // Check if transport request exists
@@ -585,82 +585,17 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
-    // Check if this user has any active acceptances (pending or approved) with these registrations
-    // that haven't been completed (turned green) yet
-    const requestedFirstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
-    const uniqueRequestedFirstParts = [...new Set(requestedFirstParts)];
-
-    console.log('=== ACCEPT VALIDATION DEBUG ===');
-    console.log('User ID:', req.user._id);
-    console.log('Requested registrations:', registrations);
-    console.log('Requested first parts:', uniqueRequestedFirstParts);
-
-    // Get all active acceptances for THIS USER (pending or approved, not declined)
-    const userActiveAcceptances = await TransportAcceptance.find({
-      userId: req.user._id,
-      status: { $in: ['pending', 'approved'] }
-    });
-
-    console.log('User active acceptances count:', userActiveAcceptances.length);
-    console.log('User active acceptances:', userActiveAcceptances.map(a => ({
-      id: a._id,
-      status: a.status,
-      registrations: a.registrations
-    })));
-
-    // For each requested registration, check if it's currently busy for this user
-    const busyRegistrations = [];
-
-    for (const firstPart of uniqueRequestedFirstParts) {
-      // Find this user's acceptances that contain this registration
-      const acceptancesWithReg = userActiveAcceptances.filter(acc => {
-        return acc.registrations.some(reg => getFirstPartOfRegistration(reg) === firstPart);
-      });
-
-      console.log(`Checking firstPart "${firstPart}": found in ${acceptancesWithReg.length} acceptances`);
-
-      if (acceptancesWithReg.length > 0) {
-        // Count how many of these acceptances have a completed item for this registration
-        // Each completed item "frees up" one acceptance for reuse
-        const acceptanceIds = acceptancesWithReg.map(acc => acc._id);
-
-        const completedItemsCount = await Item.countDocuments({
-          transportAcceptanceId: { $in: acceptanceIds },
-          approvalStatus: 'odobreno',
-          registracija: { $regex: new RegExp('^' + firstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-        });
-
-        console.log(`Acceptances with "${firstPart}": ${acceptancesWithReg.length}, Completed items: ${completedItemsCount}`);
-
-        // If completed items < acceptances count, this registration is still busy
-        // (there's at least one acceptance without a completed item)
-        if (completedItemsCount < acceptancesWithReg.length) {
-          busyRegistrations.push(firstPart);
-        }
-      }
+    // Validate count doesn't exceed available slots
+    if (count > transportRequest.brojKamiona) {
+      return res.status(400).json({ message: 'Requested count exceeds available transport slots' });
     }
-
-    console.log('Busy registrations:', busyRegistrations);
-    console.log('=== END DEBUG ===');
-
-    if (busyRegistrations.length > 0) {
-      return res.status(400).json({
-        message: 'Neke registracije su još uvijek u upotrebi i nisu dovršene',
-        overlappingRegistrations: busyRegistrations
-      });
-    }
-
-    // Calculate accepted count based on unique first parts (each unique first part = 1 truck)
-    const firstParts = registrations.map(reg => getFirstPartOfRegistration(reg));
-    const uniqueFirstParts = [...new Set(firstParts)];
-    const acceptedCount = uniqueFirstParts.length;
 
     // Create acceptance record
     const acceptance = new TransportAcceptance({
       requestId: req.params.id,
       userId: req.user._id,
-      registrations,
-      acceptedCount: acceptedCount,
+      registrations: [],
+      acceptedCount: count,
       gradiliste: transportRequest.gradiliste,
       status: 'pending',
     });

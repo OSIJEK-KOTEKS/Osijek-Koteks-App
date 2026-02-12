@@ -648,10 +648,10 @@ export const apiService = {
     }
   },
 
-  acceptTransportRequest: async (id: string, registrations: string[]): Promise<any> => {
+  acceptTransportRequest: async (id: string, count: number): Promise<any> => {
     try {
-      console.log('Accepting transport request:', { id, registrations });
-      const response = await api.post(`/api/transport-requests/${id}/accept`, { registrations });
+      console.log('Accepting transport request:', { id, count });
+      const response = await api.post(`/api/transport-requests/${id}/accept`, { count });
       return response.data;
     } catch (error) {
       console.error('Error accepting transport request:', error);

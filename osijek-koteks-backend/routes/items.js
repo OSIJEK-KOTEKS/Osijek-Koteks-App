@@ -719,50 +719,39 @@ router.post('/', auth, async (req, res) => {
       createdBy: newItem.createdBy, // LOG the creator
     });
 
-    // After saving the item, check if there's an approved transport acceptance with matching registration AND code
+    // After saving the item, check if there's an approved transport acceptance with matching code
+    // and available slots (linked approved items < acceptedCount)
     if (newItem.registracija && newItem.code) {
-      const itemFirstPart = getFirstPartOfRegistration(newItem.registracija);
-
-      // Find all approved transport acceptances that:
-      // 1. Have status 'approved'
-      // 2. Have matching gradiliste (code)
-      // 3. Contain a registration that matches this item's registration
       const matchingAcceptances = await TransportAcceptance.find({
         status: 'approved',
         gradiliste: newItem.code,
-        registrations: {
-          $elemMatch: {
-            $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-          }
-        }
       }).sort({ createdAt: 1 }); // Get oldest first
 
-      // Find the first acceptance that doesn't already have a completed item for this registration
       for (const matchingAcceptance of matchingAcceptances) {
-        const matchingReg = matchingAcceptance.registrations.find(reg => {
-          const regFirstPart = getFirstPartOfRegistration(reg);
-          return regFirstPart.toLowerCase() === itemFirstPart.toLowerCase();
+        // Count how many approved items are already linked to this acceptance
+        const linkedItemsCount = await Item.countDocuments({
+          transportAcceptanceId: matchingAcceptance._id,
+          approvalStatus: 'odobreno'
         });
 
-        if (matchingReg) {
-          // Check if this acceptance already has a completed (approved) item for this registration
-          const existingCompletedItem = await Item.findOne({
-            transportAcceptanceId: matchingAcceptance._id,
-            approvalStatus: 'odobreno',
-            registracija: { $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-          });
+        // If there are available slots, link this item
+        if (linkedItemsCount < matchingAcceptance.acceptedCount) {
+          newItem.transportAcceptanceId = matchingAcceptance._id;
+          await newItem.save();
 
-          // If no completed item exists for this acceptance, link the new item to it
-          if (!existingCompletedItem) {
-            newItem.transportAcceptanceId = matchingAcceptance._id;
-            await newItem.save();
-            console.log('Linked item to transport acceptance:', {
-              itemId: newItem._id,
-              acceptanceId: matchingAcceptance._id,
-              registration: newItem.registracija
-            });
-            break; // Stop after linking to the first available acceptance
+          // Add the registration to the acceptance's registrations array
+          const itemFirstPart = getFirstPartOfRegistration(newItem.registracija);
+          if (!matchingAcceptance.registrations.some(reg => getFirstPartOfRegistration(reg) === itemFirstPart)) {
+            matchingAcceptance.registrations.push(newItem.registracija);
+            await matchingAcceptance.save();
           }
+
+          console.log('Linked item to transport acceptance:', {
+            itemId: newItem._id,
+            acceptanceId: matchingAcceptance._id,
+            registration: newItem.registracija
+          });
+          break;
         }
       }
     }
@@ -1421,45 +1410,37 @@ router.patch(
 
         // If item was approved and has a registration, try to link it to a transport acceptance
         if (updatedItem.approvalStatus === 'odobreno' && updatedItem.registracija && updatedItem.code && !updatedItem.transportAcceptanceId) {
-          const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
-
-          // Find all approved acceptances with matching gradiliste and registration
+          // Find all approved acceptances with matching code and available slots
           const matchingAcceptances = await TransportAcceptance.find({
             status: 'approved',
             gradiliste: updatedItem.code,
-            registrations: {
-              $elemMatch: {
-                $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-              }
-            }
           }).sort({ createdAt: 1 });
 
-          // Find the first acceptance that doesn't already have a completed item for this registration
           for (const matchingAcceptance of matchingAcceptances) {
-            const matchingReg = matchingAcceptance.registrations.find(reg => {
-              const regFirstPart = getFirstPartOfRegistration(reg);
-              return regFirstPart.toLowerCase() === itemFirstPart.toLowerCase();
+            // Count how many approved items are already linked to this acceptance
+            const linkedItemsCount = await Item.countDocuments({
+              transportAcceptanceId: matchingAcceptance._id,
+              approvalStatus: 'odobreno'
             });
 
-            if (matchingReg) {
-              // Check if this acceptance already has a completed (approved) item for this registration
-              const existingCompletedItem = await Item.findOne({
-                transportAcceptanceId: matchingAcceptance._id,
-                approvalStatus: 'odobreno',
-                registracija: { $regex: new RegExp('^' + itemFirstPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-              });
+            // If there are available slots, link this item
+            if (linkedItemsCount < matchingAcceptance.acceptedCount) {
+              updatedItem.transportAcceptanceId = matchingAcceptance._id;
+              await updatedItem.save();
 
-              // If no completed item exists for this acceptance, link the new item to it
-              if (!existingCompletedItem) {
-                updatedItem.transportAcceptanceId = matchingAcceptance._id;
-                await updatedItem.save();
-                console.log('Linked approved item to transport acceptance:', {
-                  itemId: updatedItem._id,
-                  acceptanceId: matchingAcceptance._id,
-                  registration: updatedItem.registracija
-                });
-                break; // Stop after linking to the first available acceptance
+              // Add the registration to the acceptance's registrations array
+              const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
+              if (!matchingAcceptance.registrations.some(reg => getFirstPartOfRegistration(reg) === itemFirstPart)) {
+                matchingAcceptance.registrations.push(updatedItem.registracija);
+                await matchingAcceptance.save();
               }
+
+              console.log('Linked approved item to transport acceptance:', {
+                itemId: updatedItem._id,
+                acceptanceId: matchingAcceptance._id,
+                registration: updatedItem.registracija
+              });
+              break;
             }
           }
         }

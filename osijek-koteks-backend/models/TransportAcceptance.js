@@ -14,13 +14,7 @@ const TransportAcceptanceSchema = new mongoose.Schema(
     },
     registrations: {
       type: [String],
-      required: true,
-      validate: {
-        validator: function (registrations) {
-          return registrations.length > 0;
-        },
-        message: 'At least one registration is required',
-      },
+      default: [],
     },
     acceptedCount: {
       type: Number,
