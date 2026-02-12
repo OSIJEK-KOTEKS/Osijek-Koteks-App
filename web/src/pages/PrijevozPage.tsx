@@ -736,6 +736,7 @@ const PrijevozPage: React.FC = () => {
   const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
   const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
   const [approvedRegistrationsByAcceptance, setApprovedRegistrationsByAcceptance] = useState<Map<string, Set<string>>>(new Map());
+  const [linkedItemCountByAcceptance, setLinkedItemCountByAcceptance] = useState<Map<string, number>>(new Map());
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -1058,16 +1059,20 @@ const PrijevozPage: React.FC = () => {
 
       // Fetch approved registrations for each acceptance
       const approvedRegsMap = new Map<string, Set<string>>();
+      const itemCountMap = new Map(linkedItemCountByAcceptance);
       for (const acceptance of acceptances) {
         try {
-          const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-          approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+          const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
+          itemCountMap.set(acceptance._id, linkedItemCount);
         } catch (error) {
           console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
           approvedRegsMap.set(acceptance._id, new Set());
+          itemCountMap.set(acceptance._id, 0);
         }
       }
       setApprovedRegistrationsByAcceptance(approvedRegsMap);
+      setLinkedItemCountByAcceptance(itemCountMap);
     } catch (error) {
       console.error('Error fetching pending acceptances:', error);
     } finally {
@@ -1117,16 +1122,20 @@ const PrijevozPage: React.FC = () => {
 
         // Fetch approved registrations for each acceptance
         const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
+        const itemCountMap = new Map(linkedItemCountByAcceptance);
         for (const acceptance of acceptances) {
           try {
-            const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-            approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+            const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+            approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
+            itemCountMap.set(acceptance._id, linkedItemCount);
           } catch (error) {
             console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
             approvedRegsMap.set(acceptance._id, new Set());
+            itemCountMap.set(acceptance._id, 0);
           }
         }
         setApprovedRegistrationsByAcceptance(approvedRegsMap);
+        setLinkedItemCountByAcceptance(itemCountMap);
       } catch (error) {
         console.error('Error fetching acceptances for request:', error);
         setRequestAcceptances([]);
@@ -1156,16 +1165,20 @@ const PrijevozPage: React.FC = () => {
 
       // Fetch approved registrations for each acceptance
       const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
+      const itemCountMap = new Map(linkedItemCountByAcceptance);
       for (const acceptance of acceptances) {
         try {
-          const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-          approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+          const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
+          itemCountMap.set(acceptance._id, linkedItemCount);
         } catch (error) {
           console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
           approvedRegsMap.set(acceptance._id, new Set());
+          itemCountMap.set(acceptance._id, 0);
         }
       }
       setApprovedRegistrationsByAcceptance(approvedRegsMap);
+      setLinkedItemCountByAcceptance(itemCountMap);
     } catch (error) {
       console.error('Error fetching user acceptances:', error);
     } finally {
@@ -1209,16 +1222,20 @@ const PrijevozPage: React.FC = () => {
 
       // Fetch approved registrations for each acceptance
       const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
+      const itemCountMap = new Map(linkedItemCountByAcceptance);
       for (const acceptance of acceptances) {
         try {
-          const approvedRegs = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-          approvedRegsMap.set(acceptance._id, new Set(approvedRegs));
+          const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
+          itemCountMap.set(acceptance._id, linkedItemCount);
         } catch (error) {
           console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
           approvedRegsMap.set(acceptance._id, new Set());
+          itemCountMap.set(acceptance._id, 0);
         }
       }
       setApprovedRegistrationsByAcceptance(approvedRegsMap);
+      setLinkedItemCountByAcceptance(itemCountMap);
     } catch (error) {
       console.error('Error fetching driver acceptances:', error);
     } finally {
@@ -1461,7 +1478,8 @@ const PrijevozPage: React.FC = () => {
                             {requestAcceptances.map((acceptance) => {
                               const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
                               const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-                              const allCompleted = approvedRegsList.length >= acceptance.acceptedCount;
+                              const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+                              const allCompleted = itemCount >= acceptance.acceptedCount;
 
                               return (
                                 <AcceptanceItem key={acceptance._id}>
@@ -1484,7 +1502,7 @@ const PrijevozPage: React.FC = () => {
                                     Firma: {acceptance.userId?.company}
                                   </AcceptanceItemDetail>
                                   <AcceptanceItemDetail>
-                                    Broj kamiona: {acceptance.acceptedCount}
+                                    Rezervirano prijevoza: {acceptance.acceptedCount}
                                   </AcceptanceItemDetail>
                                   <AcceptanceItemDetail>
                                     Ukupna isplata:{' '}
@@ -1519,7 +1537,7 @@ const PrijevozPage: React.FC = () => {
                                     )}
                                   </AcceptanceItemDetail>
                                   <AcceptanceItemDetail>
-                                    Doveženo: {approvedRegsList.length} / {acceptance.acceptedCount}
+                                    Doveženo: {itemCount} / {acceptance.acceptedCount}
                                   </AcceptanceItemDetail>
                                   {approvedRegsList.length > 0 && (
                                     <RegistrationTags style={{ marginTop: '0.5rem' }}>
@@ -1561,6 +1579,7 @@ const PrijevozPage: React.FC = () => {
             pendingAcceptances.map((acceptance) => {
               const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
               const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
+              const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
 
               return (
                 <AcceptanceCard key={acceptance._id}>
@@ -1588,7 +1607,7 @@ const PrijevozPage: React.FC = () => {
                         Rezervirano prijevoza: {acceptance.acceptedCount}
                       </AcceptanceDetail>
                       <AcceptanceDetail>
-                        Doveženo: {approvedRegsList.length} / {acceptance.acceptedCount}
+                        Doveženo: {itemCount} / {acceptance.acceptedCount}
                       </AcceptanceDetail>
                       <AcceptanceDetail>
                         Isplata po t: {acceptance.requestId?.isplataPoT}€
@@ -1798,7 +1817,8 @@ const PrijevozPage: React.FC = () => {
                     {isExpanded && group.acceptances.map((acceptance: any) => {
                       const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
                       const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-                      const allCompleted = approvedRegsList.length >= acceptance.acceptedCount;
+                      const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+                      const allCompleted = itemCount >= acceptance.acceptedCount;
 
                       return (
                         <ListaPrijevozaItem key={acceptance._id}>
@@ -1821,7 +1841,7 @@ const PrijevozPage: React.FC = () => {
                           </ListaPrijevozaDetail>
                           <ListaPrijevozaDetail>
                             <ListaPrijevozaLabel>Doveženo:</ListaPrijevozaLabel>
-                            <ListaPrijevozaValue>{approvedRegsList.length} / {acceptance.acceptedCount}</ListaPrijevozaValue>
+                            <ListaPrijevozaValue>{itemCount} / {acceptance.acceptedCount}</ListaPrijevozaValue>
                           </ListaPrijevozaDetail>
                           <ListaPrijevozaDetail>
                             <ListaPrijevozaLabel>Isplata po (t):</ListaPrijevozaLabel>
@@ -2009,7 +2029,8 @@ const PrijevozPage: React.FC = () => {
                         {isExpanded && group.acceptances.map((acceptance: any) => {
                           const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
                           const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-                          const allCompleted = approvedRegsList.length >= acceptance.acceptedCount;
+                          const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+                          const allCompleted = itemCount >= acceptance.acceptedCount;
 
                           return (
                             <ListaPrijevozaItem key={acceptance._id}>
@@ -2036,8 +2057,8 @@ const PrijevozPage: React.FC = () => {
                               </ListaPrijevozaDetail>
                               <ListaPrijevozaDetail>
                                 <ListaPrijevozaLabel>Doveženo:</ListaPrijevozaLabel>
-                                <ListaPrijevozaValue style={{ fontWeight: 600, color: approvedRegsList.length >= acceptance.acceptedCount ? '#28a745' : '#dc3545' }}>
-                                  {approvedRegsList.length} / {acceptance.acceptedCount}
+                                <ListaPrijevozaValue style={{ fontWeight: 600, color: itemCount >= acceptance.acceptedCount ? '#28a745' : '#dc3545' }}>
+                                  {itemCount} / {acceptance.acceptedCount}
                                 </ListaPrijevozaValue>
                               </ListaPrijevozaDetail>
                               <ListaPrijevozaDetail>

@@ -143,14 +143,15 @@ router.get('/acceptance/:acceptanceId/approved-registrations', auth, async (req,
       approvalStatus: 'odobreno'
     }).select('registracija');
 
-    // Extract unique registration first parts
+    // Extract unique registration first parts (for display as clickable tags)
     const registrations = items
       .filter(item => item.registracija)
       .map(item => getFirstPartOfRegistration(item.registracija));
 
     const uniqueRegistrations = [...new Set(registrations)];
 
-    res.json({ approvedRegistrations: uniqueRegistrations });
+    // Return both unique registrations and total linked item count
+    res.json({ approvedRegistrations: uniqueRegistrations, linkedItemCount: items.length });
   } catch (error) {
     console.error('Error fetching approved registrations:', error);
     res.status(500).json({ message: 'Server error' });

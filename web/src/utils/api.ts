@@ -700,10 +700,10 @@ export const apiService = {
     }
   },
 
-  getApprovedRegistrationsForAcceptance: async (acceptanceId: string): Promise<string[]> => {
+  getApprovedRegistrationsForAcceptance: async (acceptanceId: string): Promise<{ approvedRegistrations: string[]; linkedItemCount: number }> => {
     try {
       const response = await api.get(`/api/items/acceptance/${acceptanceId}/approved-registrations`);
-      return response.data.approvedRegistrations;
+      return { approvedRegistrations: response.data.approvedRegistrations, linkedItemCount: response.data.linkedItemCount || 0 };
     } catch (error) {
       console.error('Error fetching approved registrations:', error);
       throw error;
