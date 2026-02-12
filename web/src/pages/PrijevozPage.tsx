@@ -163,38 +163,6 @@ const CompletedTag = styled.span`
   white-space: nowrap;
 `;
 
-const PaymentBadge = styled.button<{ $isPaid: boolean }>`
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-  background-color: ${({ $isPaid }) => ($isPaid ? '#28a745' : '#dc3545')};
-  color: white;
-
-  &:hover {
-    opacity: 0.85;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
-
-const PaymentBadgeReadOnly = styled.span<{ $isPaid: boolean }>`
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-  background-color: ${({ $isPaid }) => ($isPaid ? '#d4edda' : '#f8d7da')};
-  color: ${({ $isPaid }) => ($isPaid ? '#155724' : '#721c24')};
-`;
-
 const ActionButton = styled.button`
   padding: 0.375rem 0.75rem;
   border-radius: 4px;
@@ -752,7 +720,6 @@ const PrijevozPage: React.FC = () => {
   const [driverAcceptances, setDriverAcceptances] = useState<any[]>([]);
   const [isLoadingDriverAcceptances, setIsLoadingDriverAcceptances] = useState(false);
   const [expandedDriverDates, setExpandedDriverDates] = useState<Set<string>>(new Set());
-  const [driverPaymentFilter, setDriverPaymentFilter] = useState<'all' | 'Plaćeno' | 'Nije plaćeno'>('all');
 
   const isAdmin = user?.role === 'admin';
 
@@ -1185,7 +1152,6 @@ const PrijevozPage: React.FC = () => {
     setSelectedDriverName('');
     setDriverAcceptances([]);
     setExpandedDriverDates(new Set());
-    setDriverPaymentFilter('all');
     setIsLoadingDriverListUsers(true);
     try {
       const users = await apiService.getUsersWithPrijevozAccess();
@@ -1223,32 +1189,6 @@ const PrijevozPage: React.FC = () => {
       console.error('Error fetching driver acceptances:', error);
     } finally {
       setIsLoadingDriverAcceptances(false);
-    }
-  };
-
-  // Toggle payment status of an acceptance (admin only)
-  const handleTogglePaymentStatus = async (acceptanceId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'Plaćeno' ? 'Nije plaćeno' : 'Plaćeno';
-    try {
-      await apiService.updateAcceptancePaymentStatus(acceptanceId, newStatus as 'Plaćeno' | 'Nije plaćeno');
-
-      // Update in requestAcceptances (expanded row)
-      setRequestAcceptances(prev =>
-        prev.map(a => a._id === acceptanceId ? { ...a, paymentStatus: newStatus } : a)
-      );
-
-      // Update in pendingAcceptances (admin section)
-      setPendingAcceptances(prev =>
-        prev.map(a => a._id === acceptanceId ? { ...a, paymentStatus: newStatus } : a)
-      );
-
-      // Update in driverAcceptances (driver list modal)
-      setDriverAcceptances(prev =>
-        prev.map(a => a._id === acceptanceId ? { ...a, paymentStatus: newStatus } : a)
-      );
-    } catch (error) {
-      console.error('Error toggling payment status:', error);
-      alert('Greška pri ažuriranju statusa plaćanja.');
     }
   };
 
@@ -1501,24 +1441,6 @@ const PrijevozPage: React.FC = () => {
                                     </AcceptanceItemDetail>
                                   )}
                                   <AcceptanceItemDetail>
-                                    Plaćanje:{' '}
-                                    {isAdmin ? (
-                                      <PaymentBadge
-                                        $isPaid={acceptance.paymentStatus === 'Plaćeno'}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleTogglePaymentStatus(acceptance._id, acceptance.paymentStatus || 'Nije plaćeno');
-                                        }}
-                                      >
-                                        {acceptance.paymentStatus || 'Nije plaćeno'}
-                                      </PaymentBadge>
-                                    ) : (
-                                      <PaymentBadgeReadOnly $isPaid={acceptance.paymentStatus === 'Plaćeno'}>
-                                        {acceptance.paymentStatus || 'Nije plaćeno'}
-                                      </PaymentBadgeReadOnly>
-                                    )}
-                                  </AcceptanceItemDetail>
-                                  <AcceptanceItemDetail>
                                     Doveženo: {itemCount} / {acceptance.acceptedCount}
                                   </AcceptanceItemDetail>
                                   {items.length > 0 && (
@@ -1595,15 +1517,6 @@ const PrijevozPage: React.FC = () => {
                       </AcceptanceDetail>
                       <AcceptanceDetail>
                         Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Plaćanje:{' '}
-                        <PaymentBadge
-                          $isPaid={acceptance.paymentStatus === 'Plaćeno'}
-                          onClick={() => handleTogglePaymentStatus(acceptance._id, acceptance.paymentStatus || 'Nije plaćeno')}
-                        >
-                          {acceptance.paymentStatus || 'Nije plaćeno'}
-                        </PaymentBadge>
                       </AcceptanceDetail>
                       {items.length > 0 && (
                         <RegistrationTags>
@@ -1871,14 +1784,6 @@ const PrijevozPage: React.FC = () => {
                               </ListaPrijevozaValue>
                             </ListaPrijevozaDetail>
                           )}
-                          <ListaPrijevozaDetail>
-                            <ListaPrijevozaLabel>Plaćanje:</ListaPrijevozaLabel>
-                            <ListaPrijevozaValue>
-                              <PaymentBadgeReadOnly $isPaid={acceptance.paymentStatus === 'Plaćeno'}>
-                                {acceptance.paymentStatus || 'Nije plaćeno'}
-                              </PaymentBadgeReadOnly>
-                            </ListaPrijevozaValue>
-                          </ListaPrijevozaDetail>
                         </ListaPrijevozaItem>
                       );
                     })}
@@ -1947,26 +1852,9 @@ const PrijevozPage: React.FC = () => {
             {/* Driver's acceptances */}
             {selectedDriverId && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <h3 style={{ margin: 0, color: '#333' }}>
-                    Prijevozi za: {selectedDriverName}
-                  </h3>
-                  <select
-                    value={driverPaymentFilter}
-                    onChange={(e) => setDriverPaymentFilter(e.target.value as 'all' | 'Plaćeno' | 'Nije plaćeno')}
-                    style={{
-                      padding: '0.5rem',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      fontSize: '0.875rem',
-                      backgroundColor: 'white',
-                    }}
-                  >
-                    <option value="all">Svi statusi plaćanja</option>
-                    <option value="Plaćeno">Plaćeno</option>
-                    <option value="Nije plaćeno">Nije plaćeno</option>
-                  </select>
-                </div>
+                <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>
+                  Prijevozi za: {selectedDriverName}
+                </h3>
                 {isLoadingDriverAcceptances ? (
                   <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
                 ) : driverAcceptances.length === 0 ? (
@@ -1974,19 +1862,7 @@ const PrijevozPage: React.FC = () => {
                     Ovaj prijevoznik nema prihvaćenih zahtjeva za prijevoz
                   </ListaPrijevozaEmpty>
                 ) : (() => {
-                  const filteredAcceptances = driverPaymentFilter === 'all'
-                    ? driverAcceptances
-                    : driverAcceptances.filter(a => (a.paymentStatus || 'Nije plaćeno') === driverPaymentFilter);
-
-                  if (filteredAcceptances.length === 0) {
-                    return (
-                      <ListaPrijevozaEmpty>
-                        Nema prijevoza s odabranim statusom plaćanja
-                      </ListaPrijevozaEmpty>
-                    );
-                  }
-
-                  return groupAcceptancesByDate(filteredAcceptances).map(group => {
+                  return groupAcceptancesByDate(driverAcceptances).map(group => {
                     const isExpanded = expandedDriverDates.has(group.date);
                     return (
                       <ListaPrijevozaGroup key={group.date}>
@@ -2086,17 +1962,6 @@ const PrijevozPage: React.FC = () => {
                                   </ListaPrijevozaValue>
                                 </ListaPrijevozaDetail>
                               )}
-                              <ListaPrijevozaDetail>
-                                <ListaPrijevozaLabel>Plaćanje:</ListaPrijevozaLabel>
-                                <ListaPrijevozaValue>
-                                  <PaymentBadge
-                                    $isPaid={acceptance.paymentStatus === 'Plaćeno'}
-                                    onClick={() => handleTogglePaymentStatus(acceptance._id, acceptance.paymentStatus || 'Nije plaćeno')}
-                                  >
-                                    {acceptance.paymentStatus || 'Nije plaćeno'}
-                                  </PaymentBadge>
-                                </ListaPrijevozaValue>
-                              </ListaPrijevozaDetail>
                             </ListaPrijevozaItem>
                           );
                         })}
