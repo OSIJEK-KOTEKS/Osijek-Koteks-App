@@ -700,12 +700,22 @@ export const apiService = {
     }
   },
 
-  getApprovedRegistrationsForAcceptance: async (acceptanceId: string): Promise<{ approvedRegistrations: string[]; linkedItemCount: number }> => {
+  getApprovedRegistrationsForAcceptance: async (acceptanceId: string): Promise<{ linkedItems: { itemId: string; registration: string }[]; linkedItemCount: number }> => {
     try {
       const response = await api.get(`/api/items/acceptance/${acceptanceId}/approved-registrations`);
-      return { approvedRegistrations: response.data.approvedRegistrations, linkedItemCount: response.data.linkedItemCount || 0 };
+      return { linkedItems: response.data.linkedItems || [], linkedItemCount: response.data.linkedItemCount || 0 };
     } catch (error) {
       console.error('Error fetching approved registrations:', error);
+      throw error;
+    }
+  },
+
+  getTransportItemById: async (itemId: string): Promise<Item> => {
+    try {
+      const response = await api.get(`/api/items/transport-item/${itemId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching transport item:', error);
       throw error;
     }
   },

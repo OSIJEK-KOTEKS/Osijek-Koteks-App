@@ -143,17 +143,43 @@ router.get('/acceptance/:acceptanceId/approved-registrations', auth, async (req,
       approvalStatus: 'odobreno'
     }).select('registracija');
 
-    // Extract unique registration first parts (for display as clickable tags)
-    const registrations = items
+    // Return each linked item with its registration first part and item ID
+    const linkedItems = items
       .filter(item => item.registracija)
-      .map(item => getFirstPartOfRegistration(item.registracija));
+      .map(item => ({
+        itemId: item._id,
+        registration: getFirstPartOfRegistration(item.registracija),
+      }));
 
-    const uniqueRegistrations = [...new Set(registrations)];
-
-    // Return both unique registrations and total linked item count
-    res.json({ approvedRegistrations: uniqueRegistrations, linkedItemCount: items.length });
+    res.json({ linkedItems, linkedItemCount: items.length });
   } catch (error) {
     console.error('Error fetching approved registrations:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get item by ID with full population (for transport item modal)
+router.get('/transport-item/:itemId', auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.itemId)
+      .populate('createdBy', 'firstName lastName email company')
+      .populate('approvedBy', 'firstName lastName')
+      .populate('paidBy', 'firstName lastName')
+      .populate({
+        path: 'transportAcceptanceId',
+        populate: {
+          path: 'requestId',
+          select: 'isplataPoT'
+        }
+      });
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    res.json(item);
+  } catch (error) {
+    console.error('Error fetching transport item:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

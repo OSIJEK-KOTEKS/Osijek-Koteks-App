@@ -735,8 +735,7 @@ const PrijevozPage: React.FC = () => {
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
   const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
   const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
-  const [approvedRegistrationsByAcceptance, setApprovedRegistrationsByAcceptance] = useState<Map<string, Set<string>>>(new Map());
-  const [linkedItemCountByAcceptance, setLinkedItemCountByAcceptance] = useState<Map<string, number>>(new Map());
+  const [linkedItemsByAcceptance, setLinkedItemsByAcceptance] = useState<Map<string, { itemId: string; registration: string }[]>>(new Map());
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -1057,22 +1056,18 @@ const PrijevozPage: React.FC = () => {
       const acceptances = await apiService.getPendingAcceptances();
       setPendingAcceptances(acceptances);
 
-      // Fetch approved registrations for each acceptance
-      const approvedRegsMap = new Map<string, Set<string>>();
-      const itemCountMap = new Map(linkedItemCountByAcceptance);
+      // Fetch linked items for each acceptance
+      const itemsMap = new Map(linkedItemsByAcceptance);
       for (const acceptance of acceptances) {
         try {
-          const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-          approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
-          itemCountMap.set(acceptance._id, linkedItemCount);
+          const { linkedItems } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          itemsMap.set(acceptance._id, linkedItems);
         } catch (error) {
-          console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
-          approvedRegsMap.set(acceptance._id, new Set());
-          itemCountMap.set(acceptance._id, 0);
+          console.error(`Error fetching linked items for acceptance ${acceptance._id}:`, error);
+          itemsMap.set(acceptance._id, []);
         }
       }
-      setApprovedRegistrationsByAcceptance(approvedRegsMap);
-      setLinkedItemCountByAcceptance(itemCountMap);
+      setLinkedItemsByAcceptance(itemsMap);
     } catch (error) {
       console.error('Error fetching pending acceptances:', error);
     } finally {
@@ -1120,22 +1115,18 @@ const PrijevozPage: React.FC = () => {
         // Backend already filters by userId for non-admin users
         setRequestAcceptances(acceptances);
 
-        // Fetch approved registrations for each acceptance
-        const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
-        const itemCountMap = new Map(linkedItemCountByAcceptance);
+        // Fetch linked items for each acceptance
+        const itemsMap = new Map(linkedItemsByAcceptance);
         for (const acceptance of acceptances) {
           try {
-            const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-            approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
-            itemCountMap.set(acceptance._id, linkedItemCount);
+            const { linkedItems } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+            itemsMap.set(acceptance._id, linkedItems);
           } catch (error) {
-            console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
-            approvedRegsMap.set(acceptance._id, new Set());
-            itemCountMap.set(acceptance._id, 0);
+            console.error(`Error fetching linked items for acceptance ${acceptance._id}:`, error);
+            itemsMap.set(acceptance._id, []);
           }
         }
-        setApprovedRegistrationsByAcceptance(approvedRegsMap);
-        setLinkedItemCountByAcceptance(itemCountMap);
+        setLinkedItemsByAcceptance(itemsMap);
       } catch (error) {
         console.error('Error fetching acceptances for request:', error);
         setRequestAcceptances([]);
@@ -1145,9 +1136,9 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
-  const handleRegistrationClick = async (acceptanceId: string, registration: string) => {
+  const handleRegistrationClick = async (itemId: string) => {
     try {
-      const item = await apiService.getItemByAcceptanceAndRegistration(acceptanceId, registration);
+      const item = await apiService.getTransportItemById(itemId);
       setSelectedItem(item);
       setIsItemModalOpen(true);
     } catch (error) {
@@ -1163,22 +1154,18 @@ const PrijevozPage: React.FC = () => {
       const acceptances = await apiService.getUserAcceptances();
       setUserAcceptances(acceptances);
 
-      // Fetch approved registrations for each acceptance
-      const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
-      const itemCountMap = new Map(linkedItemCountByAcceptance);
+      // Fetch linked items for each acceptance
+      const itemsMap = new Map(linkedItemsByAcceptance);
       for (const acceptance of acceptances) {
         try {
-          const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-          approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
-          itemCountMap.set(acceptance._id, linkedItemCount);
+          const { linkedItems } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          itemsMap.set(acceptance._id, linkedItems);
         } catch (error) {
-          console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
-          approvedRegsMap.set(acceptance._id, new Set());
-          itemCountMap.set(acceptance._id, 0);
+          console.error(`Error fetching linked items for acceptance ${acceptance._id}:`, error);
+          itemsMap.set(acceptance._id, []);
         }
       }
-      setApprovedRegistrationsByAcceptance(approvedRegsMap);
-      setLinkedItemCountByAcceptance(itemCountMap);
+      setLinkedItemsByAcceptance(itemsMap);
     } catch (error) {
       console.error('Error fetching user acceptances:', error);
     } finally {
@@ -1220,22 +1207,18 @@ const PrijevozPage: React.FC = () => {
       const acceptances = await apiService.getAcceptancesByUserId(driverId);
       setDriverAcceptances(acceptances);
 
-      // Fetch approved registrations for each acceptance
-      const approvedRegsMap = new Map(approvedRegistrationsByAcceptance);
-      const itemCountMap = new Map(linkedItemCountByAcceptance);
+      // Fetch linked items for each acceptance
+      const itemsMap = new Map(linkedItemsByAcceptance);
       for (const acceptance of acceptances) {
         try {
-          const { approvedRegistrations, linkedItemCount } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
-          approvedRegsMap.set(acceptance._id, new Set(approvedRegistrations));
-          itemCountMap.set(acceptance._id, linkedItemCount);
+          const { linkedItems } = await apiService.getApprovedRegistrationsForAcceptance(acceptance._id);
+          itemsMap.set(acceptance._id, linkedItems);
         } catch (error) {
-          console.error(`Error fetching approved registrations for acceptance ${acceptance._id}:`, error);
-          approvedRegsMap.set(acceptance._id, new Set());
-          itemCountMap.set(acceptance._id, 0);
+          console.error(`Error fetching linked items for acceptance ${acceptance._id}:`, error);
+          itemsMap.set(acceptance._id, []);
         }
       }
-      setApprovedRegistrationsByAcceptance(approvedRegsMap);
-      setLinkedItemCountByAcceptance(itemCountMap);
+      setLinkedItemsByAcceptance(itemsMap);
     } catch (error) {
       console.error('Error fetching driver acceptances:', error);
     } finally {
@@ -1476,9 +1459,8 @@ const PrijevozPage: React.FC = () => {
                           <AcceptancesList>
                             <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Prihvaćanja za ovaj zahtjev:</h4>
                             {requestAcceptances.map((acceptance) => {
-                              const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                              const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-                              const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+                              const items = linkedItemsByAcceptance.get(acceptance._id) || [];
+                              const itemCount = items.length;
                               const allCompleted = itemCount >= acceptance.acceptedCount;
 
                               return (
@@ -1539,15 +1521,15 @@ const PrijevozPage: React.FC = () => {
                                   <AcceptanceItemDetail>
                                     Doveženo: {itemCount} / {acceptance.acceptedCount}
                                   </AcceptanceItemDetail>
-                                  {approvedRegsList.length > 0 && (
+                                  {items.length > 0 && (
                                     <RegistrationTags style={{ marginTop: '0.5rem' }}>
-                                      {approvedRegsList.map((firstPart: string, idx: number) => (
+                                      {items.map((linkedItem, idx: number) => (
                                         <RegistrationTag
                                           key={idx}
                                           $hasApprovedItem={true}
-                                          onClick={() => handleRegistrationClick(acceptance._id, firstPart)}
+                                          onClick={() => handleRegistrationClick(linkedItem.itemId)}
                                         >
-                                          {firstPart}
+                                          {linkedItem.registration}
                                         </RegistrationTag>
                                       ))}
                                     </RegistrationTags>
@@ -1577,9 +1559,8 @@ const PrijevozPage: React.FC = () => {
             <EmptyAcceptances>Nema zahtjeva na čekanju</EmptyAcceptances>
           ) : (
             pendingAcceptances.map((acceptance) => {
-              const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-              const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-              const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+              const items = linkedItemsByAcceptance.get(acceptance._id) || [];
+              const itemCount = items.length;
 
               return (
                 <AcceptanceCard key={acceptance._id}>
@@ -1624,15 +1605,15 @@ const PrijevozPage: React.FC = () => {
                           {acceptance.paymentStatus || 'Nije plaćeno'}
                         </PaymentBadge>
                       </AcceptanceDetail>
-                      {approvedRegsList.length > 0 && (
+                      {items.length > 0 && (
                         <RegistrationTags>
-                          {approvedRegsList.map((firstPart: string, idx: number) => (
+                          {items.map((linkedItem, idx: number) => (
                             <RegistrationTag
                               key={idx}
                               $hasApprovedItem={true}
-                              onClick={() => handleRegistrationClick(acceptance._id, firstPart)}
+                              onClick={() => handleRegistrationClick(linkedItem.itemId)}
                             >
-                              {firstPart}
+                              {linkedItem.registration}
                             </RegistrationTag>
                           ))}
                         </RegistrationTags>
@@ -1815,9 +1796,8 @@ const PrijevozPage: React.FC = () => {
                       <span>{isExpanded ? '▲' : '▼'}</span>
                     </ListaPrijevozaGroupHeader>
                     {isExpanded && group.acceptances.map((acceptance: any) => {
-                      const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                      const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-                      const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+                      const items = linkedItemsByAcceptance.get(acceptance._id) || [];
+                      const itemCount = items.length;
                       const allCompleted = itemCount >= acceptance.acceptedCount;
 
                       return (
@@ -1853,18 +1833,18 @@ const PrijevozPage: React.FC = () => {
                               {acceptance.ukupnaIsplata ? `${acceptance.ukupnaIsplata.toFixed(2)} €` : '0.00 €'}
                             </ListaPrijevozaValue>
                           </ListaPrijevozaDetail>
-                          {approvedRegsList.length > 0 && (
+                          {items.length > 0 && (
                             <ListaPrijevozaDetail>
                               <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
                               <ListaPrijevozaValue>
                                 <RegistrationTags>
-                                  {approvedRegsList.map((fp: string, idx: number) => (
+                                  {items.map((linkedItem, idx: number) => (
                                     <RegistrationTag
                                       key={idx}
                                       $hasApprovedItem={true}
-                                      onClick={() => handleRegistrationClick(acceptance._id, fp)}
+                                      onClick={() => handleRegistrationClick(linkedItem.itemId)}
                                     >
-                                      {fp}
+                                      {linkedItem.registration}
                                     </RegistrationTag>
                                   ))}
                                 </RegistrationTags>
@@ -2027,9 +2007,8 @@ const PrijevozPage: React.FC = () => {
                           <span>{isExpanded ? '▲' : '▼'}</span>
                         </ListaPrijevozaGroupHeader>
                         {isExpanded && group.acceptances.map((acceptance: any) => {
-                          const approvedRegs = approvedRegistrationsByAcceptance.get(acceptance._id);
-                          const approvedRegsList = approvedRegs ? Array.from(approvedRegs) : [];
-                          const itemCount = linkedItemCountByAcceptance.get(acceptance._id) || 0;
+                          const items = linkedItemsByAcceptance.get(acceptance._id) || [];
+                          const itemCount = items.length;
                           const allCompleted = itemCount >= acceptance.acceptedCount;
 
                           return (
@@ -2075,13 +2054,13 @@ const PrijevozPage: React.FC = () => {
                                 <ListaPrijevozaLabel>Registracije:</ListaPrijevozaLabel>
                                 <ListaPrijevozaValue>
                                   <RegistrationTags>
-                                    {approvedRegsList.map((fp: string, idx: number) => (
+                                    {items.map((linkedItem, idx: number) => (
                                       <RegistrationTag
                                         key={idx}
                                         $hasApprovedItem={true}
-                                        onClick={() => handleRegistrationClick(acceptance._id, fp)}
+                                        onClick={() => handleRegistrationClick(linkedItem.itemId)}
                                       >
-                                        {fp}
+                                        {linkedItem.registration}
                                       </RegistrationTag>
                                     ))}
                                   </RegistrationTags>
