@@ -768,6 +768,10 @@ const PrijevozPage: React.FC = () => {
   const [karticaYear, setKarticaYear] = useState<number>(() => new Date().getFullYear());
   const [karticaCode, setKarticaCode] = useState<string>('');
   const [isGeneratingKartica, setIsGeneratingKartica] = useState(false);
+  const [karticaUserId, setKarticaUserId] = useState<string>('');
+  const [karticaUserName, setKarticaUserName] = useState<string>('');
+  const [karticaUsers, setKarticaUsers] = useState<Array<{ _id: string; firstName: string; lastName: string; email: string; company: string }>>([]);
+  const [isLoadingKarticaUsers, setIsLoadingKarticaUsers] = useState(false);
 
   const croatianMonths = [
     'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
@@ -1289,16 +1293,36 @@ const PrijevozPage: React.FC = () => {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\x00-\x7F]/g, '');
 
+  const handleLoadKarticaUsers = async () => {
+    if (isAdmin && karticaUsers.length === 0) {
+      setIsLoadingKarticaUsers(true);
+      try {
+        const users = await apiService.getUsersWithPrijevozAccess();
+        setKarticaUsers(users as any);
+      } catch (error) {
+        console.error('Error loading kartica users:', error);
+      } finally {
+        setIsLoadingKarticaUsers(false);
+      }
+    }
+  };
+
   const handleGenerateKartica = async () => {
     if (!karticaMonthNum || !karticaYear || !karticaCode) {
       alert('Molimo odaberite mjesec i šifru.');
       return;
     }
+    if (isAdmin && !karticaUserId) {
+      alert('Molimo odaberite prijevoznika.');
+      return;
+    }
 
     setIsGeneratingKartica(true);
     try {
-      // Always fetch fresh acceptances for accurate filtering
-      const acceptances = await apiService.getUserAcceptances();
+      // Fetch acceptances: admin fetches for selected user, regular user fetches own
+      const acceptances = isAdmin
+        ? await apiService.getAcceptancesByUserId(karticaUserId)
+        : await apiService.getUserAcceptances();
 
       const selectedYear = karticaYear;
       const selectedMonth = karticaMonthNum;
@@ -1410,7 +1434,8 @@ const PrijevozPage: React.FC = () => {
       y -= 18;
 
       // User info
-      const userName = toAscii(`Prijevoznik: ${user?.firstName || ''} ${user?.lastName || ''}`);
+      const displayName = isAdmin ? karticaUserName : `${user?.firstName || ''} ${user?.lastName || ''}`;
+      const userName = toAscii(`Prijevoznik: ${displayName}`);
       page.drawText(userName, { x: MARGIN, y, size: 11, font });
       y -= 24;
 
@@ -1512,7 +1537,8 @@ const PrijevozPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = toAscii(`Kartica_${monthNames[selectedMonth - 1]}_${selectedYear}_${karticaCode}.pdf`);
+      const fileNameUser = isAdmin ? `_${karticaUserName.replace(/\s+/g, '_')}` : '';
+      link.download = toAscii(`Kartica_${monthNames[selectedMonth - 1]}_${selectedYear}_${karticaCode}${fileNameUser}.pdf`);
       link.click();
       URL.revokeObjectURL(url);
 
@@ -1548,6 +1574,9 @@ const PrijevozPage: React.FC = () => {
               </SmallButton>
               <SmallButton onClick={handleOpenDriverListModal}>
                 Lista prijevoza po prijevozniku
+              </SmallButton>
+              <SmallButton onClick={() => { setIsKarticaModalOpen(true); handleLoadKarticaUsers(); }}>
+                Ispiši karticu
               </SmallButton>
             </ButtonSection>
           ) : (
@@ -2281,6 +2310,32 @@ const PrijevozPage: React.FC = () => {
             <ListaPrijevozaTitle>
               Ispiši Karticu
             </ListaPrijevozaTitle>
+
+            {isAdmin && (
+              <KarticaFormGroup>
+                <KarticaLabel>Prijevoznik:</KarticaLabel>
+                {isLoadingKarticaUsers ? (
+                  <div style={{ padding: '0.5rem', color: '#999' }}>Učitavanje prijevoznika...</div>
+                ) : (
+                  <KarticaSelectDropdown
+                    value={karticaUserId}
+                    onChange={(e) => {
+                      const userId = e.target.value;
+                      setKarticaUserId(userId);
+                      const selectedUser = karticaUsers.find(u => u._id === userId);
+                      setKarticaUserName(selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : '');
+                    }}
+                  >
+                    <option value="">-- Odaberite prijevoznika --</option>
+                    {karticaUsers.map((u) => (
+                      <option key={u._id} value={u._id}>
+                        {u.firstName} {u.lastName}{u.company ? ` (${u.company})` : u.email ? ` (${u.email})` : ''}
+                      </option>
+                    ))}
+                  </KarticaSelectDropdown>
+                )}
+              </KarticaFormGroup>
+            )}
 
             <KarticaFormGroup>
               <KarticaLabel>Mjesec:</KarticaLabel>
