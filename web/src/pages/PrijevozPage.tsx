@@ -1629,9 +1629,6 @@ const PrijevozPage: React.FC = () => {
             </ButtonSection>
           )}
         </ContentHeader>
-        <ContentText>
-          Upravljajte zahtjevima za prijevoz.
-        </ContentText>
       </DashboardContainer>
 
       <RequestsContainer>
