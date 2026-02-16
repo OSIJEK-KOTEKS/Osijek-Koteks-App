@@ -723,6 +723,77 @@ const KarticaMonthRow = styled.div`
   gap: 0.75rem;
 `;
 
+const GroupCard = styled.div`
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+`;
+
+const GroupCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: #f8f9fa;
+
+  &:hover {
+    background: #eef0f2;
+  }
+`;
+
+const GroupName = styled.span`
+  font-weight: 600;
+  font-size: 1rem;
+`;
+
+const GroupMemberCount = styled.span`
+  font-size: 0.85rem;
+  color: #666;
+  margin-left: 0.5rem;
+`;
+
+const GroupDeleteBtn = styled.button`
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const GroupBody = styled.div`
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  max-height: 250px;
+  overflow-y: auto;
+`;
+
+const GroupUserRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const NewGroupRow = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+`;
+
 const KarticaButtonRow = styled.div`
   display: flex;
   gap: 1rem;
@@ -790,6 +861,14 @@ const PrijevozPage: React.FC = () => {
   const [karticaUserName, setKarticaUserName] = useState<string>('');
   const [karticaUsers, setKarticaUsers] = useState<Array<{ _id: string; firstName: string; lastName: string; email: string; company: string }>>([]);
   const [isLoadingKarticaUsers, setIsLoadingKarticaUsers] = useState(false);
+
+  const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [groupUsers, setGroupUsers] = useState<Array<{ _id: string; firstName: string; lastName: string; email: string }>>([]);
+  const [isLoadingGroupUsers, setIsLoadingGroupUsers] = useState(false);
 
   const croatianMonths = [
     'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
@@ -1569,6 +1648,62 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleOpenGroupsModal = async () => {
+    setIsGroupsModalOpen(true);
+    setIsLoadingGroups(true);
+    try {
+      const [fetchedGroups, fetchedUsers] = await Promise.all([
+        apiService.getGroups(),
+        apiService.getUsersWithPrijevozAccess(),
+      ]);
+      setGroups(fetchedGroups);
+      setGroupUsers(fetchedUsers as any);
+    } catch (error) {
+      console.error('Error loading groups:', error);
+    } finally {
+      setIsLoadingGroups(false);
+      setIsLoadingGroupUsers(false);
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    try {
+      await apiService.createGroup(newGroupName.trim());
+      setNewGroupName('');
+      const updatedGroups = await apiService.getGroups();
+      setGroups(updatedGroups);
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Greška pri kreiranju grupe.');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!window.confirm('Jeste li sigurni da želite obrisati ovu grupu?')) return;
+    try {
+      await apiService.deleteGroup(groupId);
+      setGroups(groups.filter(g => g._id !== groupId));
+      if (expandedGroupId === groupId) setExpandedGroupId(null);
+    } catch (error) {
+      alert('Greška pri brisanju grupe.');
+    }
+  };
+
+  const handleToggleGroupUser = async (groupId: string, userId: string) => {
+    const group = groups.find(g => g._id === groupId);
+    if (!group) return;
+    const currentUserIds = group.users.map((u: any) => u._id);
+    const newUserIds = currentUserIds.includes(userId)
+      ? currentUserIds.filter((id: string) => id !== userId)
+      : [...currentUserIds, userId];
+    try {
+      const updatedGroup = await apiService.updateGroupUsers(groupId, newUserIds);
+      setGroups(groups.map(g => g._id === groupId ? updatedGroup : g));
+    } catch (error) {
+      alert('Greška pri ažuriranju članova grupe.');
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -1598,6 +1733,7 @@ const PrijevozPage: React.FC = () => {
                   <NotificationBadge>{pendingAcceptances.length}</NotificationBadge>
                 )}
               </SmallButton>
+              <SmallButton onClick={handleOpenGroupsModal}>Grupe</SmallButton>
               <SmallButton onClick={handleRefresh}>Osvježi</SmallButton>
             </ButtonSection>
           ) : (
@@ -2422,6 +2558,70 @@ const PrijevozPage: React.FC = () => {
               </ModalCloseButton>
             </KarticaButtonRow>
           </KarticaModalContent>
+        </ModalOverlay>
+      )}
+      {/* Grupe modal */}
+      {isGroupsModalOpen && (
+        <ModalOverlay onClick={() => setIsGroupsModalOpen(false)}>
+          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+            <ListaPrijevozaTitle>Grupe</ListaPrijevozaTitle>
+
+            <NewGroupRow>
+              <KarticaSelectDropdown
+                as="input"
+                type="text"
+                placeholder="Naziv nove grupe..."
+                value={newGroupName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewGroupName(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleCreateGroup(); }}
+              />
+              <SmallButton onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+                Dodaj
+              </SmallButton>
+            </NewGroupRow>
+
+            {isLoadingGroups ? (
+              <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
+            ) : groups.length === 0 ? (
+              <ListaPrijevozaEmpty>Nema grupa</ListaPrijevozaEmpty>
+            ) : (
+              groups.map((group) => (
+                <GroupCard key={group._id}>
+                  <GroupCardHeader onClick={() => setExpandedGroupId(expandedGroupId === group._id ? null : group._id)}>
+                    <div>
+                      <GroupName>{group.name}</GroupName>
+                      <GroupMemberCount>({group.users?.length || 0} članova)</GroupMemberCount>
+                    </div>
+                    <GroupDeleteBtn onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group._id); }}>
+                      Obriši
+                    </GroupDeleteBtn>
+                  </GroupCardHeader>
+                  {expandedGroupId === group._id && (
+                    <GroupBody>
+                      {groupUsers.length === 0 ? (
+                        <div style={{ color: '#999', fontStyle: 'italic' }}>Nema dostupnih korisnika</div>
+                      ) : (
+                        groupUsers.map((u) => (
+                          <GroupUserRow key={u._id}>
+                            <input
+                              type="checkbox"
+                              checked={group.users?.some((gu: any) => gu._id === u._id) || false}
+                              onChange={() => handleToggleGroupUser(group._id, u._id)}
+                            />
+                            {u.firstName} {u.lastName} ({u.email})
+                          </GroupUserRow>
+                        ))
+                      )}
+                    </GroupBody>
+                  )}
+                </GroupCard>
+              ))
+            )}
+
+            <ModalCloseButton onClick={() => setIsGroupsModalOpen(false)}>
+              Zatvori
+            </ModalCloseButton>
+          </ListaPrijevozaModalContent>
         </ModalOverlay>
       )}
     </S.PageContainer>

@@ -772,6 +772,57 @@ export const apiService = {
       throw error;
     }
   },
+
+  // Groups API (admin only)
+  getGroups: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/groups');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      throw error;
+    }
+  },
+
+  createGroup: async (name: string): Promise<any> => {
+    try {
+      const response = await api.post('/api/groups', { name });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating group:', error);
+      throw error;
+    }
+  },
+
+  updateGroup: async (id: string, name: string): Promise<any> => {
+    try {
+      const response = await api.put(`/api/groups/${id}`, { name });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating group:', error);
+      throw error;
+    }
+  },
+
+  deleteGroup: async (id: string): Promise<any> => {
+    try {
+      const response = await api.delete(`/api/groups/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      throw error;
+    }
+  },
+
+  updateGroupUsers: async (id: string, userIds: string[]): Promise<any> => {
+    try {
+      const response = await api.patch(`/api/groups/${id}/users`, { userIds });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating group users:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;
