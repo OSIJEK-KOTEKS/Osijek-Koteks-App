@@ -1298,11 +1298,8 @@ const PrijevozPage: React.FC = () => {
 
     setIsGeneratingKartica(true);
     try {
-      // Fetch user acceptances if not already loaded
-      let acceptances = userAcceptances;
-      if (acceptances.length === 0) {
-        acceptances = await apiService.getUserAcceptances();
-      }
+      // Always fetch fresh acceptances for accurate filtering
+      const acceptances = await apiService.getUserAcceptances();
 
       // Parse selected month
       const [yearStr, monthStr] = karticaMonth.split('-');
@@ -1310,11 +1307,15 @@ const PrijevozPage: React.FC = () => {
       const selectedMonth = parseInt(monthStr);
 
       // Filter acceptances by month and code
+      // prijevozNaDan is stored as "dd/MM/yyyy" format (e.g. "13/02/2026")
       const filtered = acceptances.filter((acc: any) => {
         const dateStr = acc.requestId?.prijevozNaDan;
         if (!dateStr) return false;
-        const date = new Date(dateStr);
-        if (date.getFullYear() !== selectedYear || date.getMonth() + 1 !== selectedMonth) return false;
+        const dateParts = dateStr.split('/');
+        if (dateParts.length !== 3) return false;
+        const dateMonth = parseInt(dateParts[1]);
+        const dateYear = parseInt(dateParts[2]);
+        if (dateYear !== selectedYear || dateMonth !== selectedMonth) return false;
         if (acc.requestId?.gradiliste !== karticaCode) return false;
         if (acc.status !== 'approved') return false;
         return true;
@@ -1402,17 +1403,21 @@ const PrijevozPage: React.FC = () => {
       let grandTotalPayout = 0;
       let totalNeto = 0;
 
-      // Sort acceptances by date
+      // Sort acceptances by date (prijevozNaDan is "dd/MM/yyyy")
+      const parseDDMMYYYY = (s: string) => {
+        const parts = s.split('/');
+        if (parts.length !== 3) return 0;
+        return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+      };
       const sorted = [...acceptancesWithItems].sort((a, b) => {
-        const dateA = new Date(a.requestId?.prijevozNaDan || '').getTime();
-        const dateB = new Date(b.requestId?.prijevozNaDan || '').getTime();
+        const dateA = parseDDMMYYYY(a.requestId?.prijevozNaDan || '');
+        const dateB = parseDDMMYYYY(b.requestId?.prijevozNaDan || '');
         return dateA - dateB;
       });
 
       for (const acc of sorted) {
-        const dateStr = acc.requestId?.prijevozNaDan
-          ? new Date(acc.requestId.prijevozNaDan).toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-          : '-';
+        // prijevozNaDan is already in "dd/MM/yyyy" format - use directly
+        const dateStr = acc.requestId?.prijevozNaDan || '-';
         const kamenolom = acc.requestId?.kamenolom || '-';
         const isplataPoT = acc.requestId?.isplataPoT || 0;
 
