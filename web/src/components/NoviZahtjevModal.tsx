@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -154,34 +154,60 @@ const ToggleOption = styled.button<{ $active: boolean }>`
   }
 `;
 
-const UserSelectionContainer = styled.div`
-  max-height: 200px;
+const SelectionContainer = styled.div`
+  max-height: 280px;
   overflow-y: auto;
   border: 1px solid ${({ theme }) => theme.colors.gray};
   border-radius: 4px;
   padding: 0.5rem;
 `;
 
-const UserCheckboxItem = styled.label`
+const SectionLabel = styled.div`
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.5rem 0.25rem;
+  margin-top: 0.25rem;
+
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const CheckboxItem = styled.label<{ $disabled?: boolean }>`
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem;
-  cursor: pointer;
+  cursor: ${({ $disabled }) => ($disabled ? 'default' : 'pointer')};
   border-radius: 4px;
+  opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
 
   &:hover {
-    background-color: ${({ theme }) => theme.colors.background};
+    background-color: ${({ theme, $disabled }) => ($disabled ? 'transparent' : theme.colors.background)};
   }
 `;
 
 const Checkbox = styled.input`
   cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
 `;
 
-const UserName = styled.span`
+const ItemName = styled.span`
   font-size: 1rem;
   color: ${({ theme }) => theme.colors.text};
+`;
+
+const GroupTag = styled.span`
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+  margin-left: 0.25rem;
 `;
 
 interface NoviZahtjevModalProps {
@@ -210,6 +236,12 @@ interface PrijevozUser {
   lastName: string;
 }
 
+interface Group {
+  _id: string;
+  name: string;
+  users: PrijevozUser[];
+}
+
 const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   isOpen,
   onClose,
@@ -224,29 +256,69 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   const [error, setError] = useState('');
   const [assignMode, setAssignMode] = useState<'all' | 'specific'>('all');
   const [prijevozUsers, setPrijevozUsers] = useState<PrijevozUser[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
     if (isOpen && assignMode === 'specific' && prijevozUsers.length === 0) {
-      fetchPrijevozUsers();
+      fetchSelectionData();
     }
   }, [isOpen, assignMode]);
 
-  const fetchPrijevozUsers = async () => {
-    setIsLoadingUsers(true);
+  const fetchSelectionData = async () => {
+    setIsLoadingData(true);
     try {
-      const users = await apiService.getUsersWithPrijevozAccess();
+      const [users, groupsData] = await Promise.all([
+        apiService.getUsersWithPrijevozAccess(),
+        apiService.getGroups(),
+      ]);
       setPrijevozUsers(users);
+      setGroups(groupsData);
     } catch (error: any) {
-      console.error('Error fetching prijevoz users:', error);
-      setError(`Greška pri učitavanju korisnika: ${error?.response?.data?.message || error.message}`);
+      console.error('Error fetching selection data:', error);
+      setError(`Greška pri učitavanju podataka: ${error?.response?.data?.message || error.message}`);
     } finally {
-      setIsLoadingUsers(false);
+      setIsLoadingData(false);
     }
   };
 
+  // Compute which user IDs are covered by selected groups
+  const usersInSelectedGroups = useMemo(() => {
+    const userIdSet = new Set<string>();
+    for (const groupId of selectedGroupIds) {
+      const group = groups.find(g => g._id === groupId);
+      if (group) {
+        for (const user of group.users) {
+          userIdSet.add(typeof user === 'string' ? user : user._id);
+        }
+      }
+    }
+    return userIdSet;
+  }, [selectedGroupIds, groups]);
+
+  const handleGroupToggle = (groupId: string) => {
+    setSelectedGroupIds(prev => {
+      const newSelection = prev.includes(groupId)
+        ? prev.filter(id => id !== groupId)
+        : [...prev, groupId];
+
+      // When a group is selected, remove its users from individual selection
+      const group = groups.find(g => g._id === groupId);
+      if (group && !prev.includes(groupId)) {
+        const groupUserIds = group.users.map(u => typeof u === 'string' ? u : u._id);
+        setSelectedUserIds(prevUsers => prevUsers.filter(uid => !groupUserIds.includes(uid)));
+      }
+
+      return newSelection;
+    });
+  };
+
   const handleUserToggle = (userId: string) => {
+    // Don't allow toggling users that are in selected groups
+    if (usersInSelectedGroups.has(userId)) return;
+
     setSelectedUserIds(prev => {
       if (prev.includes(userId)) {
         return prev.filter(id => id !== userId);
@@ -254,6 +326,28 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         return [...prev, userId];
       }
     });
+  };
+
+  // Resolve final list of unique user IDs from selected groups + individual users
+  const resolveAssignedUserIds = (): string[] => {
+    const allUserIds = new Set<string>();
+
+    // Add users from selected groups
+    for (const groupId of selectedGroupIds) {
+      const group = groups.find(g => g._id === groupId);
+      if (group) {
+        for (const user of group.users) {
+          allUserIds.add(typeof user === 'string' ? user : user._id);
+        }
+      }
+    }
+
+    // Add individually selected users
+    for (const userId of selectedUserIds) {
+      allUserIds.add(userId);
+    }
+
+    return Array.from(allUserIds);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -287,9 +381,12 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       return;
     }
 
-    if (assignMode === 'specific' && selectedUserIds.length === 0) {
-      setError('Molimo odaberite barem jednog prijevoznika');
-      return;
+    if (assignMode === 'specific') {
+      const resolvedIds = resolveAssignedUserIds();
+      if (resolvedIds.length === 0) {
+        setError('Molimo odaberite barem jednog prijevoznika ili grupu');
+        return;
+      }
     }
 
     const formattedDate = format(prijevozNaDan, 'dd/MM/yyyy');
@@ -302,7 +399,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         brojKamiona: brojKamionaNum,
         prijevozNaDan: formattedDate,
         isplataPoT: isplataPoTNum,
-        assignedTo: assignMode === 'all' ? 'All' : selectedUserIds,
+        assignedTo: assignMode === 'all' ? 'All' : resolveAssignedUserIds(),
       });
       resetForm();
       onClose();
@@ -322,6 +419,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     setIsplataPoT('');
     setAssignMode('all');
     setSelectedUserIds([]);
+    setSelectedGroupIds([]);
     setError('');
   };
 
@@ -428,7 +526,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                 onClick={() => {
                   setAssignMode('specific');
                   if (prijevozUsers.length === 0) {
-                    fetchPrijevozUsers();
+                    fetchSelectionData();
                   }
                 }}
               >
@@ -439,29 +537,63 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
 
           {assignMode === 'specific' && (
             <FormGroup>
-              <Label>Odaberite prijevoznike</Label>
-              <UserSelectionContainer>
-                {isLoadingUsers ? (
+              <Label>Odaberite grupe i prijevoznike</Label>
+              <SelectionContainer>
+                {isLoadingData ? (
                   <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
-                    Učitavanje korisnika...
-                  </div>
-                ) : prijevozUsers.length === 0 ? (
-                  <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
-                    Nema dostupnih korisnika
+                    Učitavanje...
                   </div>
                 ) : (
-                  prijevozUsers.map(user => (
-                    <UserCheckboxItem key={user._id}>
-                      <Checkbox
-                        type="checkbox"
-                        checked={selectedUserIds.includes(user._id)}
-                        onChange={() => handleUserToggle(user._id)}
-                      />
-                      <UserName>{`${user.firstName} ${user.lastName}`}</UserName>
-                    </UserCheckboxItem>
-                  ))
+                  <>
+                    {groups.length > 0 && (
+                      <>
+                        <SectionLabel>Grupe</SectionLabel>
+                        {groups.map(group => {
+                          const memberCount = group.users ? group.users.length : 0;
+                          return (
+                            <CheckboxItem key={`group-${group._id}`}>
+                              <Checkbox
+                                type="checkbox"
+                                checked={selectedGroupIds.includes(group._id)}
+                                onChange={() => handleGroupToggle(group._id)}
+                              />
+                              <ItemName>
+                                {group.name}
+                                <GroupTag>({memberCount} {memberCount === 1 ? 'član' : 'članova'})</GroupTag>
+                              </ItemName>
+                            </CheckboxItem>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    <SectionLabel>Prijevoznici</SectionLabel>
+                    {prijevozUsers.length === 0 ? (
+                      <div style={{ padding: '0.5rem', textAlign: 'center', color: '#666' }}>
+                        Nema dostupnih korisnika
+                      </div>
+                    ) : (
+                      prijevozUsers.map(user => {
+                        const isInGroup = usersInSelectedGroups.has(user._id);
+                        return (
+                          <CheckboxItem key={`user-${user._id}`} $disabled={isInGroup}>
+                            <Checkbox
+                              type="checkbox"
+                              checked={selectedUserIds.includes(user._id) || isInGroup}
+                              disabled={isInGroup}
+                              onChange={() => handleUserToggle(user._id)}
+                            />
+                            <ItemName>
+                              {`${user.firstName} ${user.lastName}`}
+                              {isInGroup && <GroupTag>(u grupi)</GroupTag>}
+                            </ItemName>
+                          </CheckboxItem>
+                        );
+                      })
+                    )}
+                  </>
                 )}
-              </UserSelectionContainer>
+              </SelectionContainer>
             </FormGroup>
           )}
 
