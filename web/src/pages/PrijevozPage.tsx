@@ -10,7 +10,8 @@ import EditZahtjevModal from '../components/EditZahtjevModal';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import ImageViewerModal from '../components/ImageViewerModal';
 import { apiService } from '../utils/api';
-import { getCodeDescription } from '../utils/codeMapping';
+import { getCodeDescription, codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Item } from '../types';
 
 const Header = styled.div`
@@ -669,6 +670,52 @@ const ListaPrijevozaEmpty = styled.div`
   font-style: italic;
 `;
 
+const KarticaModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 95%;
+  max-width: 500px;
+`;
+
+const KarticaFormGroup = styled.div`
+  margin-bottom: 1.25rem;
+`;
+
+const KarticaLabel = styled.label`
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const KarticaSelect = styled.input`
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background-color: white;
+  box-sizing: border-box;
+`;
+
+const KarticaSelectDropdown = styled.select`
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background-color: white;
+  box-sizing: border-box;
+`;
+
+const KarticaButtonRow = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  align-items: center;
+`;
+
 interface TransportRequest {
   _id: string;
   kamenolom: string;
@@ -720,6 +767,13 @@ const PrijevozPage: React.FC = () => {
   const [driverAcceptances, setDriverAcceptances] = useState<any[]>([]);
   const [isLoadingDriverAcceptances, setIsLoadingDriverAcceptances] = useState(false);
   const [expandedDriverDates, setExpandedDriverDates] = useState<Set<string>>(new Set());
+  const [isKarticaModalOpen, setIsKarticaModalOpen] = useState(false);
+  const [karticaMonth, setKarticaMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [karticaCode, setKarticaCode] = useState<string>('');
+  const [isGeneratingKartica, setIsGeneratingKartica] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -1230,6 +1284,209 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const toAscii = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\x00-\x7F]/g, '');
+
+  const handleGenerateKartica = async () => {
+    if (!karticaMonth || !karticaCode) {
+      alert('Molimo odaberite mjesec i šifru.');
+      return;
+    }
+
+    setIsGeneratingKartica(true);
+    try {
+      // Fetch user acceptances if not already loaded
+      let acceptances = userAcceptances;
+      if (acceptances.length === 0) {
+        acceptances = await apiService.getUserAcceptances();
+      }
+
+      // Parse selected month
+      const [yearStr, monthStr] = karticaMonth.split('-');
+      const selectedYear = parseInt(yearStr);
+      const selectedMonth = parseInt(monthStr);
+
+      // Filter acceptances by month and code
+      const filtered = acceptances.filter((acc: any) => {
+        const dateStr = acc.requestId?.prijevozNaDan;
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        if (date.getFullYear() !== selectedYear || date.getMonth() + 1 !== selectedMonth) return false;
+        if (acc.requestId?.gradiliste !== karticaCode) return false;
+        if (acc.status !== 'approved') return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        alert('Nema prijevoza za odabrani mjesec i šifru.');
+        setIsGeneratingKartica(false);
+        return;
+      }
+
+      // Fetch linked items for each filtered acceptance
+      const acceptancesWithItems = await Promise.all(
+        filtered.map(async (acc: any) => {
+          try {
+            const { linkedItems } = await apiService.getApprovedRegistrationsForAcceptance(acc._id);
+            return { ...acc, linkedItems };
+          } catch {
+            return { ...acc, linkedItems: [] };
+          }
+        })
+      );
+
+      // Generate PDF
+      const PAGE_WIDTH = 595.28;
+      const PAGE_HEIGHT = 841.89;
+      const MARGIN = 40;
+
+      const pdfDoc = await PDFDocument.create();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      let y = PAGE_HEIGHT - MARGIN;
+
+      const addNewPage = () => {
+        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        y = PAGE_HEIGHT - MARGIN;
+      };
+
+      const checkPageBreak = (needed: number) => {
+        if (y < MARGIN + needed) {
+          addNewPage();
+        }
+      };
+
+      const monthNames = [
+        'Sijecanj', 'Veljaca', 'Ozujak', 'Travanj', 'Svibanj', 'Lipanj',
+        'Srpanj', 'Kolovoz', 'Rujan', 'Listopad', 'Studeni', 'Prosinac'
+      ];
+
+      // Title
+      const title = toAscii(`Kartica prijevoza - ${monthNames[selectedMonth - 1]} ${selectedYear}`);
+      page.drawText(title, { x: MARGIN, y, size: 16, font: boldFont });
+      y -= 24;
+
+      // Code info
+      const codeInfo = toAscii(`Sifra: ${getFormattedCode(karticaCode)}`);
+      page.drawText(codeInfo, { x: MARGIN, y, size: 11, font });
+      y -= 18;
+
+      // User info
+      const userName = toAscii(`Prijevoznik: ${user?.firstName || ''} ${user?.lastName || ''}`);
+      page.drawText(userName, { x: MARGIN, y, size: 11, font });
+      y -= 24;
+
+      // Table header
+      const colX = [MARGIN, MARGIN + 80, MARGIN + 180, MARGIN + 280, MARGIN + 370, MARGIN + 445];
+      const headers = ['Datum', 'Kamenolom', 'Registracija', 'Neto (kg)', 'Isplata/t', 'Ukupno'];
+
+      // Draw header background
+      page.drawRectangle({
+        x: MARGIN - 2,
+        y: y - 4,
+        width: PAGE_WIDTH - 2 * MARGIN + 4,
+        height: 16,
+        color: { type: 'RGB', red: 0.9, green: 0.9, blue: 0.9 } as any,
+      });
+
+      headers.forEach((h, i) => {
+        page.drawText(toAscii(h), { x: colX[i], y, size: 9, font: boldFont });
+      });
+      y -= 20;
+
+      let grandTotalPayout = 0;
+      let totalNeto = 0;
+
+      // Sort acceptances by date
+      const sorted = [...acceptancesWithItems].sort((a, b) => {
+        const dateA = new Date(a.requestId?.prijevozNaDan || '').getTime();
+        const dateB = new Date(b.requestId?.prijevozNaDan || '').getTime();
+        return dateA - dateB;
+      });
+
+      for (const acc of sorted) {
+        const dateStr = acc.requestId?.prijevozNaDan
+          ? new Date(acc.requestId.prijevozNaDan).toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : '-';
+        const kamenolom = acc.requestId?.kamenolom || '-';
+        const isplataPoT = acc.requestId?.isplataPoT || 0;
+
+        if (acc.linkedItems && acc.linkedItems.length > 0) {
+          for (const linkedItem of acc.linkedItems) {
+            checkPageBreak(16);
+
+            // Fetch item details to get neto weight
+            let netoKg = 0;
+            try {
+              const itemDetails = await apiService.getTransportItemById(linkedItem.itemId);
+              netoKg = itemDetails.neto || 0;
+            } catch {
+              // skip
+            }
+
+            const itemPayout = isplataPoT * (netoKg / 1000);
+            grandTotalPayout += itemPayout;
+            totalNeto += netoKg;
+
+            page.drawText(toAscii(dateStr), { x: colX[0], y, size: 8, font });
+            page.drawText(toAscii(kamenolom), { x: colX[1], y, size: 8, font });
+            page.drawText(toAscii(linkedItem.registration || '-'), { x: colX[2], y, size: 8, font });
+            page.drawText(toAscii(netoKg.toString()), { x: colX[3], y, size: 8, font });
+            page.drawText(toAscii(`${isplataPoT} EUR`), { x: colX[4], y, size: 8, font });
+            page.drawText(toAscii(`${itemPayout.toFixed(2)} EUR`), { x: colX[5], y, size: 8, font });
+            y -= 14;
+          }
+        } else {
+          checkPageBreak(16);
+          page.drawText(toAscii(dateStr), { x: colX[0], y, size: 8, font });
+          page.drawText(toAscii(kamenolom), { x: colX[1], y, size: 8, font });
+          page.drawText(toAscii('-'), { x: colX[2], y, size: 8, font });
+          page.drawText(toAscii('0'), { x: colX[3], y, size: 8, font });
+          page.drawText(toAscii(`${isplataPoT} EUR`), { x: colX[4], y, size: 8, font });
+          page.drawText(toAscii('0.00 EUR'), { x: colX[5], y, size: 8, font });
+          y -= 14;
+        }
+      }
+
+      // Summary line
+      checkPageBreak(40);
+      y -= 10;
+
+      // Draw separator line
+      page.drawLine({
+        start: { x: MARGIN, y: y + 6 },
+        end: { x: PAGE_WIDTH - MARGIN, y: y + 6 },
+        thickness: 1,
+      });
+
+      page.drawText(toAscii('UKUPNO:'), { x: MARGIN, y, size: 10, font: boldFont });
+      page.drawText(toAscii(`${totalNeto} kg`), { x: colX[3], y, size: 10, font: boldFont });
+      page.drawText(toAscii(`${grandTotalPayout.toFixed(2)} EUR`), { x: colX[5], y, size: 10, font: boldFont });
+
+      // Save and download
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = toAscii(`Kartica_${monthNames[selectedMonth - 1]}_${selectedYear}_${karticaCode}.pdf`);
+      link.click();
+      URL.revokeObjectURL(url);
+
+      setIsKarticaModalOpen(false);
+    } catch (error) {
+      console.error('Error generating kartica:', error);
+      alert('Greška pri generiranju kartice.');
+    } finally {
+      setIsGeneratingKartica(false);
+    }
+  };
+
   return (
     <S.PageContainer>
       <Header>
@@ -1258,6 +1515,7 @@ const PrijevozPage: React.FC = () => {
           ) : (
             <ButtonSection>
               <SmallButton onClick={handleOpenListaPrijevoza}>Lista prijevoza</SmallButton>
+              <SmallButton onClick={() => setIsKarticaModalOpen(true)}>Ispiši Karticu</SmallButton>
             </ButtonSection>
           )}
         </ContentHeader>
@@ -1976,6 +2234,54 @@ const PrijevozPage: React.FC = () => {
               Zatvori
             </ModalCloseButton>
           </ListaPrijevozaModalContent>
+        </ModalOverlay>
+      )}
+      {/* Ispiši Karticu modal */}
+      {isKarticaModalOpen && (
+        <ModalOverlay onClick={() => setIsKarticaModalOpen(false)}>
+          <KarticaModalContent onClick={(e) => e.stopPropagation()}>
+            <ListaPrijevozaTitle>
+              Ispiši Karticu
+            </ListaPrijevozaTitle>
+
+            <KarticaFormGroup>
+              <KarticaLabel>Mjesec:</KarticaLabel>
+              <KarticaSelect
+                type="month"
+                value={karticaMonth}
+                onChange={(e) => setKarticaMonth(e.target.value)}
+              />
+            </KarticaFormGroup>
+
+            <KarticaFormGroup>
+              <KarticaLabel>Šifra (gradilište):</KarticaLabel>
+              <KarticaSelectDropdown
+                value={karticaCode}
+                onChange={(e) => setKarticaCode(e.target.value)}
+              >
+                <option value="">-- Odaberite šifru --</option>
+                {Object.entries(codeToTextMapping)
+                  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+                  .map(([code, description]) => (
+                    <option key={code} value={code}>
+                      {code} - {description}
+                    </option>
+                  ))}
+              </KarticaSelectDropdown>
+            </KarticaFormGroup>
+
+            <KarticaButtonRow>
+              <SmallButton
+                onClick={handleGenerateKartica}
+                disabled={isGeneratingKartica || !karticaMonth || !karticaCode}
+              >
+                {isGeneratingKartica ? 'Generiranje...' : 'Generiraj PDF'}
+              </SmallButton>
+              <ModalCloseButton onClick={() => setIsKarticaModalOpen(false)}>
+                Zatvori
+              </ModalCloseButton>
+            </KarticaButtonRow>
+          </KarticaModalContent>
         </ModalOverlay>
       )}
     </S.PageContainer>
