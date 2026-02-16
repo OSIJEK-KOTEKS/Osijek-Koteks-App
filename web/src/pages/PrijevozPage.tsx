@@ -1367,6 +1367,41 @@ const PrijevozPage: React.FC = () => {
         'Srpanj', 'Kolovoz', 'Rujan', 'Listopad', 'Studeni', 'Prosinac'
       ];
 
+      // --- Company header with logo ---
+      try {
+        const logoResponse = await fetch('/images/logo.png');
+        const logoBytes = await logoResponse.arrayBuffer();
+        const logoImage = await pdfDoc.embedPng(logoBytes);
+        const logoHeight = 50;
+        const logoWidth = logoImage.width * (logoHeight / logoImage.height);
+        page.drawImage(logoImage, {
+          x: MARGIN,
+          y: y - logoHeight + 12,
+          width: logoWidth,
+          height: logoHeight,
+        });
+
+        // Company info next to logo
+        const infoX = MARGIN + logoWidth + 15;
+        page.drawText('Osijek-Koteks d.d.', { x: infoX, y, size: 11, font: boldFont });
+        page.drawText(toAscii('Samacka 11, 31000 Osijek, Hrvatska'), { x: infoX, y: y - 14, size: 9, font });
+        page.drawText('Tel: +385 31 227 700 | Fax: +385 31 227 777', { x: infoX, y: y - 26, size: 9, font });
+        page.drawText('Email: info@osijek-koteks.hr | Web: www.osijek-koteks.hr', { x: infoX, y: y - 38, size: 9, font });
+      } catch {
+        // If logo fails, just print company name
+        page.drawText('Osijek-Koteks d.d.', { x: MARGIN, y, size: 12, font: boldFont });
+        page.drawText(toAscii('Samacka 11, 31000 Osijek, Hrvatska'), { x: MARGIN, y: y - 14, size: 9, font });
+      }
+      y -= 60;
+
+      // Separator line
+      page.drawLine({
+        start: { x: MARGIN, y: y + 4 },
+        end: { x: PAGE_WIDTH - MARGIN, y: y + 4 },
+        thickness: 1.5,
+      });
+      y -= 16;
+
       // Title
       const title = toAscii(`Kartica prijevoza - ${monthNames[selectedMonth - 1]} ${selectedYear}`);
       page.drawText(title, { x: MARGIN, y, size: 16, font: boldFont });
@@ -1468,6 +1503,7 @@ const PrijevozPage: React.FC = () => {
         end: { x: PAGE_WIDTH - MARGIN, y: y + 6 },
         thickness: 1,
       });
+      y -= 8;
 
       page.drawText(toAscii('UKUPNO:'), { x: MARGIN, y, size: 10, font: boldFont });
       page.drawText(toAscii(`${totalNeto} kg`), { x: colX[3], y, size: 10, font: boldFont });
