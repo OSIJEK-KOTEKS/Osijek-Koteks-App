@@ -740,7 +740,7 @@ const PrijevozPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [assignedUsers, setAssignedUsers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([]);
   const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
-  const [acceptCount, setAcceptCount] = useState<number>(1);
+  const [acceptCount, setAcceptCount] = useState<number | ''>(1);
   const [pendingAcceptances, setPendingAcceptances] = useState<any[]>([]);
   const [isLoadingAcceptances, setIsLoadingAcceptances] = useState(false);
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
@@ -1048,10 +1048,10 @@ const PrijevozPage: React.FC = () => {
   };
 
   const handleAcceptSubmit = async () => {
-    if (!acceptingRequest || acceptCount < 1) return;
+    if (!acceptingRequest || !acceptCount || acceptCount < 1) return;
 
     try {
-      await apiService.acceptTransportRequest(acceptingRequest._id, acceptCount);
+      await apiService.acceptTransportRequest(acceptingRequest._id, acceptCount as number);
 
       alert(
         `✅ Zahtjev uspješno poslan!\n\n` +
@@ -1578,11 +1578,13 @@ const PrijevozPage: React.FC = () => {
               <SmallButton onClick={() => { setIsKarticaModalOpen(true); handleLoadKarticaUsers(); }}>
                 Ispiši karticu
               </SmallButton>
+              <SmallButton onClick={fetchRequests}>Osvježi</SmallButton>
             </ButtonSection>
           ) : (
             <ButtonSection>
               <SmallButton onClick={handleOpenListaPrijevoza}>Lista prijevoza</SmallButton>
               <SmallButton onClick={() => setIsKarticaModalOpen(true)}>Ispiši karticu</SmallButton>
+              <SmallButton onClick={fetchRequests}>Osvježi</SmallButton>
             </ButtonSection>
           )}
         </ContentHeader>
@@ -1951,9 +1953,19 @@ const PrijevozPage: React.FC = () => {
               max={acceptingRequest.brojKamiona}
               value={acceptCount}
               onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
+                const raw = e.target.value;
+                if (raw === '') {
+                  setAcceptCount('');
+                  return;
+                }
+                const val = parseInt(raw, 10);
                 if (!isNaN(val) && val >= 1 && val <= acceptingRequest.brojKamiona) {
                   setAcceptCount(val);
+                }
+              }}
+              onBlur={() => {
+                if (acceptCount === '' || acceptCount < 1) {
+                  setAcceptCount(1);
                 }
               }}
               style={{
@@ -1973,9 +1985,9 @@ const PrijevozPage: React.FC = () => {
               <ModalButton
                 variant="primary"
                 onClick={handleAcceptSubmit}
-                disabled={acceptCount < 1}
+                disabled={!acceptCount || acceptCount < 1}
               >
-                Prihvati ({acceptCount})
+                Prihvati ({acceptCount || 0})
               </ModalButton>
             </ModalActions>
           </ModalContent>
