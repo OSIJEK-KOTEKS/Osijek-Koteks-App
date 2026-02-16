@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format } from 'date-fns';
 import { codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
+import { apiService } from '../utils/api';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -130,6 +131,59 @@ const DatePickerWrapper = styled.div`
   }
 `;
 
+const ToggleRow = styled.div`
+  display: flex;
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const ToggleOption = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : 'white')};
+  color: ${({ $active }) => ($active ? 'white' : '#333')};
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const UserSelectionContainer = styled.div`
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid ${({ theme }) => theme.colors.gray};
+  border-radius: 4px;
+  padding: 0.5rem;
+`;
+
+const UserCheckboxItem = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.background};
+  }
+`;
+
+const Checkbox = styled.input`
+  cursor: pointer;
+`;
+
+const UserName = styled.span`
+  font-size: 1rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
 interface NoviZahtjevModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -139,6 +193,7 @@ interface NoviZahtjevModalProps {
     brojKamiona: number;
     prijevozNaDan: string;
     isplataPoT: number;
+    assignedTo: 'All' | string[];
   }) => Promise<void>;
 }
 
@@ -148,6 +203,12 @@ const KAMENOLOMI = [
   'MOLARIS',
   'PRODORINA',
 ];
+
+interface PrijevozUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+}
 
 const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   isOpen,
@@ -161,12 +222,44 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   const [isplataPoT, setIsplataPoT] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [assignMode, setAssignMode] = useState<'all' | 'specific'>('all');
+  const [prijevozUsers, setPrijevozUsers] = useState<PrijevozUser[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && assignMode === 'specific' && prijevozUsers.length === 0) {
+      fetchPrijevozUsers();
+    }
+  }, [isOpen, assignMode]);
+
+  const fetchPrijevozUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const users = await apiService.getUsersWithPrijevozAccess();
+      setPrijevozUsers(users);
+    } catch (error: any) {
+      console.error('Error fetching prijevoz users:', error);
+      setError(`Greška pri učitavanju korisnika: ${error?.response?.data?.message || error.message}`);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const handleUserToggle = (userId: string) => {
+    setSelectedUserIds(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (!kamenolom) {
       setError('Molimo odaberite kamenolom');
       return;
@@ -194,7 +287,11 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       return;
     }
 
-    // Format date to dd/mm/yyyy
+    if (assignMode === 'specific' && selectedUserIds.length === 0) {
+      setError('Molimo odaberite barem jednog prijevoznika');
+      return;
+    }
+
     const formattedDate = format(prijevozNaDan, 'dd/MM/yyyy');
 
     setIsLoading(true);
@@ -205,13 +302,9 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         brojKamiona: brojKamionaNum,
         prijevozNaDan: formattedDate,
         isplataPoT: isplataPoTNum,
+        assignedTo: assignMode === 'all' ? 'All' : selectedUserIds,
       });
-      // Reset form  
-      setKamenolom('');
-      setGradiliste('');
-      setBrojKamiona('');
-      setPrijevozNaDan(null);
-      setIsplataPoT('');
+      resetForm();
       onClose();
     } catch (err) {
       setError('Greška pri spremanju zahtjeva');
@@ -221,14 +314,20 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     }
   };
 
+  const resetForm = () => {
+    setKamenolom('');
+    setGradiliste('');
+    setBrojKamiona('');
+    setPrijevozNaDan(null);
+    setIsplataPoT('');
+    setAssignMode('all');
+    setSelectedUserIds([]);
+    setError('');
+  };
+
   const handleClose = () => {
     if (!isLoading) {
-      setKamenolom('');
-      setGradiliste('');
-      setBrojKamiona('');
-      setPrijevozNaDan(null);
-      setIsplataPoT('');
-      setError('');
+      resetForm();
       onClose();
     }
   };
@@ -312,6 +411,59 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
               required
             />
           </FormGroup>
+
+          <FormGroup>
+            <Label>Dodjeli prijevoznicima</Label>
+            <ToggleRow>
+              <ToggleOption
+                type="button"
+                $active={assignMode === 'all'}
+                onClick={() => setAssignMode('all')}
+              >
+                Svi prijevoznici
+              </ToggleOption>
+              <ToggleOption
+                type="button"
+                $active={assignMode === 'specific'}
+                onClick={() => {
+                  setAssignMode('specific');
+                  if (prijevozUsers.length === 0) {
+                    fetchPrijevozUsers();
+                  }
+                }}
+              >
+                Određeni prijevoznici
+              </ToggleOption>
+            </ToggleRow>
+          </FormGroup>
+
+          {assignMode === 'specific' && (
+            <FormGroup>
+              <Label>Odaberite prijevoznike</Label>
+              <UserSelectionContainer>
+                {isLoadingUsers ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+                    Učitavanje korisnika...
+                  </div>
+                ) : prijevozUsers.length === 0 ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+                    Nema dostupnih korisnika
+                  </div>
+                ) : (
+                  prijevozUsers.map(user => (
+                    <UserCheckboxItem key={user._id}>
+                      <Checkbox
+                        type="checkbox"
+                        checked={selectedUserIds.includes(user._id)}
+                        onChange={() => handleUserToggle(user._id)}
+                      />
+                      <UserName>{`${user.firstName} ${user.lastName}`}</UserName>
+                    </UserCheckboxItem>
+                  ))
+                )}
+              </UserSelectionContainer>
+            </FormGroup>
+          )}
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
 

@@ -5,7 +5,6 @@ import * as S from '../components/styled/Common';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 import NoviZahtjevModal from '../components/NoviZahtjevModal';
-import NoviZahtjevZaPrijevoznike from '../components/NoviZahtjevZaPrijevoznike';
 import EditZahtjevModal from '../components/EditZahtjevModal';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import ImageViewerModal from '../components/ImageViewerModal';
@@ -748,7 +747,6 @@ const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSpecificDriversModalOpen, setIsSpecificDriversModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignedUsersModalOpen, setIsAssignedUsersModalOpen] = useState(false);
   const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
@@ -878,44 +876,21 @@ const PrijevozPage: React.FC = () => {
     brojKamiona: number;
     prijevozNaDan: string;
     isplataPoT: number;
+    assignedTo: 'All' | string[];
   }) => {
     try {
       console.log('Submitting transport request:', data);
-      const response = await apiService.createTransportRequest({
-        ...data,
-        assignedTo: 'All',
-      });
-      console.log('Transport request created:', response);
-      alert(`Zahtjev uspješno kreiran!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
-      // Refresh the list after creating a new request
-      await fetchRequests();
-    } catch (error) {
-      console.error('Error creating transport request:', error);
-      alert('Greška pri kreiranju zahtjeva. Molimo pokušajte ponovno.');
-    }
-  };
-
-  const handleSubmitSpecificDriversZahtjev = async (data: {
-    kamenolom: string;
-    gradiliste: string;
-    brojKamiona: number;
-    prijevozNaDan: string;
-    isplataPoT: number;
-    selectedUserIds: string[];
-  }) => {
-    try {
-      console.log('Submitting transport request for specific drivers:', data);
       const response = await apiService.createTransportRequest({
         kamenolom: data.kamenolom,
         gradiliste: data.gradiliste,
         brojKamiona: data.brojKamiona,
         prijevozNaDan: data.prijevozNaDan,
         isplataPoT: data.isplataPoT,
-        assignedTo: data.selectedUserIds,
+        assignedTo: data.assignedTo,
       });
       console.log('Transport request created:', response);
-      alert(`Zahtjev uspješno kreiran za ${data.selectedUserIds.length} prijevoznika!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
-      // Refresh the list after creating the request
+      const assignLabel = data.assignedTo === 'All' ? 'sve prijevoznike' : `${data.assignedTo.length} prijevoznika`;
+      alert(`Zahtjev uspješno kreiran za ${assignLabel}!\nKamenolom: ${data.kamenolom}\nGradilište: ${data.gradiliste}\nBroj kamiona: ${data.brojKamiona}\nDatum: ${data.prijevozNaDan}`);
       await fetchRequests();
     } catch (error) {
       console.error('Error creating transport request:', error);
@@ -1604,9 +1579,6 @@ const PrijevozPage: React.FC = () => {
           {isAdmin ? (
             <ButtonSection>
               <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
-              <SmallButton onClick={() => setIsSpecificDriversModalOpen(true)}>
-                Novi zahtjev za određene prijevoznike
-              </SmallButton>
               <SmallButton onClick={handleOpenDriverListModal}>
                 Lista prijevoza po prijevozniku
               </SmallButton>
@@ -1924,12 +1896,6 @@ const PrijevozPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitZahtjev}
-      />
-
-      <NoviZahtjevZaPrijevoznike
-        isOpen={isSpecificDriversModalOpen}
-        onClose={() => setIsSpecificDriversModalOpen(false)}
-        onSubmit={handleSubmitSpecificDriversZahtjev}
       />
 
       <EditZahtjevModal
