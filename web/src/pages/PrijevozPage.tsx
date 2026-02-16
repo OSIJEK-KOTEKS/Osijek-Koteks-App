@@ -861,6 +861,13 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([
+      fetchRequests(),
+      fetchPendingAcceptances(),
+    ]);
+  };
+
   useEffect(() => {
     if (user) {
       fetchRequests();
@@ -1591,13 +1598,13 @@ const PrijevozPage: React.FC = () => {
                   <NotificationBadge>{pendingAcceptances.length}</NotificationBadge>
                 )}
               </SmallButton>
-              <SmallButton onClick={fetchRequests}>Osvježi</SmallButton>
+              <SmallButton onClick={handleRefresh}>Osvježi</SmallButton>
             </ButtonSection>
           ) : (
             <ButtonSection>
               <SmallButton onClick={handleOpenListaPrijevoza}>Lista prijevoza</SmallButton>
               <SmallButton onClick={() => setIsKarticaModalOpen(true)}>Ispiši karticu</SmallButton>
-              <SmallButton onClick={fetchRequests}>Osvježi</SmallButton>
+              <SmallButton onClick={handleRefresh}>Osvježi</SmallButton>
             </ButtonSection>
           )}
         </ContentHeader>

@@ -390,19 +390,26 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
       return res.status(400).json({ message: 'This acceptance has already been reviewed' });
     }
 
-    // Update acceptance status
+    if (status === 'declined') {
+      // Delete the acceptance entirely when declined
+      await TransportAcceptance.findByIdAndDelete(req.params.acceptanceId);
+
+      return res.json({
+        message: 'Acceptance declined and removed successfully',
+      });
+    }
+
+    // Approved: update acceptance status
     acceptance.status = status;
     acceptance.reviewedBy = req.user._id;
     acceptance.reviewedAt = new Date();
     await acceptance.save();
 
-    // If approved, reduce brojKamiona in the transport request
-    if (status === 'approved') {
-      const transportRequest = await TransportRequest.findById(acceptance.requestId._id);
-      if (transportRequest) {
-        transportRequest.brojKamiona = Math.max(0, transportRequest.brojKamiona - acceptance.acceptedCount);
-        await transportRequest.save();
-      }
+    // Reduce brojKamiona in the transport request
+    const transportRequest = await TransportRequest.findById(acceptance.requestId._id);
+    if (transportRequest) {
+      transportRequest.brojKamiona = Math.max(0, transportRequest.brojKamiona - acceptance.acceptedCount);
+      await transportRequest.save();
     }
 
     // Populate the acceptance for response
@@ -410,7 +417,7 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
     await acceptance.populate('reviewedBy', 'firstName lastName email');
 
     res.json({
-      message: `Acceptance ${status} successfully`,
+      message: 'Acceptance approved successfully',
       acceptance,
     });
   } catch (error) {
