@@ -73,6 +73,25 @@ const SmallButton = styled(S.Button)`
   min-width: auto !important;
   width: auto !important;
   max-width: fit-content !important;
+  position: relative;
+`;
+
+const NotificationBadge = styled.span`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  min-width: 20px;
+  height: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 `;
 
 const ContentText = styled.p`
@@ -743,6 +762,7 @@ const PrijevozPage: React.FC = () => {
   const [acceptCount, setAcceptCount] = useState<number | ''>(1);
   const [pendingAcceptances, setPendingAcceptances] = useState<any[]>([]);
   const [isLoadingAcceptances, setIsLoadingAcceptances] = useState(false);
+  const [isAcceptancesModalOpen, setIsAcceptancesModalOpen] = useState(false);
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
   const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
   const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
@@ -1581,7 +1601,6 @@ const PrijevozPage: React.FC = () => {
 
       <DashboardContainer>
         <ContentHeader>
-          <ContentTitle>Prijevoz</ContentTitle>
           {isAdmin ? (
             <ButtonSection>
               <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
@@ -1593,6 +1612,12 @@ const PrijevozPage: React.FC = () => {
               </SmallButton>
               <SmallButton onClick={() => { setIsKarticaModalOpen(true); handleLoadKarticaUsers(); }}>
                 Ispiši karticu
+              </SmallButton>
+              <SmallButton onClick={() => setIsAcceptancesModalOpen(true)}>
+                Zahtjevi prijevoznika
+                {pendingAcceptances.length > 0 && (
+                  <NotificationBadge>{pendingAcceptances.length}</NotificationBadge>
+                )}
               </SmallButton>
               <SmallButton onClick={fetchRequests}>Osvježi</SmallButton>
             </ButtonSection>
@@ -1814,81 +1839,88 @@ const PrijevozPage: React.FC = () => {
         )}
       </RequestsContainer>
 
-      {/* Admin section for pending acceptances*/}
-      {isAdmin && (
-        <AcceptancesSection>
-          <AcceptancesTitle>Zahtjevi prijevoznika</AcceptancesTitle>
-          {isLoadingAcceptances ? (
-            <EmptyAcceptances>Učitavanje...</EmptyAcceptances>
-          ) : pendingAcceptances.length === 0 ? (
-            <EmptyAcceptances>Nema zahtjeva na čekanju</EmptyAcceptances>
-          ) : (
-            pendingAcceptances.map((acceptance) => {
-              const items = linkedItemsByAcceptance.get(acceptance._id) || [];
-              const itemCount = items.length;
+      {/* Admin modal for pending acceptances */}
+      {isAcceptancesModalOpen && (
+        <ModalOverlay onClick={() => setIsAcceptancesModalOpen(false)}>
+          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+            <ListaPrijevozaTitle>
+              Zahtjevi prijevoznika
+            </ListaPrijevozaTitle>
+            {isLoadingAcceptances ? (
+              <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
+            ) : pendingAcceptances.length === 0 ? (
+              <ListaPrijevozaEmpty>Nema zahtjeva na čekanju</ListaPrijevozaEmpty>
+            ) : (
+              pendingAcceptances.map((acceptance) => {
+                const items = linkedItemsByAcceptance.get(acceptance._id) || [];
+                const itemCount = items.length;
 
-              return (
-                <AcceptanceCard key={acceptance._id}>
-                  <AcceptanceHeader>
-                    <AcceptanceInfo>
-                      <AcceptanceUser>
-                        {acceptance.userId?.firstName} {acceptance.userId?.lastName}
-                      </AcceptanceUser>
-                      <AcceptanceDetail>
-                        ID: {acceptance._id}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Email: {acceptance.userId?.email}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Firma: {acceptance.userId?.company}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Kamenolom: {acceptance.requestId?.kamenolom}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Gradilište: {getCodeDescription(acceptance.requestId?.gradiliste)}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Rezervirano prijevoza: {acceptance.acceptedCount}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Doveženo: {itemCount} / {acceptance.acceptedCount}
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Isplata po t: {acceptance.requestId?.isplataPoT}€
-                      </AcceptanceDetail>
-                      <AcceptanceDetail>
-                        Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
-                      </AcceptanceDetail>
-                      {items.length > 0 && (
-                        <RegistrationTags>
-                          {items.map((linkedItem, idx: number) => (
-                            <RegistrationTag
-                              key={idx}
-                              $hasApprovedItem={true}
-                              onClick={() => handleRegistrationClick(linkedItem.itemId)}
-                            >
-                              {linkedItem.registration}
-                            </RegistrationTag>
-                          ))}
-                        </RegistrationTags>
-                      )}
-                    </AcceptanceInfo>
-                    <AcceptanceActions>
-                      <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
-                        Prihvati
-                      </ApproveButton>
-                      <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
-                        Odbij
-                      </DeclineButton>
-                    </AcceptanceActions>
-                  </AcceptanceHeader>
-                </AcceptanceCard>
-              );
-            })
-          )}
-        </AcceptancesSection>
+                return (
+                  <AcceptanceCard key={acceptance._id}>
+                    <AcceptanceHeader>
+                      <AcceptanceInfo>
+                        <AcceptanceUser>
+                          {acceptance.userId?.firstName} {acceptance.userId?.lastName}
+                        </AcceptanceUser>
+                        <AcceptanceDetail>
+                          ID: {acceptance._id}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Email: {acceptance.userId?.email}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Firma: {acceptance.userId?.company}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Kamenolom: {acceptance.requestId?.kamenolom}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Gradilište: {getCodeDescription(acceptance.requestId?.gradiliste)}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Rezervirano prijevoza: {acceptance.acceptedCount}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Doveženo: {itemCount} / {acceptance.acceptedCount}
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Isplata po t: {acceptance.requestId?.isplataPoT}€
+                        </AcceptanceDetail>
+                        <AcceptanceDetail>
+                          Datum zahtjeva: {new Date(acceptance.createdAt).toLocaleDateString('hr-HR')}
+                        </AcceptanceDetail>
+                        {items.length > 0 && (
+                          <RegistrationTags>
+                            {items.map((linkedItem, idx: number) => (
+                              <RegistrationTag
+                                key={idx}
+                                $hasApprovedItem={true}
+                                onClick={() => handleRegistrationClick(linkedItem.itemId)}
+                              >
+                                {linkedItem.registration}
+                              </RegistrationTag>
+                            ))}
+                          </RegistrationTags>
+                        )}
+                      </AcceptanceInfo>
+                      <AcceptanceActions>
+                        <ApproveButton onClick={() => handleApproveAcceptance(acceptance._id)}>
+                          Prihvati
+                        </ApproveButton>
+                        <DeclineButton onClick={() => handleDeclineAcceptance(acceptance._id)}>
+                          Odbij
+                        </DeclineButton>
+                      </AcceptanceActions>
+                    </AcceptanceHeader>
+                  </AcceptanceCard>
+                );
+              })
+            )}
+            <ModalCloseButton onClick={() => setIsAcceptancesModalOpen(false)}>
+              Zatvori
+            </ModalCloseButton>
+          </ListaPrijevozaModalContent>
+        </ModalOverlay>
       )}
 
       <NoviZahtjevModal
