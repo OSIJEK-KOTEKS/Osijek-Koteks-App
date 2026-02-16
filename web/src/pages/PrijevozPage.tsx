@@ -689,15 +689,6 @@ const KarticaLabel = styled.label`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const KarticaSelect = styled.input`
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  background-color: white;
-  box-sizing: border-box;
-`;
 
 const KarticaSelectDropdown = styled.select`
   width: 100%;
@@ -707,6 +698,11 @@ const KarticaSelectDropdown = styled.select`
   font-size: 1rem;
   background-color: white;
   box-sizing: border-box;
+`;
+
+const KarticaMonthRow = styled.div`
+  display: flex;
+  gap: 0.75rem;
 `;
 
 const KarticaButtonRow = styled.div`
@@ -768,12 +764,15 @@ const PrijevozPage: React.FC = () => {
   const [isLoadingDriverAcceptances, setIsLoadingDriverAcceptances] = useState(false);
   const [expandedDriverDates, setExpandedDriverDates] = useState<Set<string>>(new Set());
   const [isKarticaModalOpen, setIsKarticaModalOpen] = useState(false);
-  const [karticaMonth, setKarticaMonth] = useState<string>(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [karticaMonthNum, setKarticaMonthNum] = useState<number>(() => new Date().getMonth() + 1);
+  const [karticaYear, setKarticaYear] = useState<number>(() => new Date().getFullYear());
   const [karticaCode, setKarticaCode] = useState<string>('');
   const [isGeneratingKartica, setIsGeneratingKartica] = useState(false);
+
+  const croatianMonths = [
+    'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
+    'Srpanj', 'Kolovoz', 'Rujan', 'Listopad', 'Studeni', 'Prosinac'
+  ];
 
   const isAdmin = user?.role === 'admin';
 
@@ -1291,7 +1290,7 @@ const PrijevozPage: React.FC = () => {
       .replace(/[^\x00-\x7F]/g, '');
 
   const handleGenerateKartica = async () => {
-    if (!karticaMonth || !karticaCode) {
+    if (!karticaMonthNum || !karticaYear || !karticaCode) {
       alert('Molimo odaberite mjesec i šifru.');
       return;
     }
@@ -1301,10 +1300,8 @@ const PrijevozPage: React.FC = () => {
       // Always fetch fresh acceptances for accurate filtering
       const acceptances = await apiService.getUserAcceptances();
 
-      // Parse selected month
-      const [yearStr, monthStr] = karticaMonth.split('-');
-      const selectedYear = parseInt(yearStr);
-      const selectedMonth = parseInt(monthStr);
+      const selectedYear = karticaYear;
+      const selectedMonth = karticaMonthNum;
 
       // Filter acceptances by month and code
       // prijevozNaDan is stored as "dd/MM/yyyy" format (e.g. "13/02/2026")
@@ -1511,7 +1508,7 @@ const PrijevozPage: React.FC = () => {
 
       // Save and download
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -1556,7 +1553,7 @@ const PrijevozPage: React.FC = () => {
           ) : (
             <ButtonSection>
               <SmallButton onClick={handleOpenListaPrijevoza}>Lista prijevoza</SmallButton>
-              <SmallButton onClick={() => setIsKarticaModalOpen(true)}>Ispiši Karticu</SmallButton>
+              <SmallButton onClick={() => setIsKarticaModalOpen(true)}>Ispiši karticu</SmallButton>
             </ButtonSection>
           )}
         </ContentHeader>
@@ -2287,11 +2284,28 @@ const PrijevozPage: React.FC = () => {
 
             <KarticaFormGroup>
               <KarticaLabel>Mjesec:</KarticaLabel>
-              <KarticaSelect
-                type="month"
-                value={karticaMonth}
-                onChange={(e) => setKarticaMonth(e.target.value)}
-              />
+              <KarticaMonthRow>
+                <KarticaSelectDropdown
+                  value={karticaMonthNum}
+                  onChange={(e) => setKarticaMonthNum(parseInt(e.target.value))}
+                >
+                  {croatianMonths.map((name, idx) => (
+                    <option key={idx + 1} value={idx + 1}>
+                      {name}
+                    </option>
+                  ))}
+                </KarticaSelectDropdown>
+                <KarticaSelectDropdown
+                  value={karticaYear}
+                  onChange={(e) => setKarticaYear(parseInt(e.target.value))}
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </KarticaSelectDropdown>
+              </KarticaMonthRow>
             </KarticaFormGroup>
 
             <KarticaFormGroup>
@@ -2314,7 +2328,7 @@ const PrijevozPage: React.FC = () => {
             <KarticaButtonRow>
               <SmallButton
                 onClick={handleGenerateKartica}
-                disabled={isGeneratingKartica || !karticaMonth || !karticaCode}
+                disabled={isGeneratingKartica || !karticaCode}
               >
                 {isGeneratingKartica ? 'Generiranje...' : 'Generiraj PDF'}
               </SmallButton>
