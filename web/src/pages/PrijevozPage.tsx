@@ -1440,8 +1440,8 @@ const PrijevozPage: React.FC = () => {
       y -= 24;
 
       // Table header
-      const colX = [MARGIN, MARGIN + 80, MARGIN + 180, MARGIN + 280, MARGIN + 370, MARGIN + 445];
-      const headers = ['Datum', 'Kamenolom', 'Registracija', 'Neto (kg)', 'Isplata/t', 'Ukupno'];
+      const colX = [MARGIN, MARGIN + 65, MARGIN + 145, MARGIN + 235, MARGIN + 315, MARGIN + 380, MARGIN + 440];
+      const headers = ['Datum', 'Br. otpremnice', 'Kamenolom', 'Registracija', 'Neto (kg)', 'Isplata/t', 'Ukupno'];
 
       // Draw header background
       page.drawRectangle({
@@ -1456,6 +1456,18 @@ const PrijevozPage: React.FC = () => {
         page.drawText(toAscii(h), { x: colX[i], y, size: 9, font: boldFont });
       });
       y -= 20;
+
+      // Helper to truncate text so it fits within a given max width
+      const truncateText = (text: string, maxWidth: number, fontSize: number, usedFont: typeof font) => {
+        let t = toAscii(text);
+        let width = usedFont.widthOfTextAtSize(t, fontSize);
+        if (width <= maxWidth) return t;
+        while (t.length > 0 && width > maxWidth) {
+          t = t.slice(0, -1);
+          width = usedFont.widthOfTextAtSize(t + '..', fontSize);
+        }
+        return t + '..';
+      };
 
       let grandTotalPayout = 0;
       let totalNeto = 0;
@@ -1482,11 +1494,13 @@ const PrijevozPage: React.FC = () => {
           for (const linkedItem of acc.linkedItems) {
             checkPageBreak(16);
 
-            // Fetch item details to get neto weight
+            // Fetch item details to get neto weight and title
             let netoKg = 0;
+            let itemTitle = '-';
             try {
               const itemDetails = await apiService.getTransportItemById(linkedItem.itemId);
               netoKg = itemDetails.neto || 0;
+              itemTitle = itemDetails.title || '-';
             } catch {
               // skip
             }
@@ -1496,21 +1510,23 @@ const PrijevozPage: React.FC = () => {
             totalNeto += netoKg;
 
             page.drawText(toAscii(dateStr), { x: colX[0], y, size: 8, font });
-            page.drawText(toAscii(kamenolom), { x: colX[1], y, size: 8, font });
-            page.drawText(toAscii(linkedItem.registration || '-'), { x: colX[2], y, size: 8, font });
-            page.drawText(toAscii(netoKg.toString()), { x: colX[3], y, size: 8, font });
-            page.drawText(toAscii(`${isplataPoT} EUR`), { x: colX[4], y, size: 8, font });
-            page.drawText(toAscii(`${itemPayout.toFixed(2)} EUR`), { x: colX[5], y, size: 8, font });
+            page.drawText(truncateText(itemTitle, colX[2] - colX[1] - 4, 8, font), { x: colX[1], y, size: 8, font });
+            page.drawText(toAscii(kamenolom), { x: colX[2], y, size: 8, font });
+            page.drawText(toAscii(linkedItem.registration || '-'), { x: colX[3], y, size: 8, font });
+            page.drawText(toAscii(netoKg.toString()), { x: colX[4], y, size: 8, font });
+            page.drawText(toAscii(`${isplataPoT} EUR`), { x: colX[5], y, size: 8, font });
+            page.drawText(toAscii(`${itemPayout.toFixed(2)} EUR`), { x: colX[6], y, size: 8, font });
             y -= 14;
           }
         } else {
           checkPageBreak(16);
           page.drawText(toAscii(dateStr), { x: colX[0], y, size: 8, font });
-          page.drawText(toAscii(kamenolom), { x: colX[1], y, size: 8, font });
-          page.drawText(toAscii('-'), { x: colX[2], y, size: 8, font });
-          page.drawText(toAscii('0'), { x: colX[3], y, size: 8, font });
-          page.drawText(toAscii(`${isplataPoT} EUR`), { x: colX[4], y, size: 8, font });
-          page.drawText(toAscii('0.00 EUR'), { x: colX[5], y, size: 8, font });
+          page.drawText(toAscii('-'), { x: colX[1], y, size: 8, font });
+          page.drawText(toAscii(kamenolom), { x: colX[2], y, size: 8, font });
+          page.drawText(toAscii('-'), { x: colX[3], y, size: 8, font });
+          page.drawText(toAscii('0'), { x: colX[4], y, size: 8, font });
+          page.drawText(toAscii(`${isplataPoT} EUR`), { x: colX[5], y, size: 8, font });
+          page.drawText(toAscii('0.00 EUR'), { x: colX[6], y, size: 8, font });
           y -= 14;
         }
       }
@@ -1528,8 +1544,8 @@ const PrijevozPage: React.FC = () => {
       y -= 8;
 
       page.drawText(toAscii('UKUPNO:'), { x: MARGIN, y, size: 10, font: boldFont });
-      page.drawText(toAscii(`${totalNeto} kg`), { x: colX[3], y, size: 10, font: boldFont });
-      page.drawText(toAscii(`${grandTotalPayout.toFixed(2)} EUR`), { x: colX[5], y, size: 10, font: boldFont });
+      page.drawText(toAscii(`${totalNeto} kg`), { x: colX[4], y, size: 10, font: boldFont });
+      page.drawText(toAscii(`${grandTotalPayout.toFixed(2)} EUR`), { x: colX[6], y, size: 10, font: boldFont });
 
       // Save and download
       const pdfBytes = await pdfDoc.save();
