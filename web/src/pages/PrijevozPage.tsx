@@ -1817,7 +1817,7 @@ const PrijevozPage: React.FC = () => {
       {/* Admin section for pending acceptances*/}
       {isAdmin && (
         <AcceptancesSection>
-          <AcceptancesTitle>Zahtjevi korisnika za prihvaćanje</AcceptancesTitle>
+          <AcceptancesTitle>Zahtjevi prijevoznika</AcceptancesTitle>
           {isLoadingAcceptances ? (
             <EmptyAcceptances>Učitavanje...</EmptyAcceptances>
           ) : pendingAcceptances.length === 0 ? (
