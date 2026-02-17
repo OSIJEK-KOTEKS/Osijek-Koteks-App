@@ -12,7 +12,7 @@ import { apiService } from '../utils/api';
 import { getCodeDescription, codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Item } from '../types';
-import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, Autocomplete, Libraries } from '@react-google-maps/api';
 
 const Header = styled.div`
   display: flex;
@@ -719,6 +719,21 @@ const KarticaSelectDropdown = styled.select`
   box-sizing: border-box;
 `;
 
+const MapSearchInput = styled.input`
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
 const KarticaMonthRow = styled.div`
   display: flex;
   gap: 0.75rem;
@@ -817,12 +832,14 @@ interface TransportRequest {
 
 const OSIJEK_CENTER = { lat: 45.551, lng: 18.694 };
 const MAP_CONTAINER_STYLE = { width: '100%', height: '350px', borderRadius: '8px' };
+const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
 
 const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -884,6 +901,10 @@ const PrijevozPage: React.FC = () => {
   const [lokacijaPin, setLokacijaPin] = useState<{ lat: number; lng: number } | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [editingPin, setEditingPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [createAutocomplete, setCreateAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [editAutocomplete, setEditAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [createMapRef, setCreateMapRef] = useState<google.maps.Map | null>(null);
+  const [editMapRef, setEditMapRef] = useState<google.maps.Map | null>(null);
 
   const croatianMonths = [
     'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
@@ -1685,6 +1706,44 @@ const PrijevozPage: React.FC = () => {
       }
     }
   }, [editingLocationId]);
+
+  const onCreateAutocompleteLoad = useCallback((autocomplete: google.maps.places.Autocomplete) => {
+    setCreateAutocomplete(autocomplete);
+  }, []);
+
+  const onCreatePlaceChanged = useCallback(() => {
+    if (createAutocomplete) {
+      const place = createAutocomplete.getPlace();
+      if (place.geometry?.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setLokacijaPin({ lat, lng });
+        if (createMapRef) {
+          createMapRef.panTo({ lat, lng });
+          createMapRef.setZoom(15);
+        }
+      }
+    }
+  }, [createAutocomplete, createMapRef]);
+
+  const onEditAutocompleteLoad = useCallback((autocomplete: google.maps.places.Autocomplete) => {
+    setEditAutocomplete(autocomplete);
+  }, []);
+
+  const onEditPlaceChanged = useCallback(() => {
+    if (editAutocomplete) {
+      const place = editAutocomplete.getPlace();
+      if (place.geometry?.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setEditingPin({ lat, lng });
+        if (editMapRef) {
+          editMapRef.panTo({ lat, lng });
+          editMapRef.setZoom(15);
+        }
+      }
+    }
+  }, [editAutocomplete, editMapRef]);
 
   const handleSaveCodeLocation = async () => {
     if (!lokacijaSelectedCode || !lokacijaPin) return;
@@ -2642,7 +2701,7 @@ const PrijevozPage: React.FC = () => {
       )}
       {/* Lokacija modal */}
       {isLokacijaModalOpen && (
-        <ModalOverlay onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); }}>
+        <ModalOverlay onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); setCreateAutocomplete(null); setEditAutocomplete(null); setCreateMapRef(null); setEditMapRef(null); }}>
           <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>Lokacije po šifri</ListaPrijevozaTitle>
 
@@ -2668,18 +2727,31 @@ const PrijevozPage: React.FC = () => {
                 {lokacijaSelectedCode && (
                   <div style={{ marginBottom: '1rem' }}>
                     <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>
-                      Kliknite na kartu da postavite pin lokacije:
+                      Pretražite lokaciju ili kliknite na kartu da postavite pin:
                     </p>
                     {isMapLoaded ? (
-                      <GoogleMap
-                        mapContainerStyle={MAP_CONTAINER_STYLE}
-                        center={lokacijaPin || OSIJEK_CENTER}
-                        zoom={12}
-                        onClick={handleMapClick}
-                        options={{ streetViewControl: false, mapTypeControl: false }}
-                      >
-                        {lokacijaPin && <MarkerF position={lokacijaPin} />}
-                      </GoogleMap>
+                      <>
+                        <Autocomplete
+                          onLoad={onCreateAutocompleteLoad}
+                          onPlaceChanged={onCreatePlaceChanged}
+                          options={{ componentRestrictions: { country: 'hr' } }}
+                        >
+                          <MapSearchInput
+                            type="text"
+                            placeholder="Pretražite adresu ili mjesto..."
+                          />
+                        </Autocomplete>
+                        <GoogleMap
+                          mapContainerStyle={MAP_CONTAINER_STYLE}
+                          center={lokacijaPin || OSIJEK_CENTER}
+                          zoom={12}
+                          onClick={handleMapClick}
+                          onLoad={(map) => setCreateMapRef(map)}
+                          options={{ streetViewControl: false, mapTypeControl: false }}
+                        >
+                          {lokacijaPin && <MarkerF position={lokacijaPin} />}
+                        </GoogleMap>
+                      </>
                     ) : (
                       <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f0', borderRadius: '8px' }}>
                         Učitavanje karte...
@@ -2703,18 +2775,31 @@ const PrijevozPage: React.FC = () => {
             {editingLocationId && (
               <div style={{ marginBottom: '1rem' }}>
                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>
-                  Kliknite na kartu da promijenite lokaciju:
+                  Pretražite lokaciju ili kliknite na kartu da promijenite lokaciju:
                 </p>
                 {isMapLoaded ? (
-                  <GoogleMap
-                    mapContainerStyle={MAP_CONTAINER_STYLE}
-                    center={editingPin || OSIJEK_CENTER}
-                    zoom={14}
-                    onClick={handleMapClick}
-                    options={{ streetViewControl: false, mapTypeControl: false }}
-                  >
-                    {editingPin && <MarkerF position={editingPin} />}
-                  </GoogleMap>
+                  <>
+                    <Autocomplete
+                      onLoad={onEditAutocompleteLoad}
+                      onPlaceChanged={onEditPlaceChanged}
+                      options={{ componentRestrictions: { country: 'hr' } }}
+                    >
+                      <MapSearchInput
+                        type="text"
+                        placeholder="Pretražite adresu ili mjesto..."
+                      />
+                    </Autocomplete>
+                    <GoogleMap
+                      mapContainerStyle={MAP_CONTAINER_STYLE}
+                      center={editingPin || OSIJEK_CENTER}
+                      zoom={14}
+                      onClick={handleMapClick}
+                      onLoad={(map) => setEditMapRef(map)}
+                      options={{ streetViewControl: false, mapTypeControl: false }}
+                    >
+                      {editingPin && <MarkerF position={editingPin} />}
+                    </GoogleMap>
+                  </>
                 ) : (
                   <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f0', borderRadius: '8px' }}>
                     Učitavanje karte...
@@ -2771,7 +2856,7 @@ const PrijevozPage: React.FC = () => {
               ))
             )}
 
-            <ModalCloseButton onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); }}>
+            <ModalCloseButton onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); setCreateAutocomplete(null); setEditAutocomplete(null); setCreateMapRef(null); setEditMapRef(null); }}>
               Zatvori
             </ModalCloseButton>
           </ListaPrijevozaModalContent>
