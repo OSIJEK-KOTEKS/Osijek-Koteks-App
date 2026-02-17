@@ -830,7 +830,7 @@ interface TransportRequest {
   assignedTo: 'All' | string[];
 }
 
-const KAMENOLOMI = ['VELIČKI KAMEN', 'KAMEN - PSUNJ', 'MOLARIS', 'PRODORINA'];
+const KAMENOLOMI = ['VELIČKI KAMEN VELIČANKA', 'VELIČKI KAMEN VETOVO', 'KAMEN - PSUNJ', 'MOLARIS', 'PRODORINA'];
 const OSIJEK_CENTER = { lat: 45.551, lng: 18.694 };
 const MAP_CONTAINER_STYLE = { width: '100%', height: '350px', borderRadius: '8px' };
 const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];

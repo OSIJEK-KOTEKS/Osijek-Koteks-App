@@ -5,7 +5,7 @@ const TransportRequestSchema = new mongoose.Schema(
     kamenolom: {
       type: String,
       required: true,
-      enum: ['VELIČKI KAMEN', 'KAMEN - PSUNJ', 'MOLARIS', 'PRODORINA'],
+      enum: ['VELIČKI KAMEN VELIČANKA', 'VELIČKI KAMEN VETOVO', 'KAMEN - PSUNJ', 'MOLARIS', 'PRODORINA'],
     },
     gradiliste: {
       type: String,

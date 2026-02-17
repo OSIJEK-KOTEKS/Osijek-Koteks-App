@@ -175,7 +175,8 @@ interface NoviZahtjevZaPrijevoznike {
 }
 
 const KAMENOLOMI = [
-  'VELIČKI KAMEN',
+  'VELIČKI KAMEN VELIČANKA',
+  'VELIČKI KAMEN VETOVO',
   'KAMEN - PSUNJ',
   'MOLARIS',
   'PRODORINA',
