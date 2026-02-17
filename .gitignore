@@ -2,6 +2,7 @@
 #
 .DS_Store
 .env
+nul
 osijek-koteks.keystore
 # Xcode
 #

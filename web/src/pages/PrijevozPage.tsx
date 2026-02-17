@@ -830,6 +830,7 @@ interface TransportRequest {
   assignedTo: 'All' | string[];
 }
 
+const KAMENOLOMI = ['VELIČKI KAMEN', 'KAMEN - PSUNJ', 'MOLARIS', 'PRODORINA'];
 const OSIJEK_CENTER = { lat: 45.551, lng: 18.694 };
 const MAP_CONTAINER_STYLE = { width: '100%', height: '350px', borderRadius: '8px' };
 const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
@@ -2703,7 +2704,7 @@ const PrijevozPage: React.FC = () => {
       {isLokacijaModalOpen && (
         <ModalOverlay onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); setCreateAutocomplete(null); setEditAutocomplete(null); setCreateMapRef(null); setEditMapRef(null); }}>
           <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
-            <ListaPrijevozaTitle>Lokacije po šifri</ListaPrijevozaTitle>
+            <ListaPrijevozaTitle>Lokacije</ListaPrijevozaTitle>
 
             {!editingLocationId && (
               <>
@@ -2712,7 +2713,12 @@ const PrijevozPage: React.FC = () => {
                     value={lokacijaSelectedCode}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setLokacijaSelectedCode(e.target.value)}
                   >
-                    <option value="">Odaberi šifru...</option>
+                    <option value="">Odaberi šifru ili kamenolom...</option>
+                    <option disabled>── Kamenolom ──</option>
+                    {KAMENOLOMI.map(k => (
+                      <option key={k} value={k}>{k}</option>
+                    ))}
+                    <option disabled>── Šifre (gradilišta) ──</option>
                     {Object.entries(codeToTextMapping)
                       .filter(([code]) => code !== '20001')
                       .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
@@ -2826,7 +2832,7 @@ const PrijevozPage: React.FC = () => {
                 <GroupCard key={loc._id}>
                   <GroupCardHeader>
                     <div style={{ flex: 1 }}>
-                      <GroupName>{getFormattedCode(loc.code)}</GroupName>
+                      <GroupName>{KAMENOLOMI.includes(loc.code) ? loc.code : getFormattedCode(loc.code)}</GroupName>
                       <GroupMemberCount style={{ marginLeft: 0, display: 'block', marginTop: '0.25rem' }}>
                         {loc.latitude.toFixed(6)}, {loc.longitude.toFixed(6)}
                         {' '}
