@@ -20,7 +20,7 @@ interface AdminCodeEditorProps {
   disabled?: boolean;
 }
 
-// Styled components
+// Styled components - comment
 const Container = styled.div`
   position: relative;
 `;
