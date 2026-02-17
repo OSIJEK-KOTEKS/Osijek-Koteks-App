@@ -870,6 +870,14 @@ const PrijevozPage: React.FC = () => {
   const [groupUsers, setGroupUsers] = useState<Array<{ _id: string; firstName: string; lastName: string; email: string }>>([]);
   const [isLoadingGroupUsers, setIsLoadingGroupUsers] = useState(false);
 
+  const [isLokacijaModalOpen, setIsLokacijaModalOpen] = useState(false);
+  const [codeLocations, setCodeLocations] = useState<any[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [lokacijaSelectedCode, setLokacijaSelectedCode] = useState<string>('');
+  const [lokacijaInput, setLokacijaInput] = useState<string>('');
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [editingLocationValue, setEditingLocationValue] = useState<string>('');
+
   const croatianMonths = [
     'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
     'Srpanj', 'Kolovoz', 'Rujan', 'Listopad', 'Studeni', 'Prosinac'
@@ -1648,6 +1656,60 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleOpenLokacijaModal = async () => {
+    setIsLokacijaModalOpen(true);
+    setIsLoadingLocations(true);
+    try {
+      const locations = await apiService.getCodeLocations();
+      setCodeLocations(locations);
+    } catch (error) {
+      console.error('Error loading code locations:', error);
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
+  const handleSaveCodeLocation = async () => {
+    if (!lokacijaSelectedCode || !lokacijaInput.trim()) return;
+    try {
+      await apiService.saveCodeLocation(lokacijaSelectedCode, lokacijaInput.trim());
+      const updated = await apiService.getCodeLocations();
+      setCodeLocations(updated);
+      setLokacijaSelectedCode('');
+      setLokacijaInput('');
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Greška pri spremanju lokacije.');
+    }
+  };
+
+  const handleStartEditLocation = (loc: any) => {
+    setEditingLocationId(loc._id);
+    setEditingLocationValue(loc.location);
+  };
+
+  const handleSaveEditLocation = async (id: string) => {
+    if (!editingLocationValue.trim()) return;
+    try {
+      await apiService.updateCodeLocation(id, editingLocationValue.trim());
+      const updated = await apiService.getCodeLocations();
+      setCodeLocations(updated);
+      setEditingLocationId(null);
+      setEditingLocationValue('');
+    } catch (error) {
+      alert('Greška pri ažuriranju lokacije.');
+    }
+  };
+
+  const handleDeleteCodeLocation = async (id: string) => {
+    if (!window.confirm('Jeste li sigurni da želite obrisati ovu lokaciju?')) return;
+    try {
+      await apiService.deleteCodeLocation(id);
+      setCodeLocations(codeLocations.filter(l => l._id !== id));
+    } catch (error) {
+      alert('Greška pri brisanju lokacije.');
+    }
+  };
+
   const handleOpenGroupsModal = async () => {
     setIsGroupsModalOpen(true);
     setIsLoadingGroups(true);
@@ -1734,6 +1796,7 @@ const PrijevozPage: React.FC = () => {
                 )}
               </SmallButton>
               <SmallButton onClick={handleOpenGroupsModal}>Grupe</SmallButton>
+              <SmallButton onClick={handleOpenLokacijaModal}>Lokacija</SmallButton>
               <SmallButton onClick={handleRefresh}>Osvježi</SmallButton>
             </ButtonSection>
           ) : (
@@ -2560,6 +2623,93 @@ const PrijevozPage: React.FC = () => {
           </KarticaModalContent>
         </ModalOverlay>
       )}
+      {/* Lokacija modal */}
+      {isLokacijaModalOpen && (
+        <ModalOverlay onClick={() => setIsLokacijaModalOpen(false)}>
+          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+            <ListaPrijevozaTitle>Lokacije po šifri</ListaPrijevozaTitle>
+
+            <NewGroupRow>
+              <KarticaSelectDropdown
+                value={lokacijaSelectedCode}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setLokacijaSelectedCode(e.target.value)}
+              >
+                <option value="">Odaberi šifru...</option>
+                {Object.entries(codeToTextMapping)
+                  .filter(([code]) => code !== '20001')
+                  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+                  .map(([code, desc]) => (
+                    <option key={code} value={code}>
+                      {code} - {desc}
+                    </option>
+                  ))}
+              </KarticaSelectDropdown>
+            </NewGroupRow>
+
+            <NewGroupRow>
+              <KarticaSelectDropdown
+                as="input"
+                type="text"
+                placeholder="Unesite lokaciju (adresu)..."
+                value={lokacijaInput}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLokacijaInput(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSaveCodeLocation(); }}
+              />
+              <SmallButton onClick={handleSaveCodeLocation} disabled={!lokacijaSelectedCode || !lokacijaInput.trim()}>
+                Spremi
+              </SmallButton>
+            </NewGroupRow>
+
+            {isLoadingLocations ? (
+              <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
+            ) : codeLocations.length === 0 ? (
+              <ListaPrijevozaEmpty>Nema spremljenih lokacija</ListaPrijevozaEmpty>
+            ) : (
+              codeLocations.map((loc) => (
+                <GroupCard key={loc._id}>
+                  <GroupCardHeader>
+                    <div style={{ flex: 1 }}>
+                      <GroupName>{getFormattedCode(loc.code)}</GroupName>
+                      {editingLocationId === loc._id ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <KarticaSelectDropdown
+                            as="input"
+                            type="text"
+                            value={editingLocationValue}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingLocationValue(e.target.value)}
+                            onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSaveEditLocation(loc._id); }}
+                          />
+                          <SmallButton onClick={() => handleSaveEditLocation(loc._id)}>Spremi</SmallButton>
+                          <SmallButton onClick={() => { setEditingLocationId(null); setEditingLocationValue(''); }}>Odustani</SmallButton>
+                        </div>
+                      ) : (
+                        <GroupMemberCount style={{ marginLeft: 0, display: 'block', marginTop: '0.25rem' }}>
+                          {loc.location}
+                        </GroupMemberCount>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {editingLocationId !== loc._id && (
+                        <ActionButton onClick={() => handleStartEditLocation(loc)}>
+                          Uredi
+                        </ActionButton>
+                      )}
+                      <GroupDeleteBtn onClick={() => handleDeleteCodeLocation(loc._id)}>
+                        Obriši
+                      </GroupDeleteBtn>
+                    </div>
+                  </GroupCardHeader>
+                </GroupCard>
+              ))
+            )}
+
+            <ModalCloseButton onClick={() => setIsLokacijaModalOpen(false)}>
+              Zatvori
+            </ModalCloseButton>
+          </ListaPrijevozaModalContent>
+        </ModalOverlay>
+      )}
+
       {/* Grupe modal */}
       {isGroupsModalOpen && (
         <ModalOverlay onClick={() => setIsGroupsModalOpen(false)}>

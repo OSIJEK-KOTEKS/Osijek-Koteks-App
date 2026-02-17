@@ -823,6 +823,46 @@ export const apiService = {
       throw error;
     }
   },
+
+  getCodeLocations: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/code-locations');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching code locations:', error);
+      throw error;
+    }
+  },
+
+  saveCodeLocation: async (code: string, location: string): Promise<any> => {
+    try {
+      const response = await api.post('/api/code-locations', { code, location });
+      return response.data;
+    } catch (error) {
+      console.error('Error saving code location:', error);
+      throw error;
+    }
+  },
+
+  updateCodeLocation: async (id: string, location: string): Promise<any> => {
+    try {
+      const response = await api.put(`/api/code-locations/${id}`, { location });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating code location:', error);
+      throw error;
+    }
+  },
+
+  deleteCodeLocation: async (id: string): Promise<any> => {
+    try {
+      const response = await api.delete(`/api/code-locations/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting code location:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;
