@@ -834,9 +834,9 @@ export const apiService = {
     }
   },
 
-  saveCodeLocation: async (code: string, location: string): Promise<any> => {
+  saveCodeLocation: async (code: string, latitude: number, longitude: number): Promise<any> => {
     try {
-      const response = await api.post('/api/code-locations', { code, location });
+      const response = await api.post('/api/code-locations', { code, latitude, longitude });
       return response.data;
     } catch (error) {
       console.error('Error saving code location:', error);
@@ -844,9 +844,9 @@ export const apiService = {
     }
   },
 
-  updateCodeLocation: async (id: string, location: string): Promise<any> => {
+  updateCodeLocation: async (id: string, latitude: number, longitude: number): Promise<any> => {
     try {
-      const response = await api.put(`/api/code-locations/${id}`, { location });
+      const response = await api.put(`/api/code-locations/${id}`, { latitude, longitude });
       return response.data;
     } catch (error) {
       console.error('Error updating code location:', error);

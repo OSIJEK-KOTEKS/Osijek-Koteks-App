@@ -25,26 +25,28 @@ router.post('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin access required.' });
     }
 
-    const { code, location } = req.body;
+    const { code, latitude, longitude } = req.body;
 
     if (!code || !code.trim()) {
       return res.status(400).json({ message: 'Code is required' });
     }
 
-    if (!location || !location.trim()) {
-      return res.status(400).json({ message: 'Location is required' });
+    if (latitude == null || longitude == null) {
+      return res.status(400).json({ message: 'Latitude and longitude are required' });
     }
 
     const existing = await CodeLocation.findOne({ code: code.trim() });
     if (existing) {
-      existing.location = location.trim();
+      existing.latitude = latitude;
+      existing.longitude = longitude;
       await existing.save();
       return res.json(existing);
     }
 
     const codeLocation = new CodeLocation({
       code: code.trim(),
-      location: location.trim(),
+      latitude,
+      longitude,
       createdBy: req.user._id,
     });
 
@@ -63,15 +65,15 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin access required.' });
     }
 
-    const { location } = req.body;
+    const { latitude, longitude } = req.body;
 
-    if (!location || !location.trim()) {
-      return res.status(400).json({ message: 'Location is required' });
+    if (latitude == null || longitude == null) {
+      return res.status(400).json({ message: 'Latitude and longitude are required' });
     }
 
     const codeLocation = await CodeLocation.findByIdAndUpdate(
       req.params.id,
-      { location: location.trim() },
+      { latitude, longitude },
       { new: true }
     );
 

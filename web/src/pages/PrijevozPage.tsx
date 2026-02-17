@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import * as S from '../components/styled/Common';
@@ -12,6 +12,7 @@ import { apiService } from '../utils/api';
 import { getCodeDescription, codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Item } from '../types';
+import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 
 const Header = styled.div`
   display: flex;
@@ -814,9 +815,15 @@ interface TransportRequest {
   assignedTo: 'All' | string[];
 }
 
+const OSIJEK_CENTER = { lat: 45.551, lng: 18.694 };
+const MAP_CONTAINER_STYLE = { width: '100%', height: '350px', borderRadius: '8px' };
+
 const PrijevozPage: React.FC = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignedUsersModalOpen, setIsAssignedUsersModalOpen] = useState(false);
@@ -874,9 +881,9 @@ const PrijevozPage: React.FC = () => {
   const [codeLocations, setCodeLocations] = useState<any[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [lokacijaSelectedCode, setLokacijaSelectedCode] = useState<string>('');
-  const [lokacijaInput, setLokacijaInput] = useState<string>('');
+  const [lokacijaPin, setLokacijaPin] = useState<{ lat: number; lng: number } | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
-  const [editingLocationValue, setEditingLocationValue] = useState<string>('');
+  const [editingPin, setEditingPin] = useState<{ lat: number; lng: number } | null>(null);
 
   const croatianMonths = [
     'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
@@ -1669,14 +1676,24 @@ const PrijevozPage: React.FC = () => {
     }
   };
 
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      if (editingLocationId) {
+        setEditingPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      } else {
+        setLokacijaPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      }
+    }
+  }, [editingLocationId]);
+
   const handleSaveCodeLocation = async () => {
-    if (!lokacijaSelectedCode || !lokacijaInput.trim()) return;
+    if (!lokacijaSelectedCode || !lokacijaPin) return;
     try {
-      await apiService.saveCodeLocation(lokacijaSelectedCode, lokacijaInput.trim());
+      await apiService.saveCodeLocation(lokacijaSelectedCode, lokacijaPin.lat, lokacijaPin.lng);
       const updated = await apiService.getCodeLocations();
       setCodeLocations(updated);
       setLokacijaSelectedCode('');
-      setLokacijaInput('');
+      setLokacijaPin(null);
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Greška pri spremanju lokacije.');
     }
@@ -1684,17 +1701,17 @@ const PrijevozPage: React.FC = () => {
 
   const handleStartEditLocation = (loc: any) => {
     setEditingLocationId(loc._id);
-    setEditingLocationValue(loc.location);
+    setEditingPin({ lat: loc.latitude, lng: loc.longitude });
   };
 
   const handleSaveEditLocation = async (id: string) => {
-    if (!editingLocationValue.trim()) return;
+    if (!editingPin) return;
     try {
-      await apiService.updateCodeLocation(id, editingLocationValue.trim());
+      await apiService.updateCodeLocation(id, editingPin.lat, editingPin.lng);
       const updated = await apiService.getCodeLocations();
       setCodeLocations(updated);
       setEditingLocationId(null);
-      setEditingLocationValue('');
+      setEditingPin(null);
     } catch (error) {
       alert('Greška pri ažuriranju lokacije.');
     }
@@ -2625,40 +2642,95 @@ const PrijevozPage: React.FC = () => {
       )}
       {/* Lokacija modal */}
       {isLokacijaModalOpen && (
-        <ModalOverlay onClick={() => setIsLokacijaModalOpen(false)}>
+        <ModalOverlay onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); }}>
           <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>Lokacije po šifri</ListaPrijevozaTitle>
 
-            <NewGroupRow>
-              <KarticaSelectDropdown
-                value={lokacijaSelectedCode}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setLokacijaSelectedCode(e.target.value)}
-              >
-                <option value="">Odaberi šifru...</option>
-                {Object.entries(codeToTextMapping)
-                  .filter(([code]) => code !== '20001')
-                  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-                  .map(([code, desc]) => (
-                    <option key={code} value={code}>
-                      {code} - {desc}
-                    </option>
-                  ))}
-              </KarticaSelectDropdown>
-            </NewGroupRow>
+            {!editingLocationId && (
+              <>
+                <NewGroupRow>
+                  <KarticaSelectDropdown
+                    value={lokacijaSelectedCode}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setLokacijaSelectedCode(e.target.value)}
+                  >
+                    <option value="">Odaberi šifru...</option>
+                    {Object.entries(codeToTextMapping)
+                      .filter(([code]) => code !== '20001')
+                      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+                      .map(([code, desc]) => (
+                        <option key={code} value={code}>
+                          {code} - {desc}
+                        </option>
+                      ))}
+                  </KarticaSelectDropdown>
+                </NewGroupRow>
 
-            <NewGroupRow>
-              <KarticaSelectDropdown
-                as="input"
-                type="text"
-                placeholder="Unesite lokaciju (adresu)..."
-                value={lokacijaInput}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLokacijaInput(e.target.value)}
-                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSaveCodeLocation(); }}
-              />
-              <SmallButton onClick={handleSaveCodeLocation} disabled={!lokacijaSelectedCode || !lokacijaInput.trim()}>
-                Spremi
-              </SmallButton>
-            </NewGroupRow>
+                {lokacijaSelectedCode && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>
+                      Kliknite na kartu da postavite pin lokacije:
+                    </p>
+                    {isMapLoaded ? (
+                      <GoogleMap
+                        mapContainerStyle={MAP_CONTAINER_STYLE}
+                        center={lokacijaPin || OSIJEK_CENTER}
+                        zoom={12}
+                        onClick={handleMapClick}
+                        options={{ streetViewControl: false, mapTypeControl: false }}
+                      >
+                        {lokacijaPin && <MarkerF position={lokacijaPin} />}
+                      </GoogleMap>
+                    ) : (
+                      <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f0', borderRadius: '8px' }}>
+                        Učitavanje karte...
+                      </div>
+                    )}
+                    {lokacijaPin && (
+                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#333' }}>
+                        Pin: {lokacijaPin.lat.toFixed(6)}, {lokacijaPin.lng.toFixed(6)}
+                      </p>
+                    )}
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <SmallButton onClick={handleSaveCodeLocation} disabled={!lokacijaSelectedCode || !lokacijaPin}>
+                        Spremi lokaciju
+                      </SmallButton>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {editingLocationId && (
+              <div style={{ marginBottom: '1rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>
+                  Kliknite na kartu da promijenite lokaciju:
+                </p>
+                {isMapLoaded ? (
+                  <GoogleMap
+                    mapContainerStyle={MAP_CONTAINER_STYLE}
+                    center={editingPin || OSIJEK_CENTER}
+                    zoom={14}
+                    onClick={handleMapClick}
+                    options={{ streetViewControl: false, mapTypeControl: false }}
+                  >
+                    {editingPin && <MarkerF position={editingPin} />}
+                  </GoogleMap>
+                ) : (
+                  <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f0', borderRadius: '8px' }}>
+                    Učitavanje karte...
+                  </div>
+                )}
+                {editingPin && (
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#333' }}>
+                    Pin: {editingPin.lat.toFixed(6)}, {editingPin.lng.toFixed(6)}
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  <SmallButton onClick={() => handleSaveEditLocation(editingLocationId)}>Spremi</SmallButton>
+                  <SmallButton onClick={() => { setEditingLocationId(null); setEditingPin(null); }}>Odustani</SmallButton>
+                </div>
+              </div>
+            )}
 
             {isLoadingLocations ? (
               <ListaPrijevozaEmpty>Učitavanje...</ListaPrijevozaEmpty>
@@ -2670,23 +2742,19 @@ const PrijevozPage: React.FC = () => {
                   <GroupCardHeader>
                     <div style={{ flex: 1 }}>
                       <GroupName>{getFormattedCode(loc.code)}</GroupName>
-                      {editingLocationId === loc._id ? (
-                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                          <KarticaSelectDropdown
-                            as="input"
-                            type="text"
-                            value={editingLocationValue}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingLocationValue(e.target.value)}
-                            onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSaveEditLocation(loc._id); }}
-                          />
-                          <SmallButton onClick={() => handleSaveEditLocation(loc._id)}>Spremi</SmallButton>
-                          <SmallButton onClick={() => { setEditingLocationId(null); setEditingLocationValue(''); }}>Odustani</SmallButton>
-                        </div>
-                      ) : (
-                        <GroupMemberCount style={{ marginLeft: 0, display: 'block', marginTop: '0.25rem' }}>
-                          {loc.location}
-                        </GroupMemberCount>
-                      )}
+                      <GroupMemberCount style={{ marginLeft: 0, display: 'block', marginTop: '0.25rem' }}>
+                        {loc.latitude.toFixed(6)}, {loc.longitude.toFixed(6)}
+                        {' '}
+                        <a
+                          href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '0.8rem' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          (Otvori u Google Maps)
+                        </a>
+                      </GroupMemberCount>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       {editingLocationId !== loc._id && (
@@ -2703,7 +2771,7 @@ const PrijevozPage: React.FC = () => {
               ))
             )}
 
-            <ModalCloseButton onClick={() => setIsLokacijaModalOpen(false)}>
+            <ModalCloseButton onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); }}>
               Zatvori
             </ModalCloseButton>
           </ListaPrijevozaModalContent>

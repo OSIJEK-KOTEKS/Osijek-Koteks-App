@@ -7,10 +7,13 @@ const codeLocationSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  location: {
-    type: String,
+  latitude: {
+    type: Number,
     required: true,
-    trim: true,
+  },
+  longitude: {
+    type: Number,
+    required: true,
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
