@@ -82,6 +82,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25119': 'Pripremni i zemljani radovi u Sljemenskoj',  
   '26002': 'Pevex Požega',
   '26003':'OŠ M. P. KATANČIĆA - Valpovo',
+  '26006':'RWA Osijek',
   '5014': 'Betonara',
 };
 
