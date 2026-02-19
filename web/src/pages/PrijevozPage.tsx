@@ -1105,9 +1105,9 @@ const PrijevozPage: React.FC = () => {
     navigate('/dashboard');
   };
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       const data = await apiService.getTransportRequests();
 
       // Filter requests based on user role and assignment
@@ -1171,7 +1171,7 @@ const PrijevozPage: React.FC = () => {
 
       // Real-time updates via Socket.IO
       const handleTransportChange = () => {
-        fetchRequests();
+        fetchRequests(true); // silent = no loading spinner
       };
 
       const handleAcceptanceChange = (data: any) => {
@@ -1204,7 +1204,7 @@ const PrijevozPage: React.FC = () => {
       };
 
       const handleItemApproved = () => {
-        fetchRequests();
+        fetchRequests(true); // silent = no loading spinner
         if (expandedRequestId) {
           handleRequestClick(expandedRequestId);
         }
