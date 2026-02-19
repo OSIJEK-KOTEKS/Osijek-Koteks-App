@@ -1473,6 +1473,10 @@ router.patch(
         }
 
         // Return the updated item
+        if (updatedItem.approvalStatus === 'odobreno') {
+          const io = req.app.get('io');
+          io.emit('item:approved', { itemId: updatedItem._id });
+        }
         res.json(updatedItem);
       } catch (saveError) {
         console.error('Error saving item:', saveError);

@@ -1109,16 +1109,25 @@ const PrijevozPage: React.FC = () => {
         }
       };
 
+      const handleItemApproved = () => {
+        fetchRequests();
+        if (expandedRequestId) {
+          handleRequestClick(expandedRequestId);
+        }
+      };
+
       socket.on('transport:created', handleTransportChange);
       socket.on('transport:updated', handleTransportChange);
       socket.on('transport:deleted', handleTransportChange);
       socket.on('acceptance:updated', handleAcceptanceChange);
+      socket.on('item:approved', handleItemApproved);
 
       return () => {
         socket.off('transport:created', handleTransportChange);
         socket.off('transport:updated', handleTransportChange);
         socket.off('transport:deleted', handleTransportChange);
         socket.off('acceptance:updated', handleAcceptanceChange);
+        socket.off('item:approved', handleItemApproved);
       };
     }
   }, [user, isAdmin]);
