@@ -199,6 +199,12 @@ const ActionButton = styled.button`
     background: ${({ theme }) => theme.colors.primary};
     color: white;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 `;
 
 const DeleteButton = styled.button`
@@ -1002,6 +1008,25 @@ const PrijevozPage: React.FC = () => {
 
   const [locationPreview, setLocationPreview] = useState<{ title: string; lat: number; lng: number } | null>(null);
 
+  // Derive blocked request IDs — requests where user has an approved but incomplete acceptance
+  const blockedRequestIds = React.useMemo(() => {
+    const blocked = new Set<string>();
+    for (const acceptance of userAcceptances) {
+      if (
+        acceptance.status === 'approved' &&
+        typeof acceptance.deliveredCount === 'number' &&
+        acceptance.deliveredCount < acceptance.acceptedCount
+      ) {
+        const requestId =
+          typeof acceptance.requestId === 'object'
+            ? acceptance.requestId._id
+            : acceptance.requestId;
+        if (requestId) blocked.add(String(requestId));
+      }
+    }
+    return blocked;
+  }, [userAcceptances]);
+
   const getStaticMapUrl = useCallback((lat: number, lng: number, width = 420, height = 200): string => {
     const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
     return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=${width}x${height}&scale=2&markers=color:red|${lat},${lng}&key=${apiKey}`;
@@ -1093,6 +1118,8 @@ const PrijevozPage: React.FC = () => {
       fetchRequests();
       if (isAdmin) {
         fetchPendingAcceptances();
+      } else {
+        fetchUserAcceptances();
       }
       // Fetch code locations for all users (for map previews)
       apiService.getCodeLocations().then(locs => setCodeLocations(locs)).catch(e => console.error('Error loading code locations:', e));
@@ -1325,9 +1352,11 @@ const PrijevozPage: React.FC = () => {
       setAcceptingRequest(null);
       setAcceptCount(1);
       await fetchRequests();
+      await fetchUserAcceptances();
     } catch (error: any) {
       console.error('Error accepting request:', error);
-      alert('Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
+      const serverMessage = error?.response?.data?.message;
+      alert(serverMessage ?? 'Greška pri prihvaćanju zahtjeva. Molimo pokušajte ponovno.');
     }
   };
 
@@ -2187,10 +2216,15 @@ const PrijevozPage: React.FC = () => {
                       </Td>
                       <Td>
                         {request.status === 'Aktivno' ? (
-                          <ActionButton onClick={(e) => {
-                            e.stopPropagation();
-                            handleAcceptClick(request);
-                          }}>
+                          <ActionButton
+                            disabled={blockedRequestIds.has(request._id)}
+                            title={blockedRequestIds.has(request._id)
+                              ? 'Već imate odobreno prihvaćanje za ovaj zahtjev koje nije završeno'
+                              : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAcceptClick(request);
+                            }}>
                             Prihvati
                           </ActionButton>
                         ) : (

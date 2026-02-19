@@ -285,6 +285,7 @@ router.get('/acceptances/my', auth, async (req, res) => {
         }
 
         acceptanceObj.ukupnaIsplata = Math.round(ukupnaIsplata * 100) / 100; // Round to 2 decimal places
+        acceptanceObj.deliveredCount = approvedItems.length;
         return acceptanceObj;
       })
     );
@@ -618,6 +619,25 @@ router.post('/:id/accept', auth, async (req, res) => {
     // Validate count doesn't exceed available slots
     if (count > transportRequest.brojKamiona) {
       return res.status(400).json({ message: 'Requested count exceeds available transport slots' });
+    }
+
+    // Block if user already has an approved but incomplete acceptance for this request
+    const existingApprovedAcceptances = await TransportAcceptance.find({
+      requestId: req.params.id,
+      userId: req.user._id,
+      status: 'approved',
+    });
+
+    for (const existingAcceptance of existingApprovedAcceptances) {
+      const deliveredCount = await Item.countDocuments({
+        transportAcceptanceId: existingAcceptance._id,
+        approvalStatus: 'odobreno',
+      });
+      if (deliveredCount < existingAcceptance.acceptedCount) {
+        return res.status(400).json({
+          message: 'Ne možete prihvatiti ovaj zahtjev jer već imate odobreno prihvaćanje za njega koje nije u potpunosti završeno (nije sav materijal prevežen).',
+        });
+      }
     }
 
     // Create acceptance record
