@@ -993,6 +993,7 @@ const PrijevozPage: React.FC = () => {
   const [isLoadingAcceptances, setIsLoadingAcceptances] = useState(false);
   const [isAcceptancesModalOpen, setIsAcceptancesModalOpen] = useState(false);
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const expandedRequestIdRef = React.useRef<string | null>(null);
   const [requestAcceptances, setRequestAcceptances] = useState<any[]>([]);
   const [isLoadingRequestAcceptances, setIsLoadingRequestAcceptances] = useState(false);
   const [linkedItemsByAcceptance, setLinkedItemsByAcceptance] = useState<Map<string, { itemId: string; registration: string }[]>>(new Map());
@@ -1063,6 +1064,11 @@ const PrijevozPage: React.FC = () => {
     }
     return blocked;
   }, [userAcceptances]);
+
+  // Keep ref in sync so socket handlers always read the latest expandedRequestId
+  useEffect(() => {
+    expandedRequestIdRef.current = expandedRequestId;
+  }, [expandedRequestId]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -1205,8 +1211,9 @@ const PrijevozPage: React.FC = () => {
 
       const handleItemApproved = () => {
         fetchRequests(true); // silent = no loading spinner
-        if (expandedRequestId) {
-          handleRequestClick(expandedRequestId);
+        const currentExpandedId = expandedRequestIdRef.current; // read ref, not stale closure
+        if (currentExpandedId) {
+          handleRequestClick(currentExpandedId);
         }
       };
 
