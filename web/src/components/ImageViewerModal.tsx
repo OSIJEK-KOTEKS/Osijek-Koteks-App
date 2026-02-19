@@ -118,14 +118,14 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ imageUrl, onClose, 
     };
   }, [imageUrl, token]);
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
   return (
-    <ModalOverlay onClick={handleOverlayClick}>
+    <ModalOverlay onMouseDown={handleOverlayMouseDown}>
       <ModalContent>
         <CloseButton onClick={onClose}>&times;</CloseButton>
         {isLoading && <LoadingSpinner>Učitavanje...</LoadingSpinner>}

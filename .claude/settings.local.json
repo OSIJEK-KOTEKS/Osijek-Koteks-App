@@ -5,7 +5,8 @@
       "Bash(npx react-scripts build)",
       "Bash(npm install:*)",
       "Bash(git status:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(cd:*)"
     ]
   }
 }

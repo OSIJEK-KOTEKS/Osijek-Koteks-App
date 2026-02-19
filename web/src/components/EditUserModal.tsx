@@ -318,8 +318,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   if (!isOpen || !user) return null;
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={onClose}>
+      <ModalContent onMouseDown={e => e.stopPropagation()}>
         <h2>Uredi korisnika</h2>
         <Form onSubmit={handleSubmit}>
           <FormGroup>

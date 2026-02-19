@@ -321,8 +321,8 @@ const PCUserApprovalModal: React.FC<PCUserApprovalModalProps> = ({
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={onClose}>
+      <ModalContent onMouseDown={e => e.stopPropagation()}>
         <Title>Odobri dokument</Title>
 
         <ContentSection>

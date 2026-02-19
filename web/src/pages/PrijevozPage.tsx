@@ -2254,8 +2254,8 @@ const PrijevozPage: React.FC = () => {
 
       {/* Admin modal for pending acceptances */}
       {isAcceptancesModalOpen && (
-        <ModalOverlay onClick={() => setIsAcceptancesModalOpen(false)}>
-          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsAcceptancesModalOpen(false)}>
+          <ListaPrijevozaModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>
               Zahtjevi prijevoznika
             </ListaPrijevozaTitle>
@@ -2337,8 +2337,8 @@ const PrijevozPage: React.FC = () => {
       )}
 
       {locationPreview && (
-        <LocationPreviewOverlay onClick={() => setLocationPreview(null)}>
-          <LocationPreviewCard onClick={(e) => e.stopPropagation()}>
+        <LocationPreviewOverlay onMouseDown={() => setLocationPreview(null)}>
+          <LocationPreviewCard onMouseDown={(e) => e.stopPropagation()}>
             <LocationPreviewHeader>
               <LocationPreviewTitle>{locationPreview.title}</LocationPreviewTitle>
               <LocationPreviewCloseBtn onClick={() => setLocationPreview(null)}>✕</LocationPreviewCloseBtn>
@@ -2379,8 +2379,8 @@ const PrijevozPage: React.FC = () => {
       />
 
       {isAssignedUsersModalOpen && (
-        <ModalOverlay onClick={() => setIsAssignedUsersModalOpen(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsAssignedUsersModalOpen(false)}>
+          <ModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ModalTitle>Dodijeljeni prijevoznici</ModalTitle>
             <UserList>
               {assignedUsers.map((user) => (
@@ -2397,8 +2397,8 @@ const PrijevozPage: React.FC = () => {
       )}
 
       {isAcceptModalOpen && acceptingRequest && (
-        <ModalOverlay onClick={() => setIsAcceptModalOpen(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsAcceptModalOpen(false)}>
+          <ModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ModalTitle>Prihvati zahtjev za prijevoz</ModalTitle>
 
             <RequestInfo>
@@ -2495,8 +2495,8 @@ const PrijevozPage: React.FC = () => {
 
       {/* Lista prijevoza modal for regular users */}
       {isListaPrijevozaOpen && (
-        <ModalOverlay onClick={() => setIsListaPrijevozaOpen(false)}>
-          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsListaPrijevozaOpen(false)}>
+          <ListaPrijevozaModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>
               📋 Lista prijevoza
             </ListaPrijevozaTitle>
@@ -2619,8 +2619,8 @@ const PrijevozPage: React.FC = () => {
 
       {/* Admin: Lista prijevoza po prijevozniku modal */}
       {isDriverListModalOpen && (
-        <ModalOverlay onClick={() => setIsDriverListModalOpen(false)}>
-          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsDriverListModalOpen(false)}>
+          <ListaPrijevozaModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>
               🚛 Lista prijevoza po prijevozniku
             </ListaPrijevozaTitle>
@@ -2798,8 +2798,8 @@ const PrijevozPage: React.FC = () => {
       )}
       {/* Ispiši Karticu modal */}
       {isKarticaModalOpen && (
-        <ModalOverlay onClick={() => setIsKarticaModalOpen(false)}>
-          <KarticaModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsKarticaModalOpen(false)}>
+          <KarticaModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>
               Ispiši Karticu
             </ListaPrijevozaTitle>
@@ -2889,8 +2889,8 @@ const PrijevozPage: React.FC = () => {
       )}
       {/* Lokacija modal */}
       {isLokacijaModalOpen && (
-        <ModalOverlay onClick={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); setCreateAutocomplete(null); setEditAutocomplete(null); setCreateMapRef(null); setEditMapRef(null); }}>
-          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => { setIsLokacijaModalOpen(false); setEditingLocationId(null); setEditingPin(null); setCreateAutocomplete(null); setEditAutocomplete(null); setCreateMapRef(null); setEditMapRef(null); }}>
+          <ListaPrijevozaModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>Lokacije</ListaPrijevozaTitle>
 
             {!editingLocationId && (
@@ -3058,8 +3058,8 @@ const PrijevozPage: React.FC = () => {
 
       {/* Grupe modal */}
       {isGroupsModalOpen && (
-        <ModalOverlay onClick={() => setIsGroupsModalOpen(false)}>
-          <ListaPrijevozaModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsGroupsModalOpen(false)}>
+          <ListaPrijevozaModalContent onMouseDown={(e) => e.stopPropagation()}>
             <ListaPrijevozaTitle>Grupe</ListaPrijevozaTitle>
 
             <NewGroupRow>

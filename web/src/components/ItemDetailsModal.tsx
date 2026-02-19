@@ -161,8 +161,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, isOpen, onClo
   if (!isOpen || !item) return null;
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={onClose}>
+      <ModalContent onMouseDown={(e) => e.stopPropagation()}>
         <CloseButton onClick={onClose}>&times;</CloseButton>
 
         <ItemTitle>{item.title}</ItemTitle>

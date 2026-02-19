@@ -261,8 +261,8 @@ const EditZahtjevModal: React.FC<EditZahtjevModalProps> = ({
   if (!isOpen || !request) return null;
 
   return (
-    <ModalOverlay onClick={handleClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={handleClose}>
+      <ModalContent onMouseDown={e => e.stopPropagation()}>
         <Title>Uredi zahtjev</Title>
         <Form onSubmit={handleSubmit}>
           <FormGroup>

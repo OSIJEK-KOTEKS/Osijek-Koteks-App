@@ -439,8 +439,8 @@ const RegistracijePage: React.FC = () => {
 
       {/* Assignment Modal */}
       {isModalOpen && (
-        <ModalOverlay onClick={() => setIsModalOpen(false)}>
-          <ModalContent onClick={e => e.stopPropagation()}>
+        <ModalOverlay onMouseDown={() => setIsModalOpen(false)}>
+          <ModalContent onMouseDown={e => e.stopPropagation()}>
             <ModalTitle>Dodijeli registraciju: {selectedRegistration}</ModalTitle>
             <ModalSubtitle>
               Odaberite korisnika kojem želite dodijeliti ovu registraciju.

@@ -93,7 +93,7 @@ const LocationViewerModal: React.FC<LocationViewerModalProps> = ({
   onClose,
   approvalDate,
 }) => {
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -105,7 +105,7 @@ const LocationViewerModal: React.FC<LocationViewerModalProps> = ({
   };
 
   return (
-    <ModalOverlay onClick={handleOverlayClick}>
+    <ModalOverlay onMouseDown={handleOverlayMouseDown}>
       <ModalContent>
         <CloseButton onClick={onClose}>&times;</CloseButton>
         <Title>Lokacija odobrenja</Title>

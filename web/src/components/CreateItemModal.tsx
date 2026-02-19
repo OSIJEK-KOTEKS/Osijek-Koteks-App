@@ -254,7 +254,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ isOpen, onClose, onSu
   return (
     <ModalOverlay>
       <ModalWrapper>
-        <Backdrop onClick={onClose} />
+        <Backdrop onMouseDown={onClose} />
         <ModalContent>
           <Title>Kreiraj novi dokument</Title>
 

@@ -247,8 +247,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={onClose}>
+      <ModalContent onMouseDown={e => e.stopPropagation()}>
         <h2>Dodaj novog korisnika</h2>
         <Form onSubmit={handleSubmit}>
           <FormGroup>

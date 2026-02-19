@@ -481,8 +481,8 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay onClick={handleClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={handleClose}>
+      <ModalContent onMouseDown={e => e.stopPropagation()}>
         <Title>Novi zahtjev</Title>
         <Form onSubmit={handleSubmit}>
           <FormGroup>

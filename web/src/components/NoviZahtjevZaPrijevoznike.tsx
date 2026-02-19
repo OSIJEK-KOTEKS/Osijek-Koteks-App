@@ -321,8 +321,8 @@ const NoviZahtjevZaPrijevoznike: React.FC<NoviZahtjevZaPrijevoznike> = ({
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay onClick={handleClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <ModalOverlay onMouseDown={handleClose}>
+      <ModalContent onMouseDown={e => e.stopPropagation()}>
         <Title>Novi zahtjev za određene prijevoznike</Title>
         <Form onSubmit={handleSubmit}>
           <FormGroup>
