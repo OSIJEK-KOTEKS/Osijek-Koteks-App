@@ -2299,7 +2299,10 @@ const PrijevozPage: React.FC = () => {
                         {request.status === 'Aktivno' ? (
                           (() => {
                             const isBlocked = blockedRequestIds.has(request._id);
-                            const requestTs = parseDDMMYYYY(request.prijevozNaDan);
+                            const dateParts = request.prijevozNaDan ? request.prijevozNaDan.split('/') : [];
+                            const requestTs = dateParts.length === 3
+                              ? new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0])).getTime()
+                              : 0;
                             const todayTs = (() => {
                               const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
                             })();
