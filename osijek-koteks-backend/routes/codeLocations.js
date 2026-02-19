@@ -3,13 +3,9 @@ const router = express.Router();
 const CodeLocation = require('../models/CodeLocation');
 const auth = require('../middleware/auth');
 
-// Get all code locations (admin only)
+// Get all code locations (all authenticated users)
 router.get('/', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin access required.' });
-    }
-
     const codeLocations = await CodeLocation.find().sort({ code: 1 });
     res.json(codeLocations);
   } catch (error) {

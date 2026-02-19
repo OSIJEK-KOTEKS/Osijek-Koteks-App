@@ -210,6 +210,36 @@ const GroupTag = styled.span`
   margin-left: 0.25rem;
 `;
 
+const MapPreview = styled.div`
+  margin-top: 0.5rem;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+  }
+`;
+
+const MapLabel = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #666;
+`;
+
+interface CodeLocationData {
+  _id: string;
+  code: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface NoviZahtjevModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -221,6 +251,7 @@ interface NoviZahtjevModalProps {
     isplataPoT: number;
     assignedTo: 'All' | string[];
   }) => Promise<void>;
+  codeLocations?: CodeLocationData[];
 }
 
 const KAMENOLOMI = [
@@ -243,13 +274,29 @@ interface Group {
   users: PrijevozUser[];
 }
 
+const getStaticMapUrl = (lat: number, lng: number): string => {
+  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=460x150&scale=2&markers=color:red|${lat},${lng}&key=${apiKey}`;
+};
+
 const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  codeLocations = [],
 }) => {
   const [kamenolom, setKamenolom] = useState('');
   const [gradiliste, setGradiliste] = useState('');
+
+  const kamenolomLocation = useMemo(() => {
+    if (!kamenolom) return null;
+    return codeLocations.find(loc => loc.code === kamenolom) || null;
+  }, [kamenolom, codeLocations]);
+
+  const gradilisteLocation = useMemo(() => {
+    if (!gradiliste) return null;
+    return codeLocations.find(loc => loc.code === gradiliste) || null;
+  }, [gradiliste, codeLocations]);
   const [brojKamiona, setBrojKamiona] = useState('');
   const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
   const [isplataPoT, setIsplataPoT] = useState('');
@@ -452,6 +499,27 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                 </option>
               ))}
             </Select>
+            {kamenolom && kamenolomLocation && (
+              <>
+                <MapPreview>
+                  <img
+                    src={getStaticMapUrl(kamenolomLocation.latitude, kamenolomLocation.longitude)}
+                    alt={`Lokacija: ${kamenolom}`}
+                  />
+                </MapPreview>
+                <MapLabel>
+                  <span>{kamenolomLocation.latitude.toFixed(5)}, {kamenolomLocation.longitude.toFixed(5)}</span>
+                  <a
+                    href={`https://www.google.com/maps?q=${kamenolomLocation.latitude},${kamenolomLocation.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit' }}
+                  >
+                    Otvori u Maps
+                  </a>
+                </MapLabel>
+              </>
+            )}
           </FormGroup>
 
           <FormGroup>
@@ -468,6 +536,27 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                 </option>
               ))}
             </Select>
+            {gradiliste && gradilisteLocation && (
+              <>
+                <MapPreview>
+                  <img
+                    src={getStaticMapUrl(gradilisteLocation.latitude, gradilisteLocation.longitude)}
+                    alt={`Lokacija: ${getFormattedCode(gradiliste)}`}
+                  />
+                </MapPreview>
+                <MapLabel>
+                  <span>{gradilisteLocation.latitude.toFixed(5)}, {gradilisteLocation.longitude.toFixed(5)}</span>
+                  <a
+                    href={`https://www.google.com/maps?q=${gradilisteLocation.latitude},${gradilisteLocation.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit' }}
+                  >
+                    Otvori u Maps
+                  </a>
+                </MapLabel>
+              </>
+            )}
           </FormGroup>
 
           <FormGroup>

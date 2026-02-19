@@ -222,6 +222,98 @@ const ActionButtons = styled.div`
   gap: 0.5rem;
 `;
 
+const LocationPinButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 1rem;
+  color: #e74c3c;
+  vertical-align: middle;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+const LocationPreviewOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+`;
+
+const LocationPreviewCard = styled.div`
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+`;
+
+const LocationPreviewHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+`;
+
+const LocationPreviewTitle = styled.h3`
+  margin: 0;
+  font-size: 0.95rem;
+  color: #333;
+`;
+
+const LocationPreviewCloseBtn = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: #333;
+  }
+`;
+
+const LocationPreviewMapImg = styled.img`
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+`;
+
+const LocationPreviewFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem 0.75rem;
+  font-size: 0.8rem;
+  color: #666;
+
+  a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -907,6 +999,17 @@ const PrijevozPage: React.FC = () => {
   const [createMapRef, setCreateMapRef] = useState<google.maps.Map | null>(null);
   const [editMapRef, setEditMapRef] = useState<google.maps.Map | null>(null);
 
+  const [locationPreview, setLocationPreview] = useState<{ title: string; lat: number; lng: number } | null>(null);
+
+  const getStaticMapUrl = useCallback((lat: number, lng: number, width = 420, height = 200): string => {
+    const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=${width}x${height}&scale=2&markers=color:red|${lat},${lng}&key=${apiKey}`;
+  }, []);
+
+  const findLocationForCode = useCallback((code: string) => {
+    return codeLocations.find(loc => loc.code === code);
+  }, [codeLocations]);
+
   const croatianMonths = [
     'Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj',
     'Srpanj', 'Kolovoz', 'Rujan', 'Listopad', 'Studeni', 'Prosinac'
@@ -990,6 +1093,8 @@ const PrijevozPage: React.FC = () => {
       if (isAdmin) {
         fetchPendingAcceptances();
       }
+      // Fetch code locations for all users (for map previews)
+      apiService.getCodeLocations().then(locs => setCodeLocations(locs)).catch(e => console.error('Error loading code locations:', e));
     }
   }, [user, isAdmin]);
 
@@ -1859,7 +1964,7 @@ const PrijevozPage: React.FC = () => {
         <ContentHeader>
           {isAdmin ? (
             <ButtonSection>
-              <SmallButton onClick={() => setIsModalOpen(true)}>Novi zahtjev</SmallButton>
+              <SmallButton onClick={async () => { setIsModalOpen(true); if (codeLocations.length === 0) { try { const locs = await apiService.getCodeLocations(); setCodeLocations(locs); } catch (e) { console.error('Error loading code locations:', e); } } }}>Novi zahtjev</SmallButton>
               <SmallButton onClick={handleOpenDriverListModal}>
                 Lista prijevoza po prijevozniku
               </SmallButton>
@@ -1914,8 +2019,36 @@ const PrijevozPage: React.FC = () => {
                   {isAdmin ? (
                     <ClickableRow onClick={() => handleRequestClick(request._id)}>
                       <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
-                      <Td>{request.kamenolom}</Td>
-                      <Td>{getCodeDescription(request.gradiliste)}</Td>
+                      <Td>
+                        {request.kamenolom}
+                        {findLocationForCode(request.kamenolom) && (
+                          <LocationPinButton
+                            title="Prikaži lokaciju"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const loc = findLocationForCode(request.kamenolom)!;
+                              setLocationPreview({ title: request.kamenolom, lat: loc.latitude, lng: loc.longitude });
+                            }}
+                          >
+                            📍
+                          </LocationPinButton>
+                        )}
+                      </Td>
+                      <Td>
+                        {getCodeDescription(request.gradiliste)}
+                        {findLocationForCode(request.gradiliste) && (
+                          <LocationPinButton
+                            title="Prikaži lokaciju"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const loc = findLocationForCode(request.gradiliste)!;
+                              setLocationPreview({ title: `${request.gradiliste} - ${getCodeDescription(request.gradiliste)}`, lat: loc.latitude, lng: loc.longitude });
+                            }}
+                          >
+                            📍
+                          </LocationPinButton>
+                        )}
+                      </Td>
                       <Td>{request.brojKamiona}</Td>
                       <Td>
                         {(() => {
@@ -1965,8 +2098,36 @@ const PrijevozPage: React.FC = () => {
                   ) : (
                     <ClickableRow onClick={() => handleRequestClick(request._id)}>
                       <Td>{new Date(request.createdAt).toLocaleDateString('hr-HR')}</Td>
-                      <Td>{request.kamenolom}</Td>
-                      <Td>{getCodeDescription(request.gradiliste)}</Td>
+                      <Td>
+                        {request.kamenolom}
+                        {findLocationForCode(request.kamenolom) && (
+                          <LocationPinButton
+                            title="Prikaži lokaciju"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const loc = findLocationForCode(request.kamenolom)!;
+                              setLocationPreview({ title: request.kamenolom, lat: loc.latitude, lng: loc.longitude });
+                            }}
+                          >
+                            📍
+                          </LocationPinButton>
+                        )}
+                      </Td>
+                      <Td>
+                        {getCodeDescription(request.gradiliste)}
+                        {findLocationForCode(request.gradiliste) && (
+                          <LocationPinButton
+                            title="Prikaži lokaciju"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const loc = findLocationForCode(request.gradiliste)!;
+                              setLocationPreview({ title: `${request.gradiliste} - ${getCodeDescription(request.gradiliste)}`, lat: loc.latitude, lng: loc.longitude });
+                            }}
+                          >
+                            📍
+                          </LocationPinButton>
+                        )}
+                      </Td>
                       <Td>{request.brojKamiona}</Td>
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
@@ -2175,10 +2336,36 @@ const PrijevozPage: React.FC = () => {
         </ModalOverlay>
       )}
 
+      {locationPreview && (
+        <LocationPreviewOverlay onClick={() => setLocationPreview(null)}>
+          <LocationPreviewCard onClick={(e) => e.stopPropagation()}>
+            <LocationPreviewHeader>
+              <LocationPreviewTitle>{locationPreview.title}</LocationPreviewTitle>
+              <LocationPreviewCloseBtn onClick={() => setLocationPreview(null)}>✕</LocationPreviewCloseBtn>
+            </LocationPreviewHeader>
+            <LocationPreviewMapImg
+              src={getStaticMapUrl(locationPreview.lat, locationPreview.lng)}
+              alt={`Lokacija: ${locationPreview.title}`}
+            />
+            <LocationPreviewFooter>
+              <span>{locationPreview.lat.toFixed(5)}, {locationPreview.lng.toFixed(5)}</span>
+              <a
+                href={`https://www.google.com/maps?q=${locationPreview.lat},${locationPreview.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Otvori u Google Maps
+              </a>
+            </LocationPreviewFooter>
+          </LocationPreviewCard>
+        </LocationPreviewOverlay>
+      )}
+
       <NoviZahtjevModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitZahtjev}
+        codeLocations={codeLocations}
       />
 
       <EditZahtjevModal
