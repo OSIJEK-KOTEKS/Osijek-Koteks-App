@@ -626,6 +626,18 @@ router.post('/:id/accept', auth, async (req, res) => {
       return res.status(400).json({ message: 'Requested count exceeds available transport slots' });
     }
 
+    // Block acceptance if the transport date has already passed
+    const [day, month, year] = transportRequest.prijevozNaDan.split('/').map(Number);
+    const requestDate = new Date(year, month - 1, day); // midnight on the request date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // strip time, compare date-only
+
+    if (today > requestDate) {
+      return res.status(400).json({
+        message: `Ne možete prihvatiti ovaj zahtjev jer je datum prijevoza (${transportRequest.prijevozNaDan}) već prošao.`,
+      });
+    }
+
     // Block if user already has an approved but incomplete acceptance for this request
     const existingApprovedAcceptances = await TransportAcceptance.find({
       requestId: req.params.id,

@@ -2297,17 +2297,31 @@ const PrijevozPage: React.FC = () => {
                       </Td>
                       <Td>
                         {request.status === 'Aktivno' ? (
-                          <ActionButton
-                            disabled={blockedRequestIds.has(request._id)}
-                            title={blockedRequestIds.has(request._id)
+                          (() => {
+                            const isBlocked = blockedRequestIds.has(request._id);
+                            const requestTs = parseDDMMYYYY(request.prijevozNaDan);
+                            const todayTs = (() => {
+                              const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
+                            })();
+                            const isPastDate = requestTs > 0 && todayTs > requestTs;
+                            const isDisabled = isBlocked || isPastDate;
+                            const disabledTitle = isPastDate
+                              ? `Datum prijevoza (${request.prijevozNaDan}) je već prošao`
+                              : isBlocked
                               ? 'Već imate odobreno prihvaćanje za ovaj zahtjev koje nije završeno'
-                              : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAcceptClick(request);
-                            }}>
-                            Prihvati
-                          </ActionButton>
+                              : undefined;
+                            return (
+                              <ActionButton
+                                disabled={isDisabled}
+                                title={disabledTitle}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAcceptClick(request);
+                                }}>
+                                Prihvati
+                              </ActionButton>
+                            );
+                          })()
                         ) : (
                           <span style={{ color: '#999', fontStyle: 'italic' }}>Neaktivno</span>
                         )}
