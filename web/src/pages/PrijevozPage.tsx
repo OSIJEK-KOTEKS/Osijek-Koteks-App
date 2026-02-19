@@ -49,6 +49,42 @@ const HeaderActions = styled.div`
   }
 `;
 
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+`;
+
+const ToastItem = styled.div<{ $type: 'success' | 'error' }>`
+  background: ${({ $type }) => ($type === 'success' ? '#28a745' : '#dc3545')};
+  color: white;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 0.95rem;
+  font-weight: 500;
+  max-width: 360px;
+  line-height: 1.4;
+  animation: slideIn 0.3s ease;
+  pointer-events: all;
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+`;
+
 const DashboardContainer = styled.div`
   background: ${({ theme }) => theme.colors.white};
   border-radius: ${({ theme }) => theme.borderRadius};
@@ -1007,6 +1043,7 @@ const PrijevozPage: React.FC = () => {
   const [editMapRef, setEditMapRef] = useState<google.maps.Map | null>(null);
 
   const [locationPreview, setLocationPreview] = useState<{ title: string; lat: number; lng: number } | null>(null);
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' }>>([]);
 
   // Derive blocked request IDs — requests where user has an approved but incomplete acceptance
   const blockedRequestIds = React.useMemo(() => {
@@ -1026,6 +1063,14 @@ const PrijevozPage: React.FC = () => {
     }
     return blocked;
   }, [userAcceptances]);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
 
   const getStaticMapUrl = useCallback((lat: number, lng: number, width = 420, height = 200): string => {
     const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
@@ -1129,10 +1174,32 @@ const PrijevozPage: React.FC = () => {
         fetchRequests();
       };
 
-      const handleAcceptanceChange = () => {
+      const handleAcceptanceChange = (data: any) => {
         handleTransportChange();
         if (isAdmin) {
           fetchPendingAcceptances();
+        }
+
+        // Show toast only to the user whose acceptance was reviewed
+        const acceptanceUserId =
+          data?.acceptance?.userId?._id || // approved branch (populated object)
+          data?.userId;                     // declined branch (raw id)
+
+        if (acceptanceUserId && user && String(acceptanceUserId) === String(user._id)) {
+          const location = data?.acceptance?.requestId?.kamenolom ?? '';
+          if (data?.acceptance?.status === 'approved') {
+            showToast(
+              `✅ Vaš zahtjev za prijevoz${location ? ` (${location})` : ''} je odobren!`,
+              'success'
+            );
+            fetchUserAcceptances();
+          } else if (data?.status === 'declined') {
+            showToast(
+              `❌ Vaš zahtjev za prijevoz${location ? ` (${location})` : ''} je odbijen.`,
+              'error'
+            );
+            fetchUserAcceptances();
+          }
         }
       };
 
@@ -2013,6 +2080,13 @@ const PrijevozPage: React.FC = () => {
 
   return (
     <S.PageContainer>
+      <ToastContainer>
+        {toasts.map(toast => (
+          <ToastItem key={toast.id} $type={toast.type}>
+            {toast.message}
+          </ToastItem>
+        ))}
+      </ToastContainer>
       <Header>
         <HeaderLeft>
           <Logo />

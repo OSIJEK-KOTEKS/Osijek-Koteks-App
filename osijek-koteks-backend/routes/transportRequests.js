@@ -408,7 +408,12 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
       await TransportAcceptance.findByIdAndDelete(req.params.acceptanceId);
 
       const io = req.app.get('io');
-      io.emit('acceptance:updated', { id: req.params.acceptanceId, status: 'declined' });
+      io.emit('acceptance:updated', {
+        id: req.params.acceptanceId,
+        status: 'declined',
+        userId: acceptance.userId,
+        requestId: acceptance.requestId._id,
+      });
       io.emit('transport:updated', { requestId: acceptance.requestId._id });
 
       return res.json({
