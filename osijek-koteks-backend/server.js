@@ -7,7 +7,30 @@ require('dotenv').config();
 // Import models
 const Item = require('./models/Item');
 
+const http = require('http');
+const { Server } = require('socket.io');
+
 const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  },
+});
+
+// Make io accessible from route handlers via req.app.get('io')
+app.set('io', io);
+
+io.on('connection', socket => {
+  console.log('Socket connected:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected:', socket.id);
+  });
+});
 
 // Basic CORS configuration
 const corsOptions = {
@@ -147,7 +170,7 @@ mongoose
   .then(() => {
     console.log('MongoDB connected successfully');
     const port = process.env.PORT || 5000;
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
   })

@@ -9,6 +9,7 @@ import EditZahtjevModal from '../components/EditZahtjevModal';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import ImageViewerModal from '../components/ImageViewerModal';
 import { apiService } from '../utils/api';
+import socket from '../utils/socket';
 import { getCodeDescription, codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Item } from '../types';
@@ -1095,6 +1096,30 @@ const PrijevozPage: React.FC = () => {
       }
       // Fetch code locations for all users (for map previews)
       apiService.getCodeLocations().then(locs => setCodeLocations(locs)).catch(e => console.error('Error loading code locations:', e));
+
+      // Real-time updates via Socket.IO
+      const handleTransportChange = () => {
+        fetchRequests();
+      };
+
+      const handleAcceptanceChange = () => {
+        handleTransportChange();
+        if (isAdmin) {
+          fetchPendingAcceptances();
+        }
+      };
+
+      socket.on('transport:created', handleTransportChange);
+      socket.on('transport:updated', handleTransportChange);
+      socket.on('transport:deleted', handleTransportChange);
+      socket.on('acceptance:updated', handleAcceptanceChange);
+
+      return () => {
+        socket.off('transport:created', handleTransportChange);
+        socket.off('transport:updated', handleTransportChange);
+        socket.off('transport:deleted', handleTransportChange);
+        socket.off('acceptance:updated', handleAcceptanceChange);
+      };
     }
   }, [user, isAdmin]);
 

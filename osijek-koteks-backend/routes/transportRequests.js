@@ -44,6 +44,9 @@ router.post('/', auth, async (req, res) => {
 
     await transportRequest.save();
 
+    const io = req.app.get('io');
+    io.emit('transport:created', { transportRequest });
+
     res.status(201).json({
       message: 'Transport request created successfully',
       transportRequest,
@@ -149,6 +152,9 @@ router.put('/:id', auth, async (req, res) => {
 
     await transportRequest.save();
 
+    const io = req.app.get('io');
+    io.emit('transport:updated', { transportRequest });
+
     res.json({
       message: 'Transport request updated successfully',
       transportRequest,
@@ -190,6 +196,9 @@ router.patch('/:id/status', auth, async (req, res) => {
       return res.status(404).json({ message: 'Transport request not found' });
     }
 
+    const io = req.app.get('io');
+    io.emit('transport:updated', { transportRequest });
+
     res.json({
       message: 'Status updated successfully',
       transportRequest,
@@ -223,6 +232,9 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     await TransportRequest.findByIdAndDelete(req.params.id);
+
+    const io = req.app.get('io');
+    io.emit('transport:deleted', { id: req.params.id });
 
     res.json({ message: 'Transport request deleted successfully' });
   } catch (error) {
@@ -394,6 +406,10 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
       // Delete the acceptance entirely when declined
       await TransportAcceptance.findByIdAndDelete(req.params.acceptanceId);
 
+      const io = req.app.get('io');
+      io.emit('acceptance:updated', { id: req.params.acceptanceId, status: 'declined' });
+      io.emit('transport:updated', { requestId: acceptance.requestId._id });
+
       return res.json({
         message: 'Acceptance declined and removed successfully',
       });
@@ -415,6 +431,10 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
     // Populate the acceptance for response
     await acceptance.populate('userId', 'firstName lastName email company');
     await acceptance.populate('reviewedBy', 'firstName lastName email');
+
+    const io = req.app.get('io');
+    io.emit('acceptance:updated', { acceptance });
+    io.emit('transport:updated', { requestId: acceptance.requestId._id });
 
     res.json({
       message: 'Acceptance approved successfully',
@@ -455,6 +475,9 @@ router.patch('/acceptances/:acceptanceId/payment', auth, async (req, res) => {
     if (!acceptance) {
       return res.status(404).json({ message: 'Acceptance not found' });
     }
+
+    const io = req.app.get('io');
+    io.emit('acceptance:updated', { acceptance });
 
     res.json({
       message: `Payment status updated to "${paymentStatus}"`,
@@ -608,6 +631,10 @@ router.post('/:id/accept', auth, async (req, res) => {
     });
 
     await acceptance.save();
+
+    const io = req.app.get('io');
+    io.emit('transport:updated', { requestId: req.params.id });
+    io.emit('acceptance:updated', { acceptance });
 
     res.status(201).json({
       message: 'Transport request acceptance submitted successfully',
