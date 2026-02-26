@@ -153,6 +153,10 @@ const ItemSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    prosjecnaBrzina: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,

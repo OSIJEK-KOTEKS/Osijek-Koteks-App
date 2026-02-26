@@ -232,6 +232,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, isOpen, onClo
           </ItemDetail>
         )}
 
+        {item.approvalStatus === 'odobreno' && item.prosjecnaBrzina != null && (
+          <ItemDetail>
+            <strong>Prosječna Brzina:</strong> {item.prosjecnaBrzina.toFixed(1)} km/h
+          </ItemDetail>
+        )}
+
         {item.isPaid && (
           <ItemDetail>
             <strong>Plaćen Prijevoz:</strong> {item.paidAt ? safeParseDate(item.paidAt) : 'Nepoznato'}

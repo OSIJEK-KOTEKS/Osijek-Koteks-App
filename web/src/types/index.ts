@@ -80,6 +80,7 @@ export interface Item {
     accuracy: number;
     timestamp: Date;
   };
+  prosjecnaBrzina?: number | null;
   isPaid?: boolean;
   paidAt?: string;
   paidBy?: {

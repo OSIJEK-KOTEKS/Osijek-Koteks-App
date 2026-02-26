@@ -4,9 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const axios = require('axios');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const TransportAcceptance = require('../models/TransportAcceptance');
+const CodeLocation = require('../models/CodeLocation');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
@@ -72,6 +74,61 @@ const normalizeCarrierName = name => {
       .trim()
   );
 };
+
+// Email-to-origin code mapping for speed calculation
+const CREATOR_EMAIL_TO_CODE = {
+  'velicki.vaga@velicki-kamen.hr': 'VELIČKI KAMEN VELIČANKA',
+  'vetovo.vaga@velicki-kamen.hr': 'VELIČKI KAMEN VETOVO',
+  'vaga.fukinac@kamen-psunj.hr': 'KAMEN - PSUNJ',
+  'vaga.molaris@osijek-koteks.hr': 'MOLARIS',
+};
+
+const IGNORED_APPROVER_EMAILS = new Set([
+  'marko.krajina@osijek-koteks.hr',
+  'zaposlenik.gradilista@osijek-koteks.hr',
+  'diskont.vaga@osijek-koteks.hr',
+]);
+
+// Returns speed in km/h or null if it cannot be calculated
+async function calculateAverageSpeed(item, approverUser) {
+  if (IGNORED_APPROVER_EMAILS.has(approverUser.email)) return null;
+
+  const creator = await User.findById(item.createdBy).select('email');
+  if (!creator) return null;
+
+  const originCode = CREATOR_EMAIL_TO_CODE[creator.email];
+  if (!originCode) return null;
+
+  const [originLoc, destLoc] = await Promise.all([
+    CodeLocation.findOne({ code: originCode }),
+    CodeLocation.findOne({ code: item.code }),
+  ]);
+  if (!originLoc || !destLoc) return null;
+
+  const creationTime = item.creationDate instanceof Date ? item.creationDate : new Date(item.creationDate);
+  const approvalTime = item.approvalDate instanceof Date ? item.approvalDate : new Date(item.approvalDate);
+  const timeDiffHours = (approvalTime - creationTime) / (1000 * 60 * 60);
+
+  if (timeDiffHours <= 0 || timeDiffHours > 8) return null;
+
+  // OSRM expects longitude,latitude
+  const osrmUrl = `http://router.project-osrm.org/route/v1/driving/${originLoc.longitude},${originLoc.latitude};${destLoc.longitude},${destLoc.latitude}?overview=false`;
+  const response = await axios.get(osrmUrl, { timeout: 10000 });
+
+  if (
+    !response.data ||
+    response.data.code !== 'Ok' ||
+    !response.data.routes ||
+    response.data.routes.length === 0
+  ) {
+    return null;
+  }
+
+  const distanceKm = response.data.routes[0].distance / 1000;
+  if (distanceKm <= 0) return null;
+
+  return Math.round((distanceKm / timeDiffHours) * 10) / 10;
+}
 
 // Function to find all carrier variations that match the normalized form
 const findCarrierVariations = async selectedCarrier => {
@@ -1469,6 +1526,20 @@ router.patch(
               });
               break;
             }
+          }
+        }
+
+        // Calculate and store average speed for approved items
+        if (updatedItem.approvalStatus === 'odobreno') {
+          try {
+            const speed = await calculateAverageSpeed(updatedItem, req.user);
+            if (speed !== null) {
+              updatedItem.prosjecnaBrzina = speed;
+              await Item.findByIdAndUpdate(updatedItem._id, { prosjecnaBrzina: speed });
+              console.log('Calculated average speed:', speed, 'km/h for item:', updatedItem._id);
+            }
+          } catch (speedError) {
+            console.error('Speed calculation error (non-fatal):', speedError.message);
           }
         }
 

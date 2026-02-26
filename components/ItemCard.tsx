@@ -153,6 +153,13 @@ export const ItemCard = React.memo(
                       </View>
                     )}
 
+                    {item.prosjecnaBrzina != null && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Prosj. brzina:</Text>
+                        <Text style={styles.detailValue}>{item.prosjecnaBrzina.toFixed(1)} km/h</Text>
+                      </View>
+                    )}
+
                     <View style={styles.photosContainer}>
                       {renderPhotoPreview('front')}
                       {renderPhotoPreview('back')}
@@ -184,7 +191,8 @@ export const ItemCard = React.memo(
     return (
       prevProps.item._id === nextProps.item._id &&
       prevProps.item.approvalStatus === nextProps.item.approvalStatus &&
-      prevProps.item.in_transit === nextProps.item.in_transit && // Add in_transit to memo check
+      prevProps.item.in_transit === nextProps.item.in_transit &&
+      prevProps.item.prosjecnaBrzina === nextProps.item.prosjecnaBrzina &&
       prevProps.userToken === nextProps.userToken &&
       prevProps.userProfile?.role === nextProps.userProfile?.role
     );

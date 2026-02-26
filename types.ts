@@ -113,6 +113,7 @@ export interface Item {
     accuracy: number;
     timestamp: Date;
   };
+  prosjecnaBrzina?: number | null;
 }
 
 export interface CreateItemFormData {
