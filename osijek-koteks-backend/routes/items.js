@@ -604,6 +604,16 @@ router.get('/', auth, async (req, res) => {
     const total = await Item.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
+    // Average speed query: code-only filter (ignores date range and other active filters)
+    // so that the average reflects ALL approved items for that code, not just the current date window
+    const avgSpeedQuery = {
+      approvalStatus: 'odobreno',
+      prosjecnaBrzina: { $ne: null, $exists: true },
+    };
+    if (query.code) {
+      avgSpeedQuery.code = query.code;
+    }
+
     // FIXED: Calculate total weight for ALL filtered items, not just paginated ones
     const [totalWeightResult, avgSpeedResult] = await Promise.all([
       Item.aggregate([
@@ -616,7 +626,7 @@ router.get('/', auth, async (req, res) => {
         },
       ]),
       Item.aggregate([
-        { $match: { ...query, approvalStatus: 'odobreno', prosjecnaBrzina: { $ne: null, $exists: true } } },
+        { $match: avgSpeedQuery },
         {
           $group: {
             _id: null,
