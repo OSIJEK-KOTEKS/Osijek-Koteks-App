@@ -79,6 +79,7 @@ export const codeToTextMapping: Record<string, string> = {
   '25100': 'Tranzit Eurospin Retfala',
   '25104': 'Belišće igralište',
   '25112': 'O.Š. Vladimir Nazor Đakovo',
+  '25114': 'Reciklažno dvorište Našice',
   '25119': 'Pripremni i zemljani radovi u Sljemenskoj',  
   '26002': 'Pevex Požega',
   '26003':'OŠ M. P. KATANČIĆA - Valpovo',
