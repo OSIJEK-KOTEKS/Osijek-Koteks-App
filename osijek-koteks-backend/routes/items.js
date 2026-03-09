@@ -605,17 +605,29 @@ router.get('/', auth, async (req, res) => {
     const totalPages = Math.ceil(total / limit);
 
     // FIXED: Calculate total weight for ALL filtered items, not just paginated ones
-    const totalWeightResult = await Item.aggregate([
-      { $match: query },
-      {
-        $group: {
-          _id: null,
-          totalWeight: { $sum: { $ifNull: ['$tezina', 0] } },
+    const [totalWeightResult, avgSpeedResult] = await Promise.all([
+      Item.aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            totalWeight: { $sum: { $ifNull: ['$tezina', 0] } },
+          },
         },
-      },
+      ]),
+      Item.aggregate([
+        { $match: { ...query, approvalStatus: 'odobreno', prosjecnaBrzina: { $ne: null, $exists: true } } },
+        {
+          $group: {
+            _id: null,
+            avgSpeed: { $avg: '$prosjecnaBrzina' },
+          },
+        },
+      ]),
     ]);
 
     const totalWeight = totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
+    const avgSpeed = avgSpeedResult.length > 0 ? Math.round(avgSpeedResult[0].avgSpeed * 10) / 10 : null;
 
     res.json({
       items,
@@ -625,7 +637,8 @@ router.get('/', auth, async (req, res) => {
         pages: totalPages,
         hasMore: page < totalPages,
       },
-      totalWeight: totalWeight, // This now includes ALL filtered items
+      totalWeight,
+      avgSpeed,
     });
   } catch (err) {
     console.error('Error fetching items:', err);

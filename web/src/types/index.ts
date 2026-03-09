@@ -197,6 +197,7 @@ export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationInfo;
   totalWeight?: number;
+  avgSpeed?: number | null;
 }
 
 export interface ApiServiceResponse<T = any> {

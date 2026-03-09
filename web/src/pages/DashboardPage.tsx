@@ -291,6 +291,7 @@ const Dashboard: React.FC = () => {
 
   // Other states
   const [totalWeight, setTotalWeight] = useState(0);
+  const [avgSpeed, setAvgSpeed] = useState<number | null>(null);
 
   // Refs for preventing race conditions
   const isFetchingRef = useRef(false);
@@ -516,6 +517,7 @@ const Dashboard: React.FC = () => {
         setHasMore(response.pagination.hasMore);
         setTotalItems(response.pagination.total);
         setTotalWeight(response.totalWeight || 0);
+        setAvgSpeed(response.avgSpeed ?? null);
         setError('');
       } catch (err: any) {
         if (err.name === 'AbortError') {
@@ -1095,6 +1097,13 @@ const Dashboard: React.FC = () => {
             Ukupna težina ({totalItems}{' '}
             {totalItems === 1 ? 'kamion' : totalItems < 2 ? 'kamiona' : 'kamiona'})
           </TotalWeightLabel>
+        </TotalWeightContainer>
+      )}
+
+      {selectedCode !== 'all' && avgSpeed !== null && (
+        <TotalWeightContainer>
+          <TotalWeightValue>{avgSpeed.toFixed(1)} km/h</TotalWeightValue>
+          <TotalWeightLabel>Prosječna brzina odobrenih vožnji</TotalWeightLabel>
         </TotalWeightContainer>
       )}
 
