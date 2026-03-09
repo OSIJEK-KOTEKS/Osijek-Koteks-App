@@ -1103,7 +1103,7 @@ const Dashboard: React.FC = () => {
       {selectedCode !== 'all' && avgSpeed !== null && (
         <TotalWeightContainer>
           <TotalWeightValue>{avgSpeed.toFixed(1)} km/h</TotalWeightValue>
-          <TotalWeightLabel>Prosječna brzina odobrenih vožnji</TotalWeightLabel>
+          <TotalWeightLabel>Prosječna brzina odobrenih vožnji za {getFormattedCode(selectedCode)}</TotalWeightLabel>
         </TotalWeightContainer>
       )}
 
