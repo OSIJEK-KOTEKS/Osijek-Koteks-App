@@ -7,7 +7,8 @@
       "Bash(git status:*)",
       "Bash(npx tsc:*)",
       "Bash(cd:*)",
-      "Bash(xargs grep -l \"osrm\\\\|distance\\\\|routing\\\\|codelocations\")"
+      "Bash(xargs grep -l \"osrm\\\\|distance\\\\|routing\\\\|codelocations\")",
+      "Bash(grep -r Završen 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.js --include=*.ts --include=*.tsx)"
     ]
   }
 }

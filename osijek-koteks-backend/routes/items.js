@@ -8,6 +8,7 @@ const axios = require('axios');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const TransportAcceptance = require('../models/TransportAcceptance');
+const TransportRequest = require('../models/TransportRequest');
 const CodeLocation = require('../models/CodeLocation');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
@@ -1547,6 +1548,26 @@ router.patch(
                 acceptanceId: matchingAcceptance._id,
                 registration: updatedItem.registracija
               });
+
+              // Check if the entire request is now complete
+              try {
+                const allAcceptances = await TransportAcceptance.find({
+                  requestId: matchingAcceptance.requestId,
+                  status: 'approved',
+                });
+                const totalAccepted = allAcceptances.reduce((sum, a) => sum + a.acceptedCount, 0);
+                const totalDelivered = await Item.countDocuments({
+                  transportAcceptanceId: { $in: allAcceptances.map(a => a._id) },
+                  approvalStatus: 'odobreno',
+                });
+                if (totalAccepted > 0 && totalDelivered >= totalAccepted) {
+                  await TransportRequest.findByIdAndUpdate(matchingAcceptance.requestId, { status: 'Završen' });
+                  console.log('Transport request marked as Završen:', matchingAcceptance.requestId);
+                }
+              } catch (completionError) {
+                console.error('Error checking request completion (non-fatal):', completionError.message);
+              }
+
               break;
             }
           }

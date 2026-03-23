@@ -37,7 +37,7 @@ const TransportRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Aktivno', 'Neaktivno'],
+      enum: ['Aktivno', 'Neaktivno', 'Završen'],
       default: 'Aktivno',
     },
     assignedTo: {

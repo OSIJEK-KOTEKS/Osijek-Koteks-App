@@ -1316,6 +1316,8 @@ const PrijevozPage: React.FC = () => {
         return 'Aktivno';
       case 'Neaktivno':
         return 'Neaktivno';
+      case 'Završen':
+        return 'Završen';
       default:
         return status;
     }
@@ -2203,7 +2205,7 @@ const PrijevozPage: React.FC = () => {
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
                       <Td>
-                        <StatusBadge status={request.status === 'Aktivno' ? 'approved' : 'rejected'}>
+                        <StatusBadge status={request.status === 'Aktivno' ? 'approved' : request.status === 'Završen' ? 'completed' : 'rejected'}>
                           {getStatusLabel(request.status)}
                         </StatusBadge>
                       </Td>
@@ -2276,7 +2278,7 @@ const PrijevozPage: React.FC = () => {
                       <Td>{request.prijevozNaDan}</Td>
                       <Td>{request.isplataPoT} €</Td>
                       <Td>
-                        <StatusBadge status={request.status === 'Aktivno' ? 'approved' : 'rejected'}>
+                        <StatusBadge status={request.status === 'Aktivno' ? 'approved' : request.status === 'Završen' ? 'completed' : 'rejected'}>
                           {getStatusLabel(request.status)}
                         </StatusBadge>
                       </Td>
@@ -2325,6 +2327,8 @@ const PrijevozPage: React.FC = () => {
                               </ActionButton>
                             );
                           })()
+                        ) : request.status === 'Završen' ? (
+                          <span style={{ color: '#17a2b8', fontStyle: 'italic' }}>Završeno</span>
                         ) : (
                           <span style={{ color: '#999', fontStyle: 'italic' }}>Neaktivno</span>
                         )}
