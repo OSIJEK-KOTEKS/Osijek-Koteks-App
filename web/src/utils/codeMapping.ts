@@ -24,6 +24,7 @@ export const codeToTextMapping: Record<string, string> = {
   '23071': 'Izvanredno održavanje ceste Belišće',
   '23075': 'Retail Park Retfala Nova',
   '24001': 'Izgradnja propusta Nemetin',
+  '24004': 'Betonara Štitar',
   '24005': 'Rest. toka Dunava - Zmajevički Dunavac',
   '24008': 'Prist. cesta i most Vuka',
   '24009': 'Nuštar - Vukovar',
