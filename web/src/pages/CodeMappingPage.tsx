@@ -79,12 +79,13 @@ const Td = styled.td`
   vertical-align: middle;
 `;
 
-const Tr = styled.tr`
+const Tr = styled.tr<{ unmapped?: boolean }>`
+  background: ${({ unmapped }) => (unmapped ? '#fffde7' : 'transparent')};
   &:last-child td {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ unmapped, theme }) => (unmapped ? '#fff9c4' : theme.colors.background)};
   }
 `;
 
@@ -104,7 +105,7 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-const SmallButton = styled.button<{ variant?: 'danger' | 'success' | 'secondary' }>`
+const SmallButton = styled.button<{ variant?: 'danger' | 'success' | 'secondary' | 'add' }>`
   padding: 5px 12px;
   border-radius: 4px;
   border: none;
@@ -118,6 +119,8 @@ const SmallButton = styled.button<{ variant?: 'danger' | 'success' | 'secondary'
       ? '#43a047'
       : variant === 'secondary'
       ? theme.colors.gray
+      : variant === 'add'
+      ? '#fb8c00'
       : theme.colors.primary};
   color: ${({ variant, theme }) =>
     variant === 'secondary' ? theme.colors.text : 'white'};
@@ -134,6 +137,31 @@ const SmallButton = styled.button<{ variant?: 'danger' | 'success' | 'secondary'
 
 const NewRow = styled.tr`
   background: #f0f7ff;
+`;
+
+const UnmappedTag = styled.span`
+  font-size: 0.75rem;
+  color: #f57f17;
+  background: #fff9c4;
+  border: 1px solid #f9a825;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+`;
+
+const StaticName = styled.span`
+  color: #888;
+  font-style: italic;
+`;
+
+const StaticTag = styled.span`
+  font-size: 0.72rem;
+  color: #888;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 8px;
+  vertical-align: middle;
 `;
 
 const EmptyState = styled.div`
@@ -169,6 +197,25 @@ const CountBadge = styled.span`
   margin-left: 8px;
 `;
 
+const UnmappedBadge = styled.span`
+  background: #fb8c00;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  margin-left: 6px;
+`;
+
+const FilterToggle = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  white-space: nowrap;
+`;
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CodeMappingEntry {
@@ -178,22 +225,30 @@ interface CodeMappingEntry {
   updatedAt: string;
 }
 
+interface MergedRow {
+  code: string;
+  mapping: CodeMappingEntry | null;
+  staticName: string | null; // name from codeMapping.ts fallback
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CodeMappingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [mappings, setMappings] = useState<CodeMappingEntry[]>([]);
+  const [itemCodes, setItemCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ message: string; isError: boolean } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [showUnmappedOnly, setShowUnmappedOnly] = useState(false);
 
   // Inline editing state
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
-  // New row state
+  // New row state (manual add)
   const [isAdding, setIsAdding] = useState(false);
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
@@ -202,30 +257,63 @@ const CodeMappingPage: React.FC = () => {
   const [seeding, setSeeding] = useState(false);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
-  const fetchMappings = async () => {
+  const fetchAll = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getCodeMappings();
-      setMappings(data);
+      const [mappingData, codesData] = await Promise.all([
+        apiService.getCodeMappings(),
+        apiService.getUniqueCodes(),
+      ]);
+      setMappings(mappingData);
+      setItemCodes(codesData);
     } catch {
-      setStatus({ message: 'Greška pri dohvaćanju mapiranja kodova.', isError: true });
+      setStatus({ message: 'Greška pri dohvaćanju podataka.', isError: true });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMappings();
+    fetchAll();
   }, []);
+
+  // ── Merged rows: all item codes + any DB-only mappings ───────────────────────
+  const allRows = useMemo((): MergedRow[] => {
+    const mappingByCode = new Map<string, CodeMappingEntry>();
+    mappings.forEach((m) => mappingByCode.set(m.code, m));
+
+    // Start with all item codes — coerce to string in case API returns mixed types
+    const codeSet = new Set(itemCodes.map(String));
+
+    // Also include codes that are in DB mappings but not in items (legacy/extra)
+    mappings.forEach((m) => codeSet.add(m.code));
+
+    return Array.from(codeSet)
+      .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }))
+      .map((code) => ({
+        code,
+        mapping: mappingByCode.get(code) ?? null,
+        staticName: codeToTextMapping[code] ?? null,
+      }));
+  }, [mappings, itemCodes]);
+
+  const unmappedCount = useMemo(
+    () => allRows.filter((r) => !r.mapping && !r.staticName).length,
+    [allRows]
+  );
 
   // ── Filtered list ───────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
+    let rows = allRows;
+    if (showUnmappedOnly) rows = rows.filter((r) => !r.mapping && !r.staticName);
     const q = searchQuery.toLowerCase();
-    if (!q) return mappings;
-    return mappings.filter(
-      (m) => m.code.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.code.toLowerCase().includes(q) ||
+        (r.mapping?.name ?? r.staticName ?? '').toLowerCase().includes(q)
     );
-  }, [mappings, searchQuery]);
+  }, [allRows, searchQuery, showUnmappedOnly]);
 
   // ── Show status briefly ─────────────────────────────────────────────────────
   const showStatus = (message: string, isError = false) => {
@@ -234,38 +322,45 @@ const CodeMappingPage: React.FC = () => {
   };
 
   // ── Editing ─────────────────────────────────────────────────────────────────
-  const startEdit = (m: CodeMappingEntry) => {
-    setEditingId(m._id);
-    setEditingName(m.name);
+  const startEdit = (row: MergedRow) => {
+    setEditingCode(row.code);
+    setEditingName(row.mapping?.name ?? row.staticName ?? '');
     setIsAdding(false);
   };
 
   const cancelEdit = () => {
-    setEditingId(null);
+    setEditingCode(null);
     setEditingName('');
   };
 
-  const saveEdit = async (id: string) => {
+  const saveEdit = async (row: MergedRow) => {
     if (!editingName.trim()) return;
     setSaving(true);
     try {
-      const updated = await apiService.updateCodeMapping(id, editingName.trim());
-      setMappings((prev) => prev.map((m) => (m._id === id ? updated : m)));
-      setEditingId(null);
-      showStatus('Naziv uspješno ažuriran.');
+      if (row.mapping) {
+        // Update existing
+        const updated = await apiService.updateCodeMapping(row.mapping._id, editingName.trim());
+        setMappings((prev) => prev.map((m) => (m._id === updated._id ? updated : m)));
+      } else {
+        // Create new mapping for this item code
+        const created = await apiService.saveCodeMapping(row.code, editingName.trim());
+        setMappings((prev) => [...prev, created]);
+      }
+      setEditingCode(null);
+      showStatus('Naziv uspješno spremljen.');
     } catch {
-      showStatus('Greška pri ažuriranju.', true);
+      showStatus('Greška pri spremanju.', true);
     } finally {
       setSaving(false);
     }
   };
 
-  // ── Adding ──────────────────────────────────────────────────────────────────
+  // ── Manual new row (for codes not in items) ─────────────────────────────────
   const startAdd = () => {
     setIsAdding(true);
     setNewCode('');
     setNewName('');
-    setEditingId(null);
+    setEditingCode(null);
   };
 
   const cancelAdd = () => {
@@ -279,11 +374,10 @@ const CodeMappingPage: React.FC = () => {
     setSaving(true);
     try {
       const created = await apiService.saveCodeMapping(newCode.trim(), newName.trim());
-      // saveCodeMapping returns the upserted doc
       setMappings((prev) => {
         const exists = prev.find((m) => m._id === created._id);
         if (exists) return prev.map((m) => (m._id === created._id ? created : m));
-        return [...prev, created].sort((a, b) => a.code.localeCompare(b.code));
+        return [...prev, created];
       });
       setIsAdding(false);
       showStatus(`Kod "${created.code}" uspješno dodan/ažuriran.`);
@@ -295,12 +389,12 @@ const CodeMappingPage: React.FC = () => {
   };
 
   // ── Delete ──────────────────────────────────────────────────────────────────
-  const handleDelete = async (id: string, code: string) => {
-    if (!window.confirm(`Obrisati mapiranje za kod "${code}"?`)) return;
+  const handleDelete = async (mapping: CodeMappingEntry) => {
+    if (!window.confirm(`Obrisati naziv za kod "${mapping.code}"?`)) return;
     try {
-      await apiService.deleteCodeMapping(id);
-      setMappings((prev) => prev.filter((m) => m._id !== id));
-      showStatus(`Kod "${code}" obrisan.`);
+      await apiService.deleteCodeMapping(mapping._id);
+      setMappings((prev) => prev.filter((m) => m._id !== mapping._id));
+      showStatus(`Naziv za kod "${mapping.code}" obrisan.`);
     } catch {
       showStatus('Greška pri brisanju.', true);
     }
@@ -320,10 +414,8 @@ const CodeMappingPage: React.FC = () => {
     try {
       const payload = Object.entries(codeToTextMapping).map(([code, name]) => ({ code, name }));
       const result = await apiService.bulkSeedCodeMappings(payload);
-      await fetchMappings();
-      showStatus(
-        `Uvoz završen: ${result.upserted} novih, ${result.modified} ažuriranih.`
-      );
+      await fetchAll();
+      showStatus(`Uvoz završen: ${result.upserted} novih, ${result.modified} ažuriranih.`);
     } catch {
       showStatus('Greška pri uvozu iz datoteke.', true);
     } finally {
@@ -336,10 +428,17 @@ const CodeMappingPage: React.FC = () => {
     <S.PageContainer>
       <Header>
         <HeaderLeft>
-          <Logo size="small" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }} />
+          <Logo />
           <HeaderTitle>
-            Mapiranje kodova
-            {!loading && <CountBadge>{mappings.length}</CountBadge>}
+            Imenovanje Radnih Naloga
+            {!loading && (
+              <>
+                <CountBadge>{allRows.length}</CountBadge>
+                {unmappedCount > 0 && (
+                  <UnmappedBadge title="Kodovi bez naziva">{unmappedCount} bez naziva</UnmappedBadge>
+                )}
+              </>
+            )}
           </HeaderTitle>
         </HeaderLeft>
         <SmallButton onClick={() => navigate('/dashboard')} variant="secondary">
@@ -357,30 +456,21 @@ const CodeMappingPage: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <ButtonGroup>
-          <SmallButton onClick={startAdd} disabled={isAdding}>
-            + Dodaj novi kod
-          </SmallButton>
-          <SmallButton
-            onClick={handleSeedFromFile}
-            disabled={seeding}
-            variant="secondary"
-            title="Uveze sve kodove iz statičke datoteke codeMapping.ts u bazu podataka"
-          >
-            {seeding ? 'Uvoz…' : '⬆ Uvezi iz datoteke'}
-          </SmallButton>
-        </ButtonGroup>
+        <FilterToggle>
+          <input
+            type="checkbox"
+            checked={showUnmappedOnly}
+            onChange={(e) => setShowUnmappedOnly(e.target.checked)}
+          />
+          Prikaži samo bez naziva
+        </FilterToggle>
       </Toolbar>
 
       {loading ? (
         <LoadingState>Učitavanje…</LoadingState>
-      ) : mappings.length === 0 && !isAdding ? (
+      ) : allRows.length === 0 && !isAdding ? (
         <EmptyState>
-          <p>Nema mapiranja kodova u bazi.</p>
-          <p>
-            Kliknite <strong>Uvezi iz datoteke</strong> da uvezete sve kodove iz{' '}
-            <code>codeMapping.ts</code>, ili dodajte ručno.
-          </p>
+          <p>Nema kodova u sustavu.</p>
         </EmptyState>
       ) : (
         <Table>
@@ -388,11 +478,11 @@ const CodeMappingPage: React.FC = () => {
             <tr>
               <Th style={{ width: '160px' }}>Kod</Th>
               <Th>Naziv</Th>
-              <Th style={{ width: '200px' }}>Akcije</Th>
+              <Th style={{ width: '220px' }}>Akcije</Th>
             </tr>
           </thead>
           <tbody>
-            {/* New-entry row */}
+            {/* Manual new-entry row */}
             {isAdding && (
               <NewRow>
                 <Td>
@@ -435,33 +525,42 @@ const CodeMappingPage: React.FC = () => {
               </NewRow>
             )}
 
-            {/* Existing entries */}
-            {filtered.map((m) => (
-              <Tr key={m._id}>
+            {/* Merged rows */}
+            {filtered.map((row) => (
+              <Tr key={row.code} unmapped={!row.mapping && !row.staticName}>
                 <Td>
-                  <strong>{m.code}</strong>
+                  <strong>{row.code}</strong>
+                  {!row.mapping && !row.staticName && <UnmappedTag>bez naziva</UnmappedTag>}
                 </Td>
                 <Td>
-                  {editingId === m._id ? (
+                  {editingCode === row.code ? (
                     <InlineInput
                       autoFocus
                       value={editingName}
+                      placeholder="Unesite naziv…"
                       onChange={(e) => setEditingName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(m._id);
+                        if (e.key === 'Enter') saveEdit(row);
                         if (e.key === 'Escape') cancelEdit();
                       }}
                     />
+                  ) : row.mapping ? (
+                    row.mapping.name
+                  ) : row.staticName ? (
+                    <>
+                      <StaticName>{row.staticName}</StaticName>
+                      <StaticTag title="Naziv iz statičke datoteke, nije još spremljen u bazu">iz datoteke</StaticTag>
+                    </>
                   ) : (
-                    m.name
+                    <span style={{ color: '#bbb', fontStyle: 'italic' }}>—</span>
                   )}
                 </Td>
                 <Td>
-                  {editingId === m._id ? (
+                  {editingCode === row.code ? (
                     <ButtonGroup>
                       <SmallButton
                         variant="success"
-                        onClick={() => saveEdit(m._id)}
+                        onClick={() => saveEdit(row)}
                         disabled={saving || !editingName.trim()}
                       >
                         {saving ? 'Sprema…' : 'Spremi'}
@@ -472,13 +571,20 @@ const CodeMappingPage: React.FC = () => {
                     </ButtonGroup>
                   ) : (
                     <ButtonGroup>
-                      <SmallButton onClick={() => startEdit(m)}>Uredi</SmallButton>
                       <SmallButton
-                        variant="danger"
-                        onClick={() => handleDelete(m._id, m.code)}
+                        variant={row.mapping ? undefined : 'add'}
+                        onClick={() => startEdit(row)}
                       >
-                        Obriši
+                        {row.mapping ? 'Uredi' : row.staticName ? 'Spremi u bazu' : '+ Dodaj naziv'}
                       </SmallButton>
+                      {row.mapping && (
+                        <SmallButton
+                          variant="danger"
+                          onClick={() => handleDelete(row.mapping!)}
+                        >
+                          Obriši
+                        </SmallButton>
+                      )}
                     </ButtonGroup>
                   )}
                 </Td>
@@ -488,7 +594,7 @@ const CodeMappingPage: React.FC = () => {
             {filtered.length === 0 && !isAdding && (
               <Tr>
                 <Td colSpan={3} style={{ textAlign: 'center', color: '#888' }}>
-                  Nema rezultata za "{searchQuery}"
+                  Nema rezultata{searchQuery ? ` za "${searchQuery}"` : ''}.
                 </Td>
               </Tr>
             )}

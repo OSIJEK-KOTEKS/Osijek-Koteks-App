@@ -1178,6 +1178,102 @@ Response:
 }
 ```
 
+## Code Mappings API (Imenovanje Radnih Naloga)
+
+Maps work-order codes (e.g. `"1994"`, `"25008"`) to human-readable project names (e.g. `"AB Našice"`). Android should use this to display friendly names anywhere a `code` field appears on an item.
+
+### Data shape
+
+```json
+{
+  "_id": "string",
+  "code": "string",
+  "name": "string",
+  "createdBy": "string (user ID)",
+  "updatedBy": "string (user ID)",
+  "createdAt": "ISO date",
+  "updatedAt": "ISO date"
+}
+```
+
+### `GET /api/code-mappings`
+
+Auth required. All authenticated users.
+
+Returns all code mappings sorted by `code`.
+
+**Recommended Android usage:** fetch this list once on login and cache it locally. Use it to resolve a `code` string to a display name throughout the app. If a code is not found in this list, fall back to displaying the raw code.
+
+Response: array of code mapping objects.
+
+### `POST /api/code-mappings`
+
+Auth required. Admin only.
+
+Creates a new mapping. If a mapping for the same `code` already exists, it is updated and `200` is returned instead of `201`.
+
+Request body:
+
+```json
+{
+  "code": "26010",
+  "name": "Naziv gradilišta"
+}
+```
+
+### `POST /api/code-mappings/bulk`
+
+Auth required. Admin only.
+
+Upserts many mappings at once. Used internally by the web app to seed from the static file.
+
+Request body:
+
+```json
+{
+  "mappings": [
+    { "code": "1994", "name": "AB Našice" },
+    { "code": "2001", "name": "Tranzit" }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "message": "Bulk upsert complete",
+  "upserted": 10,
+  "modified": 5
+}
+```
+
+### `PUT /api/code-mappings/:id`
+
+Auth required. Admin only.
+
+Updates the `name` of an existing mapping.
+
+Request body:
+
+```json
+{
+  "name": "Novi naziv"
+}
+```
+
+### `DELETE /api/code-mappings/:id`
+
+Auth required. Admin only.
+
+Response:
+
+```json
+{
+  "message": "Code mapping deleted successfully"
+}
+```
+
 ## Socket.IO Events
 
 The backend emits these events:
