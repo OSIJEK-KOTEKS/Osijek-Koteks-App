@@ -3,7 +3,15 @@ const router = express.Router();
 const TransportRequest = require('../models/TransportRequest');
 const TransportAcceptance = require('../models/TransportAcceptance');
 const Item = require('../models/Item');
+const CodeLocation = require('../models/CodeLocation');
 const auth = require('../middleware/auth');
+
+// Helper: fetch lat/lng for a location code from codelocations
+async function getCoordinates(code) {
+  if (!code) return { latitude: null, longitude: null };
+  const loc = await CodeLocation.findOne({ code });
+  return loc ? { latitude: loc.latitude, longitude: loc.longitude } : { latitude: null, longitude: null };
+}
 
 // Create a new transport request (admin with prijevoz access only)
 router.post('/', auth, async (req, res) => {
@@ -30,10 +38,20 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'assignedTo must be "All" or an array of user IDs' });
     }
 
+    // Look up coordinates from codelocations
+    const [kamenolomCoords, gradilisteCoords] = await Promise.all([
+      getCoordinates(kamenolom),
+      getCoordinates(gradiliste),
+    ]);
+
     // Create new transport request
     const transportRequest = new TransportRequest({
       kamenolom,
       gradiliste,
+      kamenolomLatitude: kamenolomCoords.latitude,
+      kamenolomLongitude: kamenolomCoords.longitude,
+      gradilisteLatitude: gradilisteCoords.latitude,
+      gradilisteLongitude: gradilisteCoords.longitude,
       brojKamiona,
       prijevozNaDan,
       isplataPoT,
@@ -140,9 +158,19 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
+    // Look up coordinates from codelocations
+    const [kamenolomCoords, gradilisteCoords] = await Promise.all([
+      getCoordinates(kamenolom),
+      getCoordinates(gradiliste),
+    ]);
+
     // Update the transport request
     transportRequest.kamenolom = kamenolom;
     transportRequest.gradiliste = gradiliste;
+    transportRequest.kamenolomLatitude = kamenolomCoords.latitude;
+    transportRequest.kamenolomLongitude = kamenolomCoords.longitude;
+    transportRequest.gradilisteLatitude = gradilisteCoords.latitude;
+    transportRequest.gradilisteLongitude = gradilisteCoords.longitude;
     transportRequest.brojKamiona = brojKamiona;
     transportRequest.prijevozNaDan = prijevozNaDan;
     transportRequest.isplataPoT = isplataPoT;

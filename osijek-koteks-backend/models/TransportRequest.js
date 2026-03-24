@@ -11,6 +11,18 @@ const TransportRequestSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    kamenolomLatitude: {
+      type: Number,
+    },
+    kamenolomLongitude: {
+      type: Number,
+    },
+    gradilisteLatitude: {
+      type: Number,
+    },
+    gradilisteLongitude: {
+      type: Number,
+    },
     brojKamiona: {
       type: Number,
       required: true,
