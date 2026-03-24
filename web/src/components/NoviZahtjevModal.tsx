@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format } from 'date-fns';
 import { codeToTextMapping, getFormattedCode } from '../utils/codeMapping';
 import { apiService } from '../utils/api';
+import { GoogleMap, MarkerF, useJsApiLoader, Libraries } from '@react-google-maps/api';
+
+const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -215,6 +218,7 @@ const MapPreview = styled.div`
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid #ddd;
+  height: 150px;
 
   img {
     display: block;
@@ -222,6 +226,13 @@ const MapPreview = styled.div`
     height: 150px;
     object-fit: cover;
   }
+`;
+
+const MapHint = styled.div`
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.2rem;
+  font-style: italic;
 `;
 
 const MapLabel = styled.div`
@@ -252,6 +263,7 @@ interface NoviZahtjevModalProps {
     assignedTo: 'All' | string[];
   }) => Promise<void>;
   codeLocations?: CodeLocationData[];
+  onLocationUpdate?: () => void;
 }
 
 const KAMENOLOMI = [
@@ -274,19 +286,23 @@ interface Group {
   users: PrijevozUser[];
 }
 
-const getStaticMapUrl = (lat: number, lng: number): string => {
-  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
-  return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=460x150&scale=2&markers=color:red|${lat},${lng}&key=${apiKey}`;
-};
 
 const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
   codeLocations = [],
+  onLocationUpdate,
 }) => {
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
+
   const [kamenolom, setKamenolom] = useState('');
   const [gradiliste, setGradiliste] = useState('');
+  const [kamenolomPin, setKamenolomPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [gradilistePin, setGradilistePin] = useState<{ lat: number; lng: number } | null>(null);
 
   const kamenolomLocation = useMemo(() => {
     if (!kamenolom) return null;
@@ -297,6 +313,57 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     if (!gradiliste) return null;
     return codeLocations.find(loc => loc.code === gradiliste) || null;
   }, [gradiliste, codeLocations]);
+
+  // Sync pin positions when selected location changes
+  useEffect(() => {
+    if (kamenolomLocation) {
+      setKamenolomPin({ lat: kamenolomLocation.latitude, lng: kamenolomLocation.longitude });
+    } else {
+      setKamenolomPin(null);
+    }
+  }, [kamenolom, kamenolomLocation]);
+
+  useEffect(() => {
+    if (gradilisteLocation) {
+      setGradilistePin({ lat: gradilisteLocation.latitude, lng: gradilisteLocation.longitude });
+    } else {
+      setGradilistePin(null);
+    }
+  }, [gradiliste, gradilisteLocation]);
+
+  const handleKamenolomDragEnd = useCallback(async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng || !kamenolom) return;
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    setKamenolomPin({ lat, lng });
+    try {
+      if (kamenolomLocation) {
+        await apiService.updateCodeLocation(kamenolomLocation._id, lat, lng);
+      } else {
+        await apiService.saveCodeLocation(kamenolom, lat, lng);
+      }
+      onLocationUpdate?.();
+    } catch (err) {
+      console.error('Error saving kamenolom location:', err);
+    }
+  }, [kamenolom, kamenolomLocation, onLocationUpdate]);
+
+  const handleGradillisteDragEnd = useCallback(async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng || !gradiliste) return;
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    setGradilistePin({ lat, lng });
+    try {
+      if (gradilisteLocation) {
+        await apiService.updateCodeLocation(gradilisteLocation._id, lat, lng);
+      } else {
+        await apiService.saveCodeLocation(gradiliste, lat, lng);
+      }
+      onLocationUpdate?.();
+    } catch (err) {
+      console.error('Error saving gradiliste location:', err);
+    }
+  }, [gradiliste, gradilisteLocation, onLocationUpdate]);
   const [brojKamiona, setBrojKamiona] = useState('');
   const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
   const [isplataPoT, setIsplataPoT] = useState('');
@@ -462,6 +529,8 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
   const resetForm = () => {
     setKamenolom('');
     setGradiliste('');
+    setKamenolomPin(null);
+    setGradilistePin(null);
     setBrojKamiona('');
     setPrijevozNaDan(null);
     setIsplataPoT('');
@@ -499,18 +568,26 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                 </option>
               ))}
             </Select>
-            {kamenolom && kamenolomLocation && (
+            {kamenolom && kamenolomPin && isMapLoaded && (
               <>
                 <MapPreview>
-                  <img
-                    src={getStaticMapUrl(kamenolomLocation.latitude, kamenolomLocation.longitude)}
-                    alt={`Lokacija: ${kamenolom}`}
-                  />
+                  <GoogleMap
+                    mapContainerStyle={{ width: '100%', height: '150px' }}
+                    center={kamenolomPin}
+                    zoom={13}
+                    options={{ disableDefaultUI: true, zoomControl: true }}
+                  >
+                    <MarkerF
+                      position={kamenolomPin}
+                      draggable
+                      onDragEnd={handleKamenolomDragEnd}
+                    />
+                  </GoogleMap>
                 </MapPreview>
                 <MapLabel>
-                  <span>{kamenolomLocation.latitude.toFixed(5)}, {kamenolomLocation.longitude.toFixed(5)}</span>
+                  <span>{kamenolomPin.lat.toFixed(5)}, {kamenolomPin.lng.toFixed(5)}</span>
                   <a
-                    href={`https://www.google.com/maps?q=${kamenolomLocation.latitude},${kamenolomLocation.longitude}`}
+                    href={`https://www.google.com/maps?q=${kamenolomPin.lat},${kamenolomPin.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'inherit' }}
@@ -518,6 +595,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                     Otvori u Maps
                   </a>
                 </MapLabel>
+                <MapHint>Povucite pin za promjenu lokacije</MapHint>
               </>
             )}
           </FormGroup>
@@ -536,18 +614,26 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                 </option>
               ))}
             </Select>
-            {gradiliste && gradilisteLocation && (
+            {gradiliste && gradilistePin && isMapLoaded && (
               <>
                 <MapPreview>
-                  <img
-                    src={getStaticMapUrl(gradilisteLocation.latitude, gradilisteLocation.longitude)}
-                    alt={`Lokacija: ${getFormattedCode(gradiliste)}`}
-                  />
+                  <GoogleMap
+                    mapContainerStyle={{ width: '100%', height: '150px' }}
+                    center={gradilistePin}
+                    zoom={13}
+                    options={{ disableDefaultUI: true, zoomControl: true }}
+                  >
+                    <MarkerF
+                      position={gradilistePin}
+                      draggable
+                      onDragEnd={handleGradillisteDragEnd}
+                    />
+                  </GoogleMap>
                 </MapPreview>
                 <MapLabel>
-                  <span>{gradilisteLocation.latitude.toFixed(5)}, {gradilisteLocation.longitude.toFixed(5)}</span>
+                  <span>{gradilistePin.lat.toFixed(5)}, {gradilistePin.lng.toFixed(5)}</span>
                   <a
-                    href={`https://www.google.com/maps?q=${gradilisteLocation.latitude},${gradilisteLocation.longitude}`}
+                    href={`https://www.google.com/maps?q=${gradilistePin.lat},${gradilistePin.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'inherit' }}
@@ -555,6 +641,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
                     Otvori u Maps
                   </a>
                 </MapLabel>
+                <MapHint>Povucite pin za promjenu lokacije</MapHint>
               </>
             )}
           </FormGroup>

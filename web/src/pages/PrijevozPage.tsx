@@ -2536,6 +2536,9 @@ const PrijevozPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitZahtjev}
         codeLocations={codeLocations}
+        onLocationUpdate={() => {
+          apiService.getCodeLocations().then(locs => setCodeLocations(locs)).catch(e => console.error('Error refreshing code locations:', e));
+        }}
       />
 
       <EditZahtjevModal

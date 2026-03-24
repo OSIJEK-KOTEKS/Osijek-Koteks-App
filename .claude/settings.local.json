@@ -8,7 +8,9 @@
       "Bash(npx tsc:*)",
       "Bash(cd:*)",
       "Bash(xargs grep -l \"osrm\\\\|distance\\\\|routing\\\\|codelocations\")",
-      "Bash(grep -r Završen 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.js --include=*.ts --include=*.tsx)"
+      "Bash(grep -r Završen 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.js --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"kamenolom\\\\|gradiliste\" 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.tsx --include=*.ts --include=*.jsx --include=*.js)",
+      "Bash(grep -r \"prijevoz\\\\|transport\" 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.tsx --include=*.ts --include=*.jsx --include=*.js -l)"
     ]
   }
 }
