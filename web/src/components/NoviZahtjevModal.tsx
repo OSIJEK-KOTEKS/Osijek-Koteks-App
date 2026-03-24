@@ -244,6 +244,30 @@ const MapLabel = styled.div`
   color: #666;
 `;
 
+const DistanceBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #f0f7ff;
+  border: 1px solid #b3d4f5;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  color: #1a5fa8;
+  font-weight: 500;
+`;
+
+const DistanceIcon = styled.span`
+  font-size: 1.1rem;
+`;
+
+const DistanceCalculating = styled.div`
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+  padding: 0.4rem 0;
+`;
+
 interface CodeLocationData {
   _id: string;
   code: string;
@@ -364,6 +388,41 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       console.error('Error saving gradiliste location:', err);
     }
   }, [gradiliste, gradilisteLocation, onLocationUpdate]);
+  const [roadDistance, setRoadDistance] = useState<string | null>(null);
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+
+  const calculateRoadDistance = useCallback(
+    async (origin: { lat: number; lng: number }, destination: { lat: number; lng: number }) => {
+      setIsCalculatingDistance(true);
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=false`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.code === 'Ok' && data.routes?.[0]) {
+          const distanceKm = data.routes[0].distance / 1000;
+          setRoadDistance(`${distanceKm.toFixed(1)} km`);
+        } else {
+          setRoadDistance(null);
+        }
+      } catch (err) {
+        console.error('Error calculating road distance:', err);
+        setRoadDistance(null);
+      } finally {
+        setIsCalculatingDistance(false);
+      }
+    },
+    []
+  );
+
+  // Recalculate road distance whenever either pin changes
+  useEffect(() => {
+    if (kamenolomPin && gradilistePin) {
+      calculateRoadDistance(kamenolomPin, gradilistePin);
+    } else {
+      setRoadDistance(null);
+    }
+  }, [kamenolomPin, gradilistePin, calculateRoadDistance]);
+
   const [brojKamiona, setBrojKamiona] = useState('');
   const [prijevozNaDan, setPrijevozNaDan] = useState<Date | null>(null);
   const [isplataPoT, setIsplataPoT] = useState('');
@@ -531,6 +590,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     setGradiliste('');
     setKamenolomPin(null);
     setGradilistePin(null);
+    setRoadDistance(null);
     setBrojKamiona('');
     setPrijevozNaDan(null);
     setIsplataPoT('');
@@ -645,6 +705,19 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
               </>
             )}
           </FormGroup>
+
+          {kamenolomPin && gradilistePin && (
+            <FormGroup>
+              {isCalculatingDistance ? (
+                <DistanceCalculating>Izračunavanje udaljenosti...</DistanceCalculating>
+              ) : roadDistance ? (
+                <DistanceBadge>
+                  <DistanceIcon>🛣️</DistanceIcon>
+                  Cestovna udaljenost: <strong>{roadDistance}</strong>
+                </DistanceBadge>
+              ) : null}
+            </FormGroup>
+          )}
 
           <FormGroup>
             <Label htmlFor="brojKamiona">Broj kamiona</Label>
