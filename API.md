@@ -118,7 +118,11 @@ Notes:
 {
   "_id": "string",
   "kamenolom": "VELIČKI KAMEN VELIČANKA|VELIČKI KAMEN VETOVO|KAMEN - PSUNJ|MOLARIS|PRODORINA",
+  "kamenolomLatitude": 45.47411,
+  "kamenolomLongitude": 17.65009,
   "gradiliste": "string",
+  "gradilisteLatitude": 45.50431,
+  "gradilisteLongitude": 18.08734,
   "brojKamiona": 3,
   "prijevozNaDan": "DD/MM/YYYY",
   "isplataPoT": 12.5,
@@ -130,6 +134,11 @@ Notes:
   "updatedAt": "ISO date"
 }
 ```
+
+Notes:
+
+- `kamenolomLatitude`, `kamenolomLongitude`, `gradilisteLatitude`, `gradilisteLongitude` are populated automatically on create/update by looking up the `kamenolom` and `gradiliste` codes in the `codelocations` collection. They are `null` if no matching code location exists.
+- Coordinates are shared with the item speed calculation system — updating a pin location in the transport request form also updates the corresponding `codelocations` record, which affects future `prosjecnaBrzina` calculations on items.
 
 ### TransportAcceptance
 
@@ -869,6 +878,10 @@ Request body:
 
 `assignedTo` may also be an array of user IDs.
 
+Behavior:
+
+- On creation the backend automatically resolves `kamenolomLatitude/Longitude` and `gradilisteLatitude/Longitude` by querying `codelocations` for the provided codes.
+
 Success response:
 
 ```json
@@ -908,6 +921,10 @@ Request body:
   "status": "Aktivno"
 }
 ```
+
+Behavior:
+
+- `kamenolomLatitude/Longitude` and `gradilisteLatitude/Longitude` are re-resolved from `codelocations` on every update if `kamenolom` or `gradiliste` are included in the body.
 
 Important: `assignedTo` cannot be updated through this endpoint.
 
@@ -1172,6 +1189,24 @@ The backend emits these events:
 - `item:approved` with `{ itemId }`
 
 Payload shape is not fully stable because different code paths emit different object structures for the same event name.
+
+## Road Distance Calculation (Client-Side)
+
+When creating a transport request, the web client calculates the driving distance between the kamenolom and gradilište pins using the public **OSRM** (Open Source Routing Machine) API — the same engine used by the backend for `prosjecnaBrzina` calculation on items.
+
+Endpoint called by the web client:
+
+```
+GET https://router.project-osrm.org/route/v1/driving/{originLng},{originLat};{destLng},{destLat}?overview=false
+```
+
+- No API key required.
+- Distance is taken from `routes[0].distance` (metres) and converted to km.
+- The result is shown to the user as a read-only badge (e.g. `🛣️ Cestovna udaljenost: 47.3 km`).
+- Recalculates automatically whenever either pin is moved.
+- This distance is **display-only** — it is not stored on the transport request.
+
+Android clients may call the same OSRM endpoint to show road distance in their own UI, using the `kamenolomLatitude/Longitude` and `gradilisteLatitude/Longitude` fields returned by the API.
 
 ## Important Implementation Notes For Android
 
