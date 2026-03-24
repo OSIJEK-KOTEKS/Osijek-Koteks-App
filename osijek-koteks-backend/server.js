@@ -111,6 +111,7 @@ const billsRouter = require('./routes/bills');
 const transportRequestsRouter = require('./routes/transportRequests');
 const groupsRouter = require('./routes/groups');
 const codeLocationsRouter = require('./routes/codeLocations');
+const codeMappingsRouter = require('./routes/codeMappings');
 
 // GDPR Routes
 app.get('/api/privacy-policy', (req, res) => {
@@ -148,6 +149,7 @@ app.use('/api/bills', billsRouter);
 app.use('/api/transport-requests', transportRequestsRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/code-locations', codeLocationsRouter);
+app.use('/api/code-mappings', codeMappingsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

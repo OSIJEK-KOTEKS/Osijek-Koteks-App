@@ -863,6 +863,57 @@ export const apiService = {
       throw error;
     }
   },
+
+  // Code Mappings
+  getCodeMappings: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/code-mappings');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching code mappings:', error);
+      throw error;
+    }
+  },
+
+  saveCodeMapping: async (code: string, name: string): Promise<any> => {
+    try {
+      const response = await api.post('/api/code-mappings', { code, name });
+      return response.data;
+    } catch (error) {
+      console.error('Error saving code mapping:', error);
+      throw error;
+    }
+  },
+
+  bulkSeedCodeMappings: async (mappings: { code: string; name: string }[]): Promise<any> => {
+    try {
+      const response = await api.post('/api/code-mappings/bulk', { mappings });
+      return response.data;
+    } catch (error) {
+      console.error('Error bulk seeding code mappings:', error);
+      throw error;
+    }
+  },
+
+  updateCodeMapping: async (id: string, name: string): Promise<any> => {
+    try {
+      const response = await api.put(`/api/code-mappings/${id}`, { name });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating code mapping:', error);
+      throw error;
+    }
+  },
+
+  deleteCodeMapping: async (id: string): Promise<any> => {
+    try {
+      const response = await api.delete(`/api/code-mappings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting code mapping:', error);
+      throw error;
+    }
+  },
 };
 
 export default apiService;
