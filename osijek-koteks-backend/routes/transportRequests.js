@@ -26,7 +26,7 @@ router.post('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only admins can create transport requests' });
     }
 
-    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT, assignedTo } = req.body;
+    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT, assignedTo, distance } = req.body;
 
     // Validate required fields
     if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined || !assignedTo) {
@@ -52,6 +52,7 @@ router.post('/', auth, async (req, res) => {
       kamenolomLongitude: kamenolomCoords.longitude,
       gradilisteLatitude: gradilisteCoords.latitude,
       gradilisteLongitude: gradilisteCoords.longitude,
+      distance: typeof distance === 'number' && distance >= 0 ? distance : undefined,
       brojKamiona,
       prijevozNaDan,
       isplataPoT,

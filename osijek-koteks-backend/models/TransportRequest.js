@@ -23,6 +23,10 @@ const TransportRequestSchema = new mongoose.Schema(
     gradilisteLongitude: {
       type: Number,
     },
+    distance: {
+      type: Number,
+      min: 0,
+    },
     brojKamiona: {
       type: Number,
       required: true,
