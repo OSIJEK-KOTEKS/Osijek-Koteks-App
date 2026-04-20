@@ -285,6 +285,7 @@ interface NoviZahtjevModalProps {
     prijevozNaDan: string;
     isplataPoT: number;
     assignedTo: 'All' | string[];
+    distance?: number;
   }) => Promise<void>;
   codeLocations?: CodeLocationData[];
   onLocationUpdate?: () => void;
@@ -389,6 +390,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     }
   }, [gradiliste, gradilisteLocation, onLocationUpdate]);
   const [roadDistance, setRoadDistance] = useState<string | null>(null);
+  const [roadDistanceKm, setRoadDistanceKm] = useState<number | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
 
   const calculateRoadDistance = useCallback(
@@ -401,12 +403,15 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         if (data.code === 'Ok' && data.routes?.[0]) {
           const distanceKm = data.routes[0].distance / 1000;
           setRoadDistance(`${distanceKm.toFixed(1)} km`);
+          setRoadDistanceKm(Math.round(distanceKm * 10) / 10);
         } else {
           setRoadDistance(null);
+          setRoadDistanceKm(null);
         }
       } catch (err) {
         console.error('Error calculating road distance:', err);
         setRoadDistance(null);
+        setRoadDistanceKm(null);
       } finally {
         setIsCalculatingDistance(false);
       }
@@ -420,6 +425,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
       calculateRoadDistance(kamenolomPin, gradilistePin);
     } else {
       setRoadDistance(null);
+      setRoadDistanceKm(null);
     }
   }, [kamenolomPin, gradilistePin, calculateRoadDistance]);
 
@@ -574,6 +580,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
         prijevozNaDan: formattedDate,
         isplataPoT: isplataPoTNum,
         assignedTo: assignMode === 'all' ? 'All' : resolveAssignedUserIds(),
+        distance: roadDistanceKm ?? undefined,
       });
       resetForm();
       onClose();
@@ -591,6 +598,7 @@ const NoviZahtjevModal: React.FC<NoviZahtjevModalProps> = ({
     setKamenolomPin(null);
     setGradilistePin(null);
     setRoadDistance(null);
+    setRoadDistanceKm(null);
     setBrojKamiona('');
     setPrijevozNaDan(null);
     setIsplataPoT('');

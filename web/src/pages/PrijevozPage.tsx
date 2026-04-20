@@ -1240,6 +1240,7 @@ const PrijevozPage: React.FC = () => {
     prijevozNaDan: string;
     isplataPoT: number;
     assignedTo: 'All' | string[];
+    distance?: number;
   }) => {
     try {
       console.log('Submitting transport request:', data);
@@ -1250,6 +1251,7 @@ const PrijevozPage: React.FC = () => {
         prijevozNaDan: data.prijevozNaDan,
         isplataPoT: data.isplataPoT,
         assignedTo: data.assignedTo,
+        distance: data.distance,
       });
       console.log('Transport request created:', response);
       const assignLabel = data.assignedTo === 'All' ? 'sve prijevoznike' : `${data.assignedTo.length} prijevoznika`;
