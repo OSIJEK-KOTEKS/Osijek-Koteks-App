@@ -13,6 +13,7 @@ const CodeLocation = require('../models/CodeLocation');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
+const { normalizeCarrier } = require('../utils/normalizeCarrier');
 // Function to extract RN code from filename with special pattern handling
 const extractRNFromFilename = (filename, defaultCode) => {
   if (!filename || typeof filename !== 'string') {
@@ -778,7 +779,7 @@ router.post('/', auth, async (req, res) => {
       title: title.trim(),
       code: extractRNFromFilename(title, code.trim()),
       registracija: registracija ? registracija.trim() : undefined,
-      prijevoznik: prijevoznik && prijevoznik.trim() ? prijevoznik.trim() : undefined,
+      prijevoznik: normalizeCarrier(prijevoznik),
       pdfUrl: pdfUrl.trim(),
       createdBy: req.user._id, // ADD THIS LINE - Store who created the item
       creationDate: creationDate ? new Date(creationDate) : now,

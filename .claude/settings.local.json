@@ -10,7 +10,11 @@
       "Bash(xargs grep -l \"osrm\\\\|distance\\\\|routing\\\\|codelocations\")",
       "Bash(grep -r Završen 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.js --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"kamenolom\\\\|gradiliste\" 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.tsx --include=*.ts --include=*.jsx --include=*.js)",
-      "Bash(grep -r \"prijevoz\\\\|transport\" 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.tsx --include=*.ts --include=*.jsx --include=*.js -l)"
+      "Bash(grep -r \"prijevoz\\\\|transport\" 'C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App' --include=*.tsx --include=*.ts --include=*.jsx --include=*.js -l)",
+      "Bash(node -e \"require\\('./utils/normalizeCarrier'\\); require\\('./models/Item'\\); console.log\\('OK: utility + model load cleanly'\\);\")",
+      "Bash(node --check scripts/migrate-normalize-carriers.js)",
+      "Bash(node --check routes/items.js)",
+      "Bash(node --check models/Item.js)"
     ]
   }
 }

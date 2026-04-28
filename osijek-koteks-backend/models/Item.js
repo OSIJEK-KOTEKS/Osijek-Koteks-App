@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { normalizeCarrier } = require('../utils/normalizeCarrier');
 
 const photoSchema = new mongoose.Schema({
   url: {
@@ -162,6 +163,31 @@ const ItemSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Normalize prijevoznik on every save (trim + collapse whitespace)
+ItemSchema.pre('save', function (next) {
+  if (this.isModified('prijevoznik')) {
+    this.prijevoznik = normalizeCarrier(this.prijevoznik);
+  }
+  next();
+});
+
+// Same normalization for findOneAndUpdate / updateOne / updateMany paths
+function normalizeOnUpdate(next) {
+  const update = this.getUpdate();
+  if (!update) return next();
+
+  if (update.prijevoznik !== undefined) {
+    update.prijevoznik = normalizeCarrier(update.prijevoznik);
+  }
+  if (update.$set && update.$set.prijevoznik !== undefined) {
+    update.$set.prijevoznik = normalizeCarrier(update.$set.prijevoznik);
+  }
+  next();
+}
+ItemSchema.pre('findOneAndUpdate', normalizeOnUpdate);
+ItemSchema.pre('updateOne', normalizeOnUpdate);
+ItemSchema.pre('updateMany', normalizeOnUpdate);
 
 // Add indexes for better query performance
 ItemSchema.index({ code: 1 });
