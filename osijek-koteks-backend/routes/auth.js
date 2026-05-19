@@ -6,10 +6,17 @@ const User = require('../models/User');
 
 router.post('/register', async (req, res) => {
   try {
-    console.log('Registration attempt:', req.body);
+    // Public registration is disabled by default. Privileged users are
+    // created via the admin-only /api/users route.
+    if (process.env.ENABLE_PUBLIC_REGISTRATION !== 'true') {
+      return res.status(403).json({ message: 'Public registration is disabled' });
+    }
 
-    const { firstName, lastName, company, email, password, codes, role, canAccessRacuni, canAccessPrijevoz } =
-      req.body;
+    console.log('Registration attempt for email:', req.body && req.body.email);
+
+    // Only accept non-privileged fields from the public request body.
+    // Permission/role fields are never honored here.
+    const { firstName, lastName, company, email, password } = req.body;
 
     // Check if user already  exists
     let user = await User.findOne({ email });
@@ -17,19 +24,21 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create new user
+    // Create new user with hardcoded safe defaults. No privilege
+    // escalation possible via the public endpoint.
     user = new User({
       firstName,
       lastName,
       company,
       email,
       password, // Will be hashed by the pre-save middleware
-      codes: codes || [],
-      role: role || 'user',
+      role: 'user',
       isVerified: false,
-      hasFullAccess: req.body.hasFullAccess || false,
-      canAccessRacuni: canAccessRacuni || false,
-      canAccessPrijevoz: canAccessPrijevoz || false,
+      hasFullAccess: false,
+      canAccessRacuni: false,
+      canAccessPrijevoz: false,
+      codes: [],
+      assignedRegistrations: [],
     });
 
     // Save user to database

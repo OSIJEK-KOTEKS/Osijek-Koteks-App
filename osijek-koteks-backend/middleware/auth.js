@@ -6,16 +6,16 @@ const auth = async (req, res, next) => {
     // Get token from header
     const authHeader = req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No valid auth header found:', authHeader);
+      // Do not log the raw header value — it can contain a bearer token.
+      console.log('No valid auth header found');
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
     // Get the token without 'Bearer '
     const token = authHeader.split(' ')[1];
 
-    // Verify token
+    // Verify token (do not log the decoded payload)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded token:', decoded);
 
     // Find user and attach to request
     const user = await User.findById(decoded.id);
