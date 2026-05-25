@@ -1,8 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { serviceAuthHeadersPresent, verifyServiceRequest } = require('../utils/serviceAuth');
 
 const auth = async (req, res, next) => {
   try {
+    if (serviceAuthHeadersPresent(req)) {
+      return authenticateServiceRequest(req, res, next);
+    }
+
     // Get token from header
     const authHeader = req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -37,5 +42,38 @@ const auth = async (req, res, next) => {
     res.status(401).json({ message: 'Token is not valid' });
   }
 };
+
+async function authenticateServiceRequest(req, res, next) {
+  try {
+    const serviceClient = await verifyServiceRequest(req);
+    const user = await User.findById(serviceClient.actorUserId);
+
+    if (!user) {
+      return res.status(401).json({ message: 'Service actor user not found' });
+    }
+
+    req.user = user;
+    req.serviceClient = {
+      clientId: serviceClient.clientId,
+      actorUserId: serviceClient.actorUserId,
+    };
+
+    console.log('Service request authenticated:', {
+      clientId: serviceClient.clientId,
+      actorUserId: serviceClient.actorUserId,
+      method: req.method,
+      path: req.originalUrl,
+    });
+
+    next();
+  } catch (err) {
+    console.warn('Service authentication failed:', {
+      code: err.code || 'service_auth_failed',
+      method: req.method,
+      path: req.originalUrl,
+    });
+    res.status(401).json({ message: 'Service authentication failed' });
+  }
+}
 
 module.exports = auth;
