@@ -9,3 +9,17 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: ENABLE_PUBLIC_REGISTRATION
+        value: "false"
+      - key: SERVICE_AUTH_CLIENTS_JSON
+        sync: false
+      - key: SERVICE_AUTH_TIMESTAMP_TOLERANCE_SECONDS
+        value: "300"
+      - key: SERVICE_AUTH_NONCE_TTL_SECONDS
+        value: "600"
+      - key: PRIJEVOZ_API_BASE_URL
+        sync: false
+      - key: PRIJEVOZ_SERVICE_CLIENT_ID
+        sync: false
+      - key: PRIJEVOZ_SERVICE_SECRET
+        sync: false

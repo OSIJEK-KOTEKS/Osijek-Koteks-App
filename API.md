@@ -6,25 +6,55 @@ This document describes the backend API implemented in `osijek-koteks-backend` a
 
 - Base URL used by current clients: `https://osijek-koteks-app.onrender.com`
 - API prefix: `/api`
-- Auth: JWT bearer token in `Authorization: Bearer <token>`
+- User auth: JWT bearer token in `Authorization: Bearer <token>`
+- Service auth: HMAC-signed JSON requests for backend-to-backend calls
 - Default content type: `application/json`
 - Upload endpoints use `multipart/form-data`
 - Real-time side channel: Socket.IO is enabled on the same origin
 
 ## Authentication Model
 
-Most routes require a valid JWT. The auth middleware:
+Most routes require either a valid user JWT or a valid service signature. The
+auth middleware:
 
 - reads `Authorization` header
 - requires the `Bearer <token>` format
 - verifies token with `JWT_SECRET`
 - loads the full user document and assigns it to `req.user`
 
+For backend-to-backend JSON calls, the middleware also accepts HMAC service
+headers:
+
+```http
+X-OK-Service-Client: prijevoz-backend
+X-OK-Service-Timestamp: 1700000000
+X-OK-Service-Nonce: nonce-or-uuid
+X-OK-Service-Body-SHA256: hex-sha256-of-raw-body
+X-OK-Service-Signature: hex-hmac-sha256
+```
+
+The signed canonical string is:
+
+```text
+METHOD
+/path?query
+timestamp
+nonce
+body_sha256
+```
+
+`SERVICE_AUTH_CLIENTS_JSON` configures allowed service clients. Each entry must
+include `clientId`, `secret`, `actorUserId`, and an `allowed` list of
+`method`/`pathPrefix` objects. A valid service request is mapped to the local
+actor user, so existing route authorization still applies. Service auth is
+intended for JSON endpoints only.
+
 Common auth failures:
 
 - `401 { "message": "No token, authorization denied" }`
 - `401 { "message": "User not found" }`
 - `401 { "message": "Token is not valid" }`
+- `401 { "message": "Service authentication failed" }`
 
 ## Roles and Access Flags
 
@@ -210,7 +240,10 @@ Returns static Croatian privacy policy metadata plus retention days from `DATA_R
 
 ### `POST /api/auth/register`
 
-No auth.
+Public registration is disabled unless `ENABLE_PUBLIC_REGISTRATION=true`.
+Privileged users should be created through the admin-only `/api/users` route.
+When enabled, this endpoint ignores submitted role and permission fields and
+always creates a non-privileged `user`.
 
 Request body:
 
@@ -220,20 +253,17 @@ Request body:
   "lastName": "string",
   "company": "string",
   "email": "string",
-  "password": "string",
-  "codes": ["string"],
-  "role": "admin|user|bot|pc-user",
-  "hasFullAccess": false,
-  "canAccessRacuni": false,
-  "canAccessPrijevoz": false
+  "password": "string"
 }
 ```
 
 Behavior:
 
-- creates a user
+- returns `403` unless public registration is explicitly enabled
+- creates a non-privileged `user`
 - password is hashed via model pre-save hook
 - sets `isVerified` to `false`
+- sets `codes`, `assignedRegistrations`, and permission flags to empty/false
 - immediately returns a login token
 
 Success response:
@@ -1421,4 +1451,3 @@ Recommendation:
 Recommendation:
 
 - deprecate or fix this route before Android uses it
-

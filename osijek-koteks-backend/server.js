@@ -17,7 +17,15 @@ const io = new Server(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-OK-Service-Client',
+      'X-OK-Service-Timestamp',
+      'X-OK-Service-Nonce',
+      'X-OK-Service-Body-SHA256',
+      'X-OK-Service-Signature',
+    ],
     credentials: true,
   },
 });
@@ -36,15 +44,27 @@ io.on('connection', socket => {
 const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-OK-Service-Client',
+    'X-OK-Service-Timestamp',
+    'X-OK-Service-Nonce',
+    'X-OK-Service-Body-SHA256',
+    'X-OK-Service-Signature',
+  ],
   credentials: true,
   maxAge: 600,
 };
 app.use(cors(corsOptions));
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const captureRawBody = (req, res, buf) => {
+  req.rawBody = buf.toString('utf8');
+};
+
+app.use(express.json({ verify: captureRawBody }));
+app.use(express.urlencoded({ extended: true, verify: captureRawBody }));
 
 // Basic security headers
 app.use((req, res, next) => {

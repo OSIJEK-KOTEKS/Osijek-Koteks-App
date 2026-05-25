@@ -1,5 +1,25 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+# Backend Service Auth
+
+The Express backend supports HMAC-signed JSON requests from trusted backend
+services. Local defaults live in `osijek-koteks-backend/.env.example`.
+
+Example incoming config for calls from `Osijek-Koteks-Prijevoz`:
+
+```sh
+SERVICE_AUTH_CLIENTS_JSON='[{"clientId":"prijevoz-backend","secret":"replace-with-shared-secret","actorUserId":"mongo-user-id","allowed":[{"method":"GET","pathPrefix":"/api/transport-requests"},{"method":"POST","pathPrefix":"/api/transport-requests"},{"method":"PUT","pathPrefix":"/api/transport-requests"},{"method":"PATCH","pathPrefix":"/api/transport-requests"},{"method":"DELETE","pathPrefix":"/api/transport-requests"},{"method":"GET","pathPrefix":"/api/users/prijevoz/access"}]}]'
+SERVICE_AUTH_TIMESTAMP_TOLERANCE_SECONDS=300
+SERVICE_AUTH_NONCE_TTL_SECONDS=600
+PRIJEVOZ_API_BASE_URL=https://prijevoz-api.example.com
+PRIJEVOZ_SERVICE_CLIENT_ID=app-backend
+PRIJEVOZ_SERVICE_SECRET=replace-with-outgoing-secret
+```
+
+`actorUserId` must point to a real local service user with the permissions
+needed by the reused endpoints, usually `role: "admin"` and
+`canAccessPrijevoz: true`.
+
 # Getting Started
 
 > **Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
