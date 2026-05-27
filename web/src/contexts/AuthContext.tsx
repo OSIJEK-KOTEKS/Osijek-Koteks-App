@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, LoginResponse } from '../types';
 import { apiService } from '../utils/api';
+import { setDbCodeMappings } from '../utils/codeMapping';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Load DB-backed code names into the runtime lookup so dropdowns and labels
+  // reflect names set on the admin "Imenovanje Radnih Naloga" page.
+  const hydrateCodeMappings = async () => {
+    try {
+      const mappings = await apiService.getCodeMappings();
+      setDbCodeMappings(mappings);
+    } catch (error) {
+      console.error('Error loading code mappings:', error);
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -48,6 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             const userProfile = await apiService.getUserProfile();
             setUser(userProfile);
+            await hydrateCodeMappings();
           } catch (error) {
             console.error('Error fetching user profile:', error);
             localStorage.removeItem('userToken');
@@ -77,6 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Set user state
       setUser(userProfile);
+      await hydrateCodeMappings();
     } catch (error) {
       console.error('Sign in error:', error);
       setError('Authentication failed');

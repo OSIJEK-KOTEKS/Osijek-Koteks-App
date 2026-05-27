@@ -88,13 +88,37 @@ export const codeToTextMapping: Record<string, string> = {
   '5014': 'Betonara',
 };
 
+// Names managed at runtime via the admin "Imenovanje Radnih Naloga" page (backend
+// DB). These take priority over the static fallback above, so codes named in the
+// admin page resolve everywhere — not only on that page.
+let dbCodeMapping: Record<string, string> = {};
+
+/**
+ * Replace the runtime DB-backed name overrides. Call once after auth with the
+ * mappings returned by apiService.getCodeMappings().
+ */
+export const setDbCodeMappings = (
+  mappings: { code: string; name: string }[]
+): void => {
+  const next: Record<string, string> = {};
+  for (const { code, name } of mappings) {
+    if (code != null && name != null && String(name).trim()) {
+      next[String(code)] = String(name);
+    }
+  }
+  dbCodeMapping = next;
+};
+
+const resolveName = (code: string): string | undefined =>
+  dbCodeMapping[code] ?? codeToTextMapping[code];
+
 /**
  * Get formatted code with description
  * @param code - The code number as string
  * @returns Formatted string with code and description
  */
 export const getFormattedCode = (code: string): string => {
-  const description = codeToTextMapping[code];
+  const description = resolveName(code);
   return description ? `${code} - ${description}` : `${code} - /`;
 };
 
@@ -104,5 +128,5 @@ export const getFormattedCode = (code: string): string => {
  * @returns Description or "/" if not found
  */
 export const getCodeDescription = (code: string): string => {
-  return codeToTextMapping[code] || '/';
+  return resolveName(code) || '/';
 };
