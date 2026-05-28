@@ -608,9 +608,11 @@ router.get('/', auth, async (req, res) => {
 
     // Average speed query: code-only filter (ignores date range and other active filters)
     // so that the average reflects ALL approved items for that code, not just the current date window
+    // Exclude implausible readings (> 130 km/h, likely GPS/timing artifacts) so
+    // they don't inflate the average — matches the per-item display rule.
     const avgSpeedQuery = {
       approvalStatus: 'odobreno',
-      prosjecnaBrzina: { $ne: null, $exists: true },
+      prosjecnaBrzina: { $ne: null, $exists: true, $lte: 130 },
     };
     if (query.code) {
       avgSpeedQuery.code = query.code;

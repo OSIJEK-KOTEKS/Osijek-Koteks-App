@@ -1204,11 +1204,13 @@ const Dashboard: React.FC = () => {
                     </ItemDetails>
                   )}
 
-                  {item.approvalStatus === 'odobreno' && item.prosjecnaBrzina != null && (
-                    <ItemDetails>
-                      <strong>Prosječna Brzina:</strong> {item.prosjecnaBrzina.toFixed(1)} km/h
-                    </ItemDetails>
-                  )}
+                  {item.approvalStatus === 'odobreno' &&
+                    item.prosjecnaBrzina != null &&
+                    item.prosjecnaBrzina <= 130 && (
+                      <ItemDetails>
+                        <strong>Prosječna Brzina:</strong> {item.prosjecnaBrzina.toFixed(1)} km/h
+                      </ItemDetails>
+                    )}
 
                   {item.isPaid && (
                     <ItemDetails>
