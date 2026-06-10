@@ -1388,10 +1388,11 @@ Recommendation:
 
 That means the validation endpoint cannot be trusted as a real constraint.
 
-### 5. Item creation can delete an existing item by title
+### 5. Item creation can delete an existing item by title and weight
 
-- `POST /api/items` deletes an older item if the same `title` already exists.
-- This is dangerous for auditability and can silently destroy approval history and attachments.
+- `POST /api/items` deletes older items that have the same `title` AND the same weight (`tezina`, falling back to `neto`) as the incoming item.
+- Items with the same `title` but a different weight are kept alongside the new one (treated as a different load).
+- Replacement is still dangerous for auditability and can silently destroy approval history and attachments.
 
 ### 6. Transport request assignment is not enforced
 

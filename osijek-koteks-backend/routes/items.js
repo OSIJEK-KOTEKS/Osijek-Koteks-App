@@ -730,11 +730,37 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Check if an item with the same title already exists
-    const existingItem = await Item.findOne({ title: title.trim() });
+    // Determine the incoming weight the same way it is stored below
+    // (explicit tezina takes priority, then neto), so duplicate detection
+    // matches what would actually be saved on the new item
+    const parseWeight = value => {
+      if (value === undefined || value === null || value === '') return null;
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? null : parsed;
+    };
+    const incomingWeight = parseWeight(tezina) !== null ? parseWeight(tezina) : parseWeight(neto);
 
-    if (existingItem) {
-      console.log('Found existing item with same title:', existingItem._id);
+    // Items with the same title are replaced only when their weight matches
+    // the incoming one (a re-upload of the same load). An item with the same
+    // title but a different weight is a different load and is kept.
+    const existingItems = await Item.find({ title: title.trim() });
+
+    for (const existingItem of existingItems) {
+      const existingWeight =
+        parseWeight(existingItem.tezina) !== null
+          ? parseWeight(existingItem.tezina)
+          : parseWeight(existingItem.neto);
+
+      if (existingWeight !== incomingWeight) {
+        console.log('Keeping existing item with same title but different weight:', {
+          id: existingItem._id,
+          existingWeight,
+          incomingWeight,
+        });
+        continue;
+      }
+
+      console.log('Found existing item with same title and weight:', existingItem._id);
 
       // Delete the existing item (including any associated files)
       if (existingItem.approvalPhotoFront?.publicId) {
