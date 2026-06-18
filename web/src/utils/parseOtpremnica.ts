@@ -57,6 +57,7 @@ export async function parseOtpremnicaPdf(file: File): Promise<OtpremnicaData> {
       .sort((a, b) => a.x - b.x)
       .map(it => it.str)
       .join(' ')
+      .replace(/\s+/g, ' ') // collapse any doubled/odd spacing from the join
       .trim();
   };
 
