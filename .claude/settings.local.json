@@ -15,7 +15,10 @@
       "Bash(node --check scripts/migrate-normalize-carriers.js)",
       "Bash(node --check routes/items.js)",
       "Bash(node --check models/Item.js)",
-      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); console.log\\('MONGODB_URI is', process.env.MONGODB_URI ? 'set ✓' : 'NOT SET ✗'\\);\")"
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); console.log\\('MONGODB_URI is', process.env.MONGODB_URI ? 'set ✓' : 'NOT SET ✗'\\);\")",
+      "Bash(python -c \"import pdfplumber\")",
+      "Bash(python -c ' *)",
+      "PowerShell(cd \"C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App\\\\web\"; \\(Get-Content node_modules\\\\pdfjs-dist\\\\package.json | ConvertFrom-Json\\).version; Test-Path node_modules\\\\pdfjs-dist\\\\legacy\\\\build\\\\pdf.js)"
     ]
   }
 }

@@ -702,15 +702,28 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create a new item - Complete POST route
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
   try {
-    // Only admin and bot users can create items
-    if (req.user.role !== 'admin' && req.user.role !== 'bot') {
+    // Asfalt flow (a PDF file is attached) is open to all users except bots.
+    // The classic pdfUrl/JSON flow stays restricted to admin and bot users.
+    if (req.file) {
+      if (req.user.role === 'bot') {
+        return res.status(403).json({ message: 'Access denied. Bots cannot use this flow.' });
+      }
+    } else if (req.user.role !== 'admin' && req.user.role !== 'bot') {
       return res.status(403).json({ message: 'Access denied. Admin or Bot users only.' });
     }
 
     // Extract fields from request body including prijevoznik
-    const { title, code, registracija, neto, tezina, prijevoznik, pdfUrl, creationDate } = req.body;
+    const { title, code, registracija, neto, tezina, prijevoznik, creationDate } = req.body;
+    let { pdfUrl } = req.body;
+
+    // Asfalt flow: a PDF file is attached instead of a pdfUrl link. Upload it
+    // to Cloudinary and use the resulting URL as the item's pdfUrl.
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file);
+      pdfUrl = uploadResult.url;
+    }
 
     console.log('Creating item with data:', {
       title: title?.substring(0, 50) + '...',
