@@ -45,7 +45,7 @@ export async function parseOtpremnicaPdf(file: File): Promise<OtpremnicaData> {
     const lab = items.find(it => it.str.toLowerCase().startsWith(label.toLowerCase()));
     if (!lab) return '';
 
-    const Y_TOL = 8; // baseline tolerance in PDF points
+    const Y_TOL = 11; // baseline tolerance in PDF points
     return items
       .filter(
         it =>
