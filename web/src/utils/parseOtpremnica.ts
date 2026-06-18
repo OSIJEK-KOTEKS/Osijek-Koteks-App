@@ -61,7 +61,8 @@ export async function parseOtpremnicaPdf(file: File): Promise<OtpremnicaData> {
       .trim();
   };
 
-  const brojOtpremnice = valueFor('Broj otpremnice');
+  // "2026 - 1 - 3649" -> "2026-1-3649"
+  const brojOtpremnice = valueFor('Broj otpremnice').replace(/\s*-\s*/g, '-');
   const lokacijaIsporuke = valueFor('Lokacija isporuke');
   const regOznaka = valueFor('Reg. oznaka vozila');
   const netoMasa = valueFor('Neto masa');
