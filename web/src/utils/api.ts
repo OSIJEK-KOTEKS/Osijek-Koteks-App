@@ -414,6 +414,34 @@ export const apiService = {
     }
   },
 
+  // Create an item from an attached PDF (Asfalt flow). The PDF is uploaded as
+  // the item's document instead of providing a pdfUrl link.
+  createItemFromPdf: async (
+    itemData: Omit<CreateItemInput, 'pdfUrl'>,
+    pdfFile: File
+  ): Promise<Item> => {
+    try {
+      const formData = new FormData();
+      formData.append('title', itemData.title);
+      formData.append('code', itemData.code);
+      if (itemData.registracija) formData.append('registracija', itemData.registracija);
+      if (itemData.neto !== undefined) formData.append('neto', itemData.neto.toString());
+      // Keep tezina in sync with neto, mirroring createItem
+      if (itemData.neto !== undefined) formData.append('tezina', itemData.neto.toString());
+      if (itemData.prijevoznik && itemData.prijevoznik.trim())
+        formData.append('prijevoznik', itemData.prijevoznik.trim());
+      formData.append('pdfDocument', pdfFile);
+
+      const response = await api.post<Item>('/api/items', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating item from PDF:', error);
+      throw error;
+    }
+  },
+
   updateItem: async (
     id: string,
     itemData: Partial<Omit<Item, '_id' | 'creationDate' | 'approvalDate' | 'approvedBy'>>

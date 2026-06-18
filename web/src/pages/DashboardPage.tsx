@@ -11,6 +11,7 @@ import Logo from '../components/Logo';
 import PrintButton from '../components/PrintButton';
 import DashboardFilters from '../components/DashboardFilters';
 import CreateItemModal from '../components/CreateItemModal';
+import AsfaltModal from '../components/AsfaltModal';
 import PrintAllButton from '../components/PrintAllButton';
 import PrintTableButton from 'src/components/PrintTableButton';
 import ApproveButton from '../components/ApproveButton';
@@ -288,6 +289,7 @@ const Dashboard: React.FC = () => {
 
   // Modal states
   const [isCreateModalVisible, setCreateModalVisible] = useState<boolean>(false);
+  const [isAsfaltModalVisible, setAsfaltModalVisible] = useState<boolean>(false);
 
   // Other states
   const [totalWeight, setTotalWeight] = useState(0);
@@ -1032,6 +1034,12 @@ const Dashboard: React.FC = () => {
             </S.Button>
           )}
 
+          {user?.role !== 'bot' && (
+            <S.Button id="asfalt_item" onClick={() => setAsfaltModalVisible(true)}>
+              Asfalt
+            </S.Button>
+          )}
+
           {/* User Management button - only for admins */}
           {user?.role === 'admin' && (
             <>
@@ -1398,6 +1406,17 @@ const Dashboard: React.FC = () => {
           onClose={() => setCreateModalVisible(false)}
           onSuccess={() => {
             setCreateModalVisible(false);
+            handleRefresh();
+          }}
+        />
+      )}
+
+      {user?.role !== 'bot' && (
+        <AsfaltModal
+          isOpen={isAsfaltModalVisible}
+          onClose={() => setAsfaltModalVisible(false)}
+          onSuccess={() => {
+            setAsfaltModalVisible(false);
             handleRefresh();
           }}
         />
