@@ -104,16 +104,19 @@ const Input = styled.input`
   }
 `;
 
-const FileDropZone = styled.label`
+const FileDropZone = styled.label<{ $dragging?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 1.5rem;
-  border: 2px dashed ${({ theme }) => theme.colors.gray};
+  border: 2px dashed
+    ${({ theme, $dragging }) => ($dragging ? theme.colors.primary : theme.colors.gray)};
   border-radius: ${({ theme }) => theme.borderRadius};
-  color: #666;
+  background-color: ${({ theme, $dragging }) =>
+    $dragging ? `${theme.colors.primary}10` : 'transparent'};
+  color: ${({ theme, $dragging }) => ($dragging ? theme.colors.primary : '#666')};
   font-size: 0.875rem;
   text-align: center;
   cursor: pointer;
@@ -211,6 +214,7 @@ const AsfaltModal: React.FC<AsfaltModalProps> = ({ isOpen, onClose, onSuccess })
   const [parsing, setParsing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [dragging, setDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetState = () => {
@@ -227,8 +231,7 @@ const AsfaltModal: React.FC<AsfaltModalProps> = ({ isOpen, onClose, onSuccess })
     onClose();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFile = async (file: File | undefined) => {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
@@ -254,6 +257,26 @@ const AsfaltModal: React.FC<AsfaltModalProps> = ({ isOpen, onClose, onSuccess })
     } finally {
       setParsing(false);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFile(e.target.files?.[0]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!dragging) setDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFile(e.dataTransfer.files?.[0]);
   };
 
   const validateForm = (): boolean => {
@@ -315,8 +338,16 @@ const AsfaltModal: React.FC<AsfaltModalProps> = ({ isOpen, onClose, onSuccess })
 
           <FormGroup>
             <Label>PDF otpremnica</Label>
-            <FileDropZone>
-              {pdfFile ? 'Promijeni PDF datoteku' : 'Kliknite za odabir PDF datoteke'}
+            <FileDropZone
+              $dragging={dragging}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}>
+              {dragging
+                ? 'Ispustite PDF ovdje'
+                : pdfFile
+                  ? 'Promijeni PDF datoteku (ili povucite i ispustite)'
+                  : 'Kliknite ili povucite PDF datoteku ovdje'}
               <HiddenFileInput
                 ref={fileInputRef}
                 type="file"
