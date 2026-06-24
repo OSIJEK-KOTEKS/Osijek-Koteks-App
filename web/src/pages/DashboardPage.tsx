@@ -260,6 +260,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [inTransitOnly, setInTransitOnly] = useState(false);
+  const [asfaltOnly, setAsfaltOnly] = useState(false);
   const [paidStatus, setPaidStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
 
   // Pagination state
@@ -490,6 +491,7 @@ const Dashboard: React.FC = () => {
             ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
             sortOrder,
             ...(inTransitOnly && { inTransitOnly: true }),
+            ...(asfaltOnly && { asfaltOnly: true }),
             ...(paidStatus !== 'all' && { paidStatus }),
           };
         }
@@ -542,6 +544,7 @@ const Dashboard: React.FC = () => {
       selectedUser,
       sortOrder,
       inTransitOnly,
+      asfaltOnly,
       paidStatus,
       searchMode,
       searchValue,
@@ -673,6 +676,7 @@ const Dashboard: React.FC = () => {
     selectedUser,
     sortOrder,
     inTransitOnly,
+    asfaltOnly,
     paidStatus,
     searchMode, // Added searchMode to dependencies
     handleFilterChange,
@@ -948,6 +952,7 @@ const Dashboard: React.FC = () => {
           ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
           sortOrder,
           ...(inTransitOnly && { inTransitOnly: true }),
+          ...(asfaltOnly && { asfaltOnly: true }),
           ...(paidStatus !== 'all' && { paidStatus }),
         };
       }
@@ -1093,6 +1098,8 @@ const Dashboard: React.FC = () => {
           onSearchModeChange={setSearchMode}
           inTransitOnly={inTransitOnly}
           onInTransitChange={setInTransitOnly}
+          asfaltOnly={asfaltOnly}
+          onAsfaltChange={setAsfaltOnly}
         />
       </DashboardContainer>
 

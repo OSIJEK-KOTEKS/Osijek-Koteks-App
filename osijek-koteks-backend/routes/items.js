@@ -437,6 +437,7 @@ router.get('/', auth, async (req, res) => {
       inTransitOnly,
       createdByUser,
       paidStatus,
+      asfaltOnly,
     } = req.query;
 
     const page = parseInt(req.query.page) || 1;
@@ -545,6 +546,11 @@ router.get('/', auth, async (req, res) => {
     // In transit filtering
     if (inTransitOnly === 'true') {
       query.inTransit = true;
+    }
+
+    // Asfalt filtering (items created through the Asfalt button)
+    if (asfaltOnly === 'true') {
+      query.isAsfalt = true;
     }
 
     // Paid status filtering
@@ -822,6 +828,7 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
       registracija: registracija ? registracija.trim() : undefined,
       prijevoznik: normalizeCarrier(prijevoznik),
       pdfUrl: pdfUrl.trim(),
+      isAsfalt: !!req.file, // created via the Asfalt button when a PDF is attached
       createdBy: req.user._id, // ADD THIS LINE - Store who created the item
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,

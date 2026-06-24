@@ -130,6 +130,8 @@ interface DashboardFiltersProps {
   onClearSearch: () => void;
   inTransitOnly: boolean;
   onInTransitChange: (inTransit: boolean) => void;
+  asfaltOnly: boolean;
+  onAsfaltChange: (asfaltOnly: boolean) => void;
 }
 
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
@@ -161,6 +163,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   onClearSearch,
   inTransitOnly,
   onInTransitChange,
+  asfaltOnly,
+  onAsfaltChange,
 }) => {
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && searchValue.trim()) {
@@ -409,6 +413,12 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   $active={inTransitOnly}>
                   🚚 U tranzitu
                 </TransitPresetButton>
+                <TransitPresetButton
+                  onClick={() => onAsfaltChange(!asfaltOnly)}
+                  type="button"
+                  $active={asfaltOnly}>
+                  🛣️ Samo asfalt
+                </TransitPresetButton>
               </DatePresets>
             )}
 
@@ -417,6 +427,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                 <DateRangeDisplay>
                   Odabrani period: {formatDateRange(startDate, endDate)}
                   {inTransitOnly && ' (samo u tranzitu)'}
+                  {asfaltOnly && ' (samo asfalt)'}
                 </DateRangeDisplay>
                 <RangeLimitInfo>Maksimalni raspon: 366 dana</RangeLimitInfo>
               </>

@@ -370,6 +370,7 @@ export const apiService = {
       if (filters?.searchRegistration)
         params.append('searchRegistration', filters.searchRegistration);
       if (filters?.inTransitOnly) params.append('inTransitOnly', 'true');
+      if (filters?.asfaltOnly) params.append('asfaltOnly', 'true');
       if (filters?.prijevoznik && filters.prijevoznik.trim())
         params.append('prijevoznik', filters.prijevoznik);
       if (filters?.paidStatus) params.append('paidStatus', filters.paidStatus);

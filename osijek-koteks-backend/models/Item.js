@@ -62,6 +62,11 @@ const ItemSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // True for items created through the "Asfalt" button (PDF otpremnica upload)
+    isAsfalt: {
+      type: Boolean,
+      default: false,
+    },
     creationDate: {
       type: Date,
       default: Date.now,

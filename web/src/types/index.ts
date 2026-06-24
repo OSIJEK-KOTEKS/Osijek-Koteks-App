@@ -37,6 +37,7 @@ export interface Item {
   tezina?: number;
   prijevoznik?: string;
   pdfUrl: string;
+  isAsfalt?: boolean;
   creationDate: string;
   creationTime?: string;
   approvalStatus: 'na čekanju' | 'odobreno' | 'odbijen';
@@ -144,6 +145,7 @@ export interface ItemFilters {
   inTransitOnly?: boolean;
   createdByUser?: string;
   paidStatus?: 'paid' | 'unpaid';
+  asfaltOnly?: boolean;
 }
 
 export interface Bill {
