@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, getImageUrl } from '../utils/api';
 import { Item, ItemFilters, ItemUser } from '../types';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import * as S from '../components/styled/Common';
 import ImageViewerModal from '../components/ImageViewerModal';
 import LocationViewerModal from '../components/LocationViewerModal';
@@ -199,7 +199,7 @@ const DashboardContainer = styled.div`
   box-shadow: ${({ theme }) => theme.shadows.main};
 `;
 
-const HeaderActions = styled.div`
+const HeaderActions = styled.div<{ $compact?: boolean }>`
   display: flex;
   gap: ${({ theme }) => theme.spacing.medium};
 
@@ -214,6 +214,32 @@ const HeaderActions = styled.div`
     padding: 0.638rem 0.85rem !important;
     font-size: 0.935rem !important;
   }
+
+  /*
+   * Admins see roughly twice as many buttons as anyone else. S.Button is
+   * width: 100%, so as a flex row they all stretch equally and their labels
+   * wrap onto two or three lines — tall, ragged and hard to scan. Sizing them
+   * to their own text and letting the row wrap keeps every button on one line.
+   */
+  ${({ $compact }) =>
+    $compact &&
+    css`
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+
+      & > button,
+      & button,
+      & > ${S.Button}, & ${S.Button} {
+        width: auto !important;
+        flex: 0 0 auto;
+        white-space: nowrap;
+        line-height: 1.2;
+        padding: 8px 11px !important;
+        font-size: 0.8rem !important;
+      }
+    `}
 `;
 
 // Alternative approach: Create a smaller variant of the button
@@ -989,7 +1015,7 @@ const Dashboard: React.FC = () => {
         <HeaderLeft>
           <Logo />
         </HeaderLeft>
-        <HeaderActions>
+        <HeaderActions $compact={user?.role === 'admin'}>
           <ExportExcelButton
             items={items}
             totalItems={totalItems}

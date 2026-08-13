@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { apiService } from '../utils/api';
@@ -247,13 +248,14 @@ const PickerInput = styled.input`
   }
 `;
 
+/*
+ * Rendered through a portal with viewport coordinates rather than positioned
+ * inside the row: the table clips its overflow, which used to swallow the list
+ * on the last rows entirely.
+ */
 const PickerList = styled.ul`
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 2px);
-  left: 0;
-  right: 0;
-  max-height: 260px;
+  position: fixed;
+  z-index: 1000;
   overflow-y: auto;
   margin: 0;
   padding: 0;
@@ -299,20 +301,82 @@ interface PickerProps {
   placeholder?: string;
 }
 
+/** Where the portalled list should sit, in viewport coordinates. */
+interface PickerPosition {
+  left: number;
+  width: number;
+  top?: number;
+  bottom?: number;
+  maxHeight: number;
+}
+
+const MAX_LIST_HEIGHT = 280;
+const VIEWPORT_MARGIN = 8;
+
 const CanonicalPicker: React.FC<PickerProps> = ({ options, value, onChange, placeholder }) => {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [position, setPosition] = useState<PickerPosition | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   // Keep the text in sync when the parent resets the selection.
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
+  const updatePosition = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const rect = input.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - VIEWPORT_MARGIN;
+    // Rows near the bottom of the window get the list above the input instead.
+    const openUp = spaceBelow < 180 && spaceAbove > spaceBelow;
+
+    setPosition({
+      left: rect.left,
+      width: rect.width,
+      ...(openUp
+        ? {
+            bottom: window.innerHeight - rect.top + 2,
+            maxHeight: Math.min(MAX_LIST_HEIGHT, spaceAbove),
+          }
+        : {
+            top: rect.bottom + 2,
+            maxHeight: Math.min(MAX_LIST_HEIGHT, spaceBelow),
+          }),
+    });
+  }, []);
+
+  // Measure before paint so the list never flashes at a stale position.
+  useLayoutEffect(() => {
+    if (open) updatePosition();
+  }, [open, query, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Capture phase so scrolling of any ancestor container repositions the list.
+    const onScrollOrResize = () => updatePosition();
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [open, updatePosition]);
+
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      // The list lives in a portal, so it is not inside wrapRef.
+      if (wrapRef.current?.contains(target)) return;
+      if (listRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onDocMouseDown);
     return () => document.removeEventListener('mousedown', onDocMouseDown);
@@ -323,6 +387,14 @@ const CanonicalPicker: React.FC<PickerProps> = ({ options, value, onChange, plac
     if (!q) return options;
     return options.filter(o => fold(o.name).includes(q));
   }, [options, query]);
+
+  // Keep the keyboard-highlighted option visible while arrowing through 133 names.
+  useEffect(() => {
+    if (!open) return;
+    const list = listRef.current;
+    const active = list?.children[activeIndex] as HTMLElement | undefined;
+    active?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, open]);
 
   const select = (name: string) => {
     setQuery(name);
@@ -351,6 +423,7 @@ const CanonicalPicker: React.FC<PickerProps> = ({ options, value, onChange, plac
   return (
     <PickerWrap ref={wrapRef}>
       <PickerInput
+        ref={inputRef}
         value={query}
         placeholder={placeholder || 'Odaberite unificirani naziv…'}
         onChange={e => {
@@ -363,28 +436,40 @@ const CanonicalPicker: React.FC<PickerProps> = ({ options, value, onChange, plac
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
       />
-      {open && (
-        <PickerList>
-          {matches.length === 0 ? (
-            <PickerEmpty>Nema podudaranja na unificiranoj listi.</PickerEmpty>
-          ) : (
-            matches.slice(0, 100).map((o, i) => (
-              <PickerOption
-                key={o._id}
-                active={i === activeIndex}
-                onMouseEnter={() => setActiveIndex(i)}
-                onMouseDown={e => {
-                  // Pick before the input's blur can close the list.
-                  e.preventDefault();
-                  select(o.name);
-                }}
-              >
-                {o.name}
-              </PickerOption>
-            ))
-          )}
-        </PickerList>
-      )}
+      {open &&
+        position &&
+        createPortal(
+          <PickerList
+            ref={listRef}
+            style={{
+              left: position.left,
+              width: position.width,
+              top: position.top,
+              bottom: position.bottom,
+              maxHeight: position.maxHeight,
+            }}
+          >
+            {matches.length === 0 ? (
+              <PickerEmpty>Nema podudaranja na unificiranoj listi.</PickerEmpty>
+            ) : (
+              matches.slice(0, 100).map((o, i) => (
+                <PickerOption
+                  key={o._id}
+                  active={i === activeIndex}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onMouseDown={e => {
+                    // Pick before the input's blur can close the list.
+                    e.preventDefault();
+                    select(o.name);
+                  }}
+                >
+                  {o.name}
+                </PickerOption>
+              ))
+            )}
+          </PickerList>,
+          document.body
+        )}
     </PickerWrap>
   );
 };
