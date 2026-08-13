@@ -6,6 +6,7 @@ require('dotenv').config();
 
 // Import models
 const Item = require('./models/Item');
+const { initCarrierUnification } = require('./utils/carrierUnification');
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -132,6 +133,7 @@ const transportRequestsRouter = require('./routes/transportRequests');
 const groupsRouter = require('./routes/groups');
 const codeLocationsRouter = require('./routes/codeLocations');
 const codeMappingsRouter = require('./routes/codeMappings');
+const carrierUnificationRouter = require('./routes/carrierUnification');
 
 // GDPR Routes
 app.get('/api/privacy-policy', (req, res) => {
@@ -170,6 +172,7 @@ app.use('/api/transport-requests', transportRequestsRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/code-locations', codeLocationsRouter);
 app.use('/api/code-mappings', codeMappingsRouter);
+app.use('/api/carrier-unification', carrierUnificationRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -189,8 +192,11 @@ mongoose
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
   })
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected successfully');
+    // Seed the unified carrier list (first run) and warm the alias-rule cache
+    // that Item write hooks read from.
+    await initCarrierUnification();
     const port = process.env.PORT || 5000;
     server.listen(port, () => {
       console.log(`Server running on port ${port}`);

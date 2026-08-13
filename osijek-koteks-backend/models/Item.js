@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { normalizeCarrier } = require('../utils/normalizeCarrier');
+const { applyAlias } = require('../utils/carrierUnification');
 
 const photoSchema = new mongoose.Schema({
   url: {
@@ -169,26 +170,26 @@ const ItemSchema = new mongoose.Schema(
   }
 );
 
-// Normalize prijevoznik on every save (trim + collapse whitespace)
-ItemSchema.pre('save', function (next) {
+// Normalize prijevoznik on every save (trim + collapse whitespace), then apply
+// any unification rule an admin defined on the Unifikacija page, so items
+// arriving from the scales under an old spelling land on the unified name.
+ItemSchema.pre('save', async function () {
   if (this.isModified('prijevoznik')) {
-    this.prijevoznik = normalizeCarrier(this.prijevoznik);
+    this.prijevoznik = await applyAlias(normalizeCarrier(this.prijevoznik));
   }
-  next();
 });
 
-// Same normalization for findOneAndUpdate / updateOne / updateMany paths
-function normalizeOnUpdate(next) {
+// Same normalization + unification for findOneAndUpdate / updateOne / updateMany paths
+async function normalizeOnUpdate() {
   const update = this.getUpdate();
-  if (!update) return next();
+  if (!update) return;
 
   if (update.prijevoznik !== undefined) {
-    update.prijevoznik = normalizeCarrier(update.prijevoznik);
+    update.prijevoznik = await applyAlias(normalizeCarrier(update.prijevoznik));
   }
   if (update.$set && update.$set.prijevoznik !== undefined) {
-    update.$set.prijevoznik = normalizeCarrier(update.$set.prijevoznik);
+    update.$set.prijevoznik = await applyAlias(normalizeCarrier(update.$set.prijevoznik));
   }
-  next();
 }
 ItemSchema.pre('findOneAndUpdate', normalizeOnUpdate);
 ItemSchema.pre('updateOne', normalizeOnUpdate);
