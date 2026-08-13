@@ -9,6 +9,7 @@ import RacuniPage from './pages/RacuniPage';
 import PrijevozPage from './pages/PrijevozPage';
 import RegistracijePage from './pages/RegistracijePage';
 import CodeMappingPage from './pages/CodeMappingPage';
+import UnifikacijaPage from './pages/UnifikacijaPage';
 
 const App: React.FC = () => {
   return (
@@ -61,6 +62,14 @@ const App: React.FC = () => {
             element={
               <PrivateRoute adminOnly>
                 <CodeMappingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/unifikacija"
+            element={
+              <PrivateRoute adminOnly>
+                <UnifikacijaPage />
               </PrivateRoute>
             }
           />

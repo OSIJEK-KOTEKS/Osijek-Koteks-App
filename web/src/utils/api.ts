@@ -11,6 +11,9 @@ import {
   ApiService,
   ItemUser,
   Bill,
+  CanonicalCarrier,
+  PendingCarrier,
+  CarrierAlias,
 } from '../types';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://osijek-koteks-app.onrender.com';
@@ -941,6 +944,113 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error deleting code mapping:', error);
+      throw error;
+    }
+  },
+
+  // Carrier unification (Unifikacija)
+  getCanonicalCarriers: async (): Promise<CanonicalCarrier[]> => {
+    try {
+      const response = await api.get<CanonicalCarrier[]>('/api/carrier-unification/canonical');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching canonical carriers:', error);
+      throw error;
+    }
+  },
+
+  addCanonicalCarrier: async (name: string): Promise<CanonicalCarrier> => {
+    try {
+      const response = await api.post('/api/carrier-unification/canonical', { name });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding canonical carrier:', error);
+      throw error;
+    }
+  },
+
+  deleteCanonicalCarrier: async (id: string): Promise<any> => {
+    try {
+      const response = await api.delete(`/api/carrier-unification/canonical/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting canonical carrier:', error);
+      throw error;
+    }
+  },
+
+  seedCanonicalCarriers: async (): Promise<{ inserted: number; total: number }> => {
+    try {
+      const response = await api.post('/api/carrier-unification/canonical/seed');
+      return response.data;
+    } catch (error) {
+      console.error('Error seeding canonical carriers:', error);
+      throw error;
+    }
+  },
+
+  getPendingCarriers: async (): Promise<PendingCarrier[]> => {
+    try {
+      const response = await api.get<PendingCarrier[]>('/api/carrier-unification/pending');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching pending carriers:', error);
+      throw error;
+    }
+  },
+
+  getCarrierAliases: async (): Promise<CarrierAlias[]> => {
+    try {
+      const response = await api.get<CarrierAlias[]>('/api/carrier-unification/aliases');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching carrier aliases:', error);
+      throw error;
+    }
+  },
+
+  createCarrierAlias: async (
+    from: string,
+    to: string
+  ): Promise<{ rule: CarrierAlias; itemsUpdated: number }> => {
+    try {
+      const response = await api.post('/api/carrier-unification/aliases', { from, to });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating carrier alias:', error);
+      throw error;
+    }
+  },
+
+  updateCarrierAlias: async (
+    id: string,
+    to: string
+  ): Promise<{ rule: CarrierAlias; itemsUpdated: number }> => {
+    try {
+      const response = await api.put(`/api/carrier-unification/aliases/${id}`, { to });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating carrier alias:', error);
+      throw error;
+    }
+  },
+
+  applyCarrierAlias: async (id: string): Promise<{ rule: CarrierAlias; itemsUpdated: number }> => {
+    try {
+      const response = await api.post(`/api/carrier-unification/aliases/${id}/apply`);
+      return response.data;
+    } catch (error) {
+      console.error('Error applying carrier alias:', error);
+      throw error;
+    }
+  },
+
+  deleteCarrierAlias: async (id: string): Promise<any> => {
+    try {
+      const response = await api.delete(`/api/carrier-unification/aliases/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting carrier alias:', error);
       throw error;
     }
   },

@@ -1051,6 +1051,7 @@ const Dashboard: React.FC = () => {
               <S.Button onClick={() => navigate('/users')}>Upravljanje korisnicima</S.Button>
               <S.Button onClick={handleNavigateToRegistracije}>Registracije</S.Button>
               <S.Button onClick={() => navigate('/code-mapping')}>Imenovanje Radnih Naloga</S.Button>
+              <S.Button onClick={() => navigate('/unifikacija')}>Unifikacija</S.Button>
             </>
           )}
 

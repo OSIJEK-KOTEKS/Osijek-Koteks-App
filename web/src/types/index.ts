@@ -208,6 +208,42 @@ export interface ApiServiceResponse<T = any> {
   message?: string;
 }
 
+// ─── Carrier unification (Unifikacija) ───────────────────────────────────────
+
+/** One entry of the unified Prijevoznik list shared with the weighing scales. */
+export interface CanonicalCarrier {
+  _id: string;
+  name: string;
+  key: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A Prijevoznik value currently present on items, with its cleanup status. */
+export interface PendingCarrier {
+  key: string;
+  value: string;
+  count: number;
+  lastSeen: string | null;
+  variants: { value: string; count: number }[];
+  status: 'canonical' | 'mapped' | 'unmapped';
+  canonicalName: string | null;
+  mappedTo: string | null;
+}
+
+/** A rule rewriting one old Prijevoznik spelling to a unified name. */
+export interface CarrierAlias {
+  _id: string;
+  from: string;
+  fromKey: string;
+  to: string;
+  toKey: string;
+  itemsUpdated: number;
+  lastAppliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TransportAcceptance {
   _id: string;
   requestId: {
