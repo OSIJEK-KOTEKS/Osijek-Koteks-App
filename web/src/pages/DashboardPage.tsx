@@ -1357,14 +1357,18 @@ const Dashboard: React.FC = () => {
                       </ActionButton>
                     )}
 
-                    {/* Approval buttons based on user role */}
-                    {user?.role === 'admin' && item.approvalStatus === 'na čekanju' && (
-                      <ApproveButton item={item} onSuccess={handleApprovalSuccess} />
-                    )}
+                    {/* Approval buttons based on user role. "Samo asfalt" users
+                        approve everything they can see, using the same flow as admins. */}
+                    {(user?.role === 'admin' || isOnlyAsfaltUser) &&
+                      item.approvalStatus === 'na čekanju' && (
+                        <ApproveButton item={item} onSuccess={handleApprovalSuccess} />
+                      )}
 
-                    {user?.role === 'pc-user' && item.approvalStatus === 'na čekanju' && (
-                      <PCUserApproveButton item={item} onSuccess={handleApprovalSuccess} />
-                    )}
+                    {user?.role === 'pc-user' &&
+                      !isOnlyAsfaltUser &&
+                      item.approvalStatus === 'na čekanju' && (
+                        <PCUserApproveButton item={item} onSuccess={handleApprovalSuccess} />
+                      )}
 
                     {/* Delete button for admin */}
                     {user?.role === 'admin' && (

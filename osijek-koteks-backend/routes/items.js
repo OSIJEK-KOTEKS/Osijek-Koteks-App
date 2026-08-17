@@ -1355,6 +1355,15 @@ router.patch(
         return res.status(404).json({ message: 'Item not found' });
       }
 
+      // "Samo asfalt" users approve everything they can see — and nothing else.
+      if (isAsfaltOnlyUser(req.user) && item.isAsfalt !== true) {
+        console.log('Approval denied: samo-asfalt user on non-asfalt item', item._id);
+        return res.status(403).json({
+          message: 'Access denied to this item',
+          messageHr: 'Pristup ovoj stavci je odbijen',
+        });
+      }
+
       console.log('Found item:', {
         id: item._id,
         title: item.title.substring(0, 50),
