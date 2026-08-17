@@ -12,6 +12,8 @@ export interface User {
   hasFullAccess: boolean;
   canAccessRacuni?: boolean;
   canAccessPrijevoz?: boolean;
+  /** "Samo asfalt": sees every code, but only Asfalt items. */
+  onlyAsfalt?: boolean;
 }
 
 export interface RegistrationData {
@@ -26,6 +28,7 @@ export interface RegistrationData {
   hasFullAccess?: boolean;
   canAccessRacuni?: boolean;
   canAccessPrijevoz?: boolean;
+  onlyAsfalt?: boolean;
 }
 
 export interface Item {

@@ -132,6 +132,13 @@ async function calculateAverageSpeed(item, approverUser) {
   return Math.round((distanceKm / timeDiffHours) * 10) / 10;
 }
 
+/**
+ * "Samo asfalt" users trade one restriction for another: the per-code
+ * restriction is lifted (they see every code) but they only ever see items
+ * created through the Asfalt flow.
+ */
+const isAsfaltOnlyUser = user => user?.onlyAsfalt === true;
+
 // Function to find all carrier variations that match the normalized form
 const findCarrierVariations = async selectedCarrier => {
   try {
@@ -281,7 +288,10 @@ router.get('/codes', auth, async (req, res) => {
     // Apply the same filtering logic as the main items route
     let query = {};
 
-    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+    if (isAsfaltOnlyUser(req.user)) {
+      // Samo asfalt: every code is visible, but only through Asfalt items
+      query.isAsfalt = true;
+    } else if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their codes
       query.code = { $in: req.user.codes };
     } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
@@ -309,7 +319,10 @@ router.get('/users', auth, async (req, res) => {
     // Build query based on user permissions (same logic as main items route)
     let matchQuery = {};
 
-    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+    if (isAsfaltOnlyUser(req.user)) {
+      // Samo asfalt: every code is visible, but only through Asfalt items
+      matchQuery.isAsfalt = true;
+    } else if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their assigned codes
       if (req.user.codes && req.user.codes.length > 0) {
         matchQuery.code = { $in: req.user.codes };
@@ -370,7 +383,10 @@ router.get('/carriers', auth, async (req, res) => {
     // Apply the same filtering logic as the main items route
     let query = {};
 
-    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+    if (isAsfaltOnlyUser(req.user)) {
+      // Samo asfalt: every code is visible, but only through Asfalt items
+      query.isAsfalt = true;
+    } else if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their codes
       query.code = { $in: req.user.codes };
     } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
@@ -400,7 +416,10 @@ router.get('/registrations', auth, async (req, res) => {
     // Apply the same filtering logic as the main items route
     let query = {};
 
-    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+    if (isAsfaltOnlyUser(req.user)) {
+      // Samo asfalt: every code is visible, but only through Asfalt items
+      query.isAsfalt = true;
+    } else if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their codes
       query.code = { $in: req.user.codes };
     } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
@@ -470,7 +489,12 @@ router.get('/', auth, async (req, res) => {
     }
 
     // Code filtering - with access control
-    if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+    if (isAsfaltOnlyUser(req.user)) {
+      // Samo asfalt: no code restriction — the isAsfalt pin below does the work
+      if (code) {
+        query.code = code;
+      }
+    } else if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
       // Non-admin users: filter by their codes
       if (req.user.codes && req.user.codes.length > 0) {
         if (code && req.user.codes.includes(code)) {
@@ -548,8 +572,9 @@ router.get('/', auth, async (req, res) => {
       query.inTransit = true;
     }
 
-    // Asfalt filtering (items created through the Asfalt button)
-    if (asfaltOnly === 'true') {
+    // Asfalt filtering (items created through the Asfalt button). "Samo asfalt"
+    // users get it pinned on regardless of what the client asks for.
+    if (asfaltOnly === 'true' || isAsfaltOnlyUser(req.user)) {
       query.isAsfalt = true;
     }
 
@@ -686,10 +711,11 @@ router.get('/:id', auth, async (req, res) => {
     // 2. User is admin or non-admin and has the item's code in their codes array
     // 3. User has full access flag set
 
-    const hasAccess =
-      (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
-      user.codes.includes(item.code) || // User has the specific code
-      user.hasFullAccess; // User has full access flag
+    const hasAccess = isAsfaltOnlyUser(user)
+      ? item.isAsfalt === true // Samo asfalt: any code, but Asfalt items only
+      : (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
+        user.codes.includes(item.code) || // User has the specific code
+        user.hasFullAccess; // User has full access flag
 
     if (!hasAccess) {
       console.log('Access denied for user:', user._id, 'to item:', item._id);
@@ -998,15 +1024,17 @@ router.patch('/:id/code', auth, async (req, res) => {
     });
 
     // Apply access control logic
-    const hasAccess =
-      (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
-      user.codes.includes(item.code) || // User has the specific code
-      user.hasFullAccess; // User has full access flag
+    const hasAccess = isAsfaltOnlyUser(user)
+      ? item.isAsfalt === true // Samo asfalt: any code, but Asfalt items only
+      : (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
+        user.codes.includes(item.code) || // User has the specific code
+        user.hasFullAccess; // User has full access flag
 
     console.log('🔐 Access control check:', {
       isAdminWithNoCodes: user.role === 'admin' && (!user.codes || user.codes.length === 0),
       hasSpecificCode: user.codes.includes(item.code),
       hasFullAccess: user.hasFullAccess,
+      onlyAsfalt: user.onlyAsfalt,
       finalAccess: hasAccess,
     });
 

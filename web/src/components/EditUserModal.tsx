@@ -211,6 +211,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         hasFullAccess: user.hasFullAccess || false,
         canAccessRacuni: user.canAccessRacuni ?? false,
         canAccessPrijevoz: user.canAccessPrijevoz ?? false,
+        onlyAsfalt: user.onlyAsfalt ?? false,
       });
       // Reset other state values
       setNewCode('');
@@ -249,6 +250,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     setFormData(prev => ({
       ...prev,
       canAccessPrijevoz: checked,
+    }));
+  };
+
+  const handleOnlyAsfaltChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      onlyAsfalt: checked,
     }));
   };
 
@@ -398,6 +406,24 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
             </FormGroup>
           )}
+
+          <FormGroup>
+            <Label>Samo asfalt</Label>
+            <CheckboxContainer>
+              <input
+                type="checkbox"
+                checked={formData.onlyAsfalt || false}
+                onChange={e => handleOnlyAsfaltChange(e.target.checked)}
+                id="onlyAsfalt"
+              />
+              <label htmlFor="onlyAsfalt">Prikaži samo asfalt dokumente</label>
+            </CheckboxContainer>
+            {formData.onlyAsfalt && (
+              <WarningText>
+                Korisnik će vidjeti sve radne naloge, ali isključivo asfalt dokumente.
+              </WarningText>
+            )}
+          </FormGroup>
 
           <FormGroup>
             <Label>Pristup računima</Label>

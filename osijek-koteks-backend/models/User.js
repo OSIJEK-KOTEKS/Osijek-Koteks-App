@@ -39,6 +39,8 @@ const UserSchema = new mongoose.Schema({
   hasFullAccess: { type: Boolean, default: false },
   canAccessRacuni: { type: Boolean, default: false },
   canAccessPrijevoz: { type: Boolean, default: false },
+  // "Samo asfalt": the user sees items for every code, but only Asfalt ones.
+  onlyAsfalt: { type: Boolean, default: false },
 });
 
 // Hash the password before saving

@@ -456,7 +456,11 @@ const Dashboard: React.FC = () => {
 
     return creationTime ? `${formattedDate} ${creationTime}` : formattedDate;
   };
-  const showRestrictedMessage = user?.role === 'admin' && user?.codes && user.codes.length > 0;
+  // "Samo asfalt" lifts the per-code restriction server-side, so the codes
+  // banner would be wrong for those users — they get their own notice instead.
+  const isOnlyAsfaltUser = user?.onlyAsfalt === true;
+  const showRestrictedMessage =
+    !isOnlyAsfaltUser && user?.role === 'admin' && user?.codes && user.codes.length > 0;
   const debugDateFormatting = (item: Item, index: number) => {
     console.log(`Item ${index} (${item.title}):`, {
       creationDate: item.creationDate,
@@ -1088,6 +1092,13 @@ const Dashboard: React.FC = () => {
         </RestrictedAccessMessage>
       )}
 
+      {isOnlyAsfaltUser && (
+        <RestrictedAccessMessage>
+          <RestrictedAccessIcon>🛣️</RestrictedAccessIcon>
+          Samo asfalt: vidite sve radne naloge, ali isključivo asfalt dokumente
+        </RestrictedAccessMessage>
+      )}
+
       <DashboardContainer>
         <DashboardFilters
           startDate={startDate}
@@ -1119,6 +1130,7 @@ const Dashboard: React.FC = () => {
           inTransitOnly={inTransitOnly}
           onInTransitChange={setInTransitOnly}
           asfaltOnly={asfaltOnly}
+          lockedToAsfalt={isOnlyAsfaltUser}
           onAsfaltChange={setAsfaltOnly}
         />
       </DashboardContainer>

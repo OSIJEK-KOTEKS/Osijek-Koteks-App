@@ -43,6 +43,12 @@ const Label = styled.label`
   color: ${({ theme }) => theme.colors.text};
 `;
 
+const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
 const Input = styled.input`
   padding: 0.5rem;
   border: 1px solid ${({ theme }) => theme.colors.gray};
@@ -331,6 +337,21 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               <option value="admin">Administrator</option>
               <option value="bot">Bot</option>
             </Select>
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Samo asfalt</Label>
+            <CheckboxContainer>
+              <input
+                type="checkbox"
+                checked={formData.onlyAsfalt || false}
+                onChange={e => setFormData({ ...formData, onlyAsfalt: e.target.checked })}
+                id="createOnlyAsfalt"
+              />
+              <label htmlFor="createOnlyAsfalt">
+                Prikaži samo asfalt dokumente (svi radni nalozi)
+              </label>
+            </CheckboxContainer>
           </FormGroup>
 
           <FormGroup>

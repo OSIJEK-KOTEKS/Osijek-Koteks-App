@@ -132,6 +132,8 @@ interface DashboardFiltersProps {
   onInTransitChange: (inTransit: boolean) => void;
   asfaltOnly: boolean;
   onAsfaltChange: (asfaltOnly: boolean) => void;
+  /** "Samo asfalt" users always get asfalt-only results, so the toggle is hidden. */
+  lockedToAsfalt?: boolean;
 }
 
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
@@ -165,6 +167,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   onInTransitChange,
   asfaltOnly,
   onAsfaltChange,
+  lockedToAsfalt = false,
 }) => {
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && searchValue.trim()) {
@@ -413,12 +416,14 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   $active={inTransitOnly}>
                   🚚 U tranzitu
                 </TransitPresetButton>
-                <TransitPresetButton
-                  onClick={() => onAsfaltChange(!asfaltOnly)}
-                  type="button"
-                  $active={asfaltOnly}>
-                  🛣️ Samo asfalt
-                </TransitPresetButton>
+                {!lockedToAsfalt && (
+                  <TransitPresetButton
+                    onClick={() => onAsfaltChange(!asfaltOnly)}
+                    type="button"
+                    $active={asfaltOnly}>
+                    🛣️ Samo asfalt
+                  </TransitPresetButton>
+                )}
               </DatePresets>
             )}
 

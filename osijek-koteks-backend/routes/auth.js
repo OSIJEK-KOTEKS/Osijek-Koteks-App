@@ -37,6 +37,7 @@ router.post('/register', async (req, res) => {
       hasFullAccess: false,
       canAccessRacuni: false,
       canAccessPrijevoz: false,
+      onlyAsfalt: false,
       codes: [],
       assignedRegistrations: [],
     });
@@ -71,6 +72,7 @@ router.post('/register', async (req, res) => {
         hasFullAccess: user.hasFullAccess,
         canAccessRacuni: user.canAccessRacuni,
         canAccessPrijevoz: user.canAccessPrijevoz,
+        onlyAsfalt: user.onlyAsfalt,
       },
     });
   } catch (error) {
@@ -134,6 +136,7 @@ router.post('/login', async (req, res) => {
         hasFullAccess: user.hasFullAccess,
         canAccessRacuni: user.canAccessRacuni,
         canAccessPrijevoz: user.canAccessPrijevoz,
+        onlyAsfalt: user.onlyAsfalt,
       },
     });
   } catch (error) {
