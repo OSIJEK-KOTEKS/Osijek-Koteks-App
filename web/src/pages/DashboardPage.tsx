@@ -227,7 +227,7 @@ const HeaderActions = styled.div<{ $compact?: boolean }>`
       flex-wrap: wrap;
       justify-content: flex-end;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
 
       & > button,
       & button,
@@ -236,8 +236,8 @@ const HeaderActions = styled.div<{ $compact?: boolean }>`
         flex: 0 0 auto;
         white-space: nowrap;
         line-height: 1.2;
-        padding: 8px 11px !important;
-        font-size: 0.8rem !important;
+        padding: 8px 10px !important;
+        font-size: 0.78rem !important;
       }
     `}
 `;
@@ -331,7 +331,6 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('userToken');
   const canAccessRacuni = user?.role === 'admin' || user?.canAccessRacuni;
-  const canAccessPrijevoz = user?.canAccessPrijevoz === true;
 
   const getDisplayNameForUser = (item: Item): string => {
     if (!item.createdBy) return 'Nepoznato';
@@ -799,11 +798,6 @@ const Dashboard: React.FC = () => {
     navigate('/racuni');
   };
 
-  const handleNavigateToPrijevoz = () => {
-    if (!canAccessPrijevoz) return;
-    navigate('/prijevoz');
-  };
-
   const handleNavigateToRegistracije = () => {
     navigate('/registracije');
   };
@@ -1082,7 +1076,6 @@ const Dashboard: React.FC = () => {
           )}
 
           {canAccessRacuni && <S.Button onClick={handleNavigateToRacuni}>Racuni</S.Button>}
-          {canAccessPrijevoz && <S.Button onClick={handleNavigateToPrijevoz}>Prijevoz</S.Button>}
           {/* Logout button */}
           <S.Button onClick={handleLogout}>Odjava</S.Button>
         </HeaderActions>

@@ -20,7 +20,23 @@
       "Bash(python -c ' *)",
       "PowerShell(cd \"C:\\\\Users\\\\mkrajina\\\\Desktop\\\\React Appovi\\\\Osijek-Koteks-App\\\\web\"; \\(Get-Content node_modules\\\\pdfjs-dist\\\\package.json | ConvertFrom-Json\\).version; Test-Path node_modules\\\\pdfjs-dist\\\\legacy\\\\build\\\\pdf.js)",
       "Bash(node dbg.js)",
-      "Bash(cd \"/c/Users/mkrajina/Desktop/React Appovi/Osijek-Koteks-App/web\" && node dbg.js && rm dbg.js)"
+      "Bash(cd \"/c/Users/mkrajina/Desktop/React Appovi/Osijek-Koteks-App/web\" && node dbg.js && rm dbg.js)",
+      "Bash(node -e ' *)",
+      "Bash(python -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(node --test test/carrierUnification.test.js)",
+      "Bash(npm test *)",
+      "Bash(npx react-scripts *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\({sc:p.dependencies['styled-components'], react:p.dependencies.react, rd:p.dependencies['react-dom']},null,1\\)\")",
+      "Bash(node -p \"require\\('./node_modules/styled-components/package.json'\\).version\")",
+      "Bash(curl -s -o /dev/null -w \"localhost:3000 -> %{http_code}\\\\n\" http://localhost:3000/__navbar-check.html --max-time 8)",
+      "Bash(python -m http.server 4599 --bind 127.0.0.1)",
+      "Bash(taskkill //PID 3916 //F)",
+      "Bash(curl -s -o /dev/null -w \"4599 now: %{http_code}\\\\n\" http://127.0.0.1:4599/ --max-time 3)"
     ]
   }
 }
