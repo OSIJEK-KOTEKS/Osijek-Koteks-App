@@ -140,6 +140,7 @@ const groupsRouter = require('./routes/groups');
 const codeLocationsRouter = require('./routes/codeLocations');
 const codeMappingsRouter = require('./routes/codeMappings');
 const carrierUnificationRouter = require('./routes/carrierUnification');
+const integrationsRouter = require('./routes/integrations');
 
 // GDPR Routes
 app.get('/api/privacy-policy', (req, res) => {
@@ -179,6 +180,7 @@ app.use('/api/groups', groupsRouter);
 app.use('/api/code-locations', codeLocationsRouter);
 app.use('/api/code-mappings', codeMappingsRouter);
 app.use('/api/carrier-unification', carrierUnificationRouter);
+app.use('/api/integrations', integrationsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

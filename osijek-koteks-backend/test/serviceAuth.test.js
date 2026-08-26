@@ -245,3 +245,35 @@ test('rejects service requests with a declared body that was not captured', asyn
     { code: 'missing_raw_body' }
   );
 });
+
+test('verifies a reconciliation GET signature with encoded query parameters', async () => {
+  clearNonceCache();
+  const pathWithQuery =
+    '/api/integrations/delivery-note-sync-state?updatedAfter=2026-08-24T08%3A00%3A00Z&limit=100';
+  const headers = createServiceAuthHeaders({
+    method: 'GET',
+    pathWithQuery,
+    bodyString: '',
+    clientId: 'transport-backend',
+    secret: 'test-secret',
+    timestamp: fixedTimestamp,
+    nonce: 'nonce-reconciliation-01',
+  });
+  const clients = parseServiceClients(
+    JSON.stringify([
+      {
+        clientId: 'transport-backend',
+        secret: 'test-secret',
+        actorUserId: '507f1f77bcf86cd799439011',
+        allowed: [{ method: 'GET', pathPrefix: '/api/integrations/delivery-note-sync-state' }],
+      },
+    ])
+  );
+
+  const client = await verifyServiceRequest(
+    request({ method: 'GET', originalUrl: pathWithQuery, bodyString: '', headers }),
+    { clients, now: fixedNowMs }
+  );
+
+  assert.equal(client.clientId, 'transport-backend');
+});
