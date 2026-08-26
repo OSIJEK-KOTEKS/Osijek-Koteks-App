@@ -967,11 +967,26 @@ router.patch('/:id/code', auth, async (req, res) => {
     // REMOVED: Duplicate code check - allow multiple items to have the same code
     console.log('ℹ️  Allowing duplicate codes as per admin requirements');
 
-    // Find and update the item
-    console.log('🔍 Finding item by ID...');
-    const item = await Item.findById(req.params.id);
+    const updateResult = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return { status: 'not-found' };
 
-    if (!item) {
+      const user = req.user;
+      const hasAccess = isAsfaltOnlyUser(user)
+        ? item.isAsfalt === true
+        : (user.role === 'admin' && (!user.codes || user.codes.length === 0)) ||
+          user.codes.includes(item.code) ||
+          user.hasFullAccess;
+      if (!hasAccess) return { status: 'forbidden' };
+
+      const oldCode = item.code;
+      item.code = trimmedCode;
+      await saveItem(item);
+
+      return { status: 'updated', item, oldCode, user };
+    });
+
+    if (updateResult.status === 'not-found') {
       console.log('❌ Item not found:', req.params.id);
       return res.status(404).json({
         message: 'Item not found',
@@ -979,64 +994,14 @@ router.patch('/:id/code', auth, async (req, res) => {
       });
     }
 
-    console.log('✅ Item found:', {
-      id: item._id,
-      currentCode: item.code,
-      title: item.title.substring(0, 50),
-    });
-
-    // Check if admin has access to this item
-    console.log('🔍 Checking user access...');
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      console.log('❌ User not found:', req.user._id);
-      return res.status(404).json({
-        message: 'User not found',
-        messageHr: 'Korisnik nije pronađen',
-      });
-    }
-
-    console.log('✅ User found:', {
-      id: user._id,
-      role: user.role,
-      codes: user.codes,
-      hasFullAccess: user.hasFullAccess,
-    });
-
-    // Apply access control logic
-    const hasAccess = isAsfaltOnlyUser(user)
-      ? item.isAsfalt === true // Samo asfalt: any code, but Asfalt items only
-      : (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
-        user.codes.includes(item.code) || // User has the specific code
-        user.hasFullAccess; // User has full access flag
-
-    console.log('🔐 Access control check:', {
-      isAdminWithNoCodes: user.role === 'admin' && (!user.codes || user.codes.length === 0),
-      hasSpecificCode: user.codes.includes(item.code),
-      hasFullAccess: user.hasFullAccess,
-      onlyAsfalt: user.onlyAsfalt,
-      finalAccess: hasAccess,
-    });
-
-    if (!hasAccess) {
-      console.log('❌ Access denied for user:', user._id, 'to item:', item._id);
+    if (updateResult.status === 'forbidden') {
       return res.status(403).json({
         message: 'Access denied to this item',
         messageHr: 'Pristup ovoj stavci je odbijen',
       });
     }
 
-    console.log('✅ Access control passed');
-
-    // Store the old code for logging
-    const oldCode = item.code;
-
-    // Update the code (duplicates are now allowed)
-    console.log('💾 Updating code from', oldCode, 'to', trimmedCode);
-    item.code = trimmedCode;
-
-    console.log('💾 Saving item...');
-    await item.save();
+    const { item, oldCode, user } = updateResult;
 
     console.log('=== CODE UPDATE SUCCESS ===');
     console.log('Item ID:', item._id);
@@ -1202,57 +1167,11 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     }
 
     const { title, code, neto, tezina, pdfUrl, creationDate } = req.body;
-    const item = await Item.findById(req.params.id);
-
-    if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
-    }
-
-    // Update basic fields
-    if (title) item.title = title.trim();
-    if (code) item.code = code.trim();
-    if (pdfUrl) item.pdfUrl = pdfUrl.trim();
-    if (creationDate) item.creationDate = new Date(creationDate);
-
-    // Update neto and tezina fields - backward compatible
-    if (tezina !== undefined && tezina !== null && tezina !== '') {
-      const tezinaValue = parseFloat(tezina);
-      if (!isNaN(tezinaValue)) {
-        item.tezina = tezinaValue;
-        // Also update neto if provided, otherwise keep existing
-        if (neto !== undefined && neto !== null && neto !== '') {
-          const netoValue = parseFloat(neto);
-          if (!isNaN(netoValue)) {
-            item.neto = netoValue;
-          }
-        }
-      }
-    } else if (neto !== undefined && neto !== null && neto !== '') {
-      const netoValue = parseFloat(neto);
-      if (!isNaN(netoValue)) {
-        item.neto = netoValue;
-        item.tezina = netoValue; // Keep tezina in sync with neto
-      }
-    }
-
-    // Handle photo upload if present
+    let uploadedPhoto = null;
     if (req.file) {
       try {
         console.log('Uploading new photo to Cloudinary...');
-        const cloudinaryResponse = await uploadToCloudinary(req.file);
-        console.log('Cloudinary response:', cloudinaryResponse);
-
-        // Delete old photo from Cloudinary if exists
-        if (item.approvalPhoto && item.approvalPhoto.publicId) {
-          await cloudinary.uploader.destroy(item.approvalPhoto.publicId);
-        }
-
-        item.approvalPhoto = {
-          url: cloudinaryResponse.url,
-          uploadDate: new Date(),
-          mimeType: req.file.mimetype,
-          publicId: cloudinaryResponse.publicId,
-        };
+        uploadedPhoto = await uploadToCloudinary(req.file);
       } catch (error) {
         console.error('Error uploading image:', error);
         return res.status(500).json({
@@ -1262,7 +1181,62 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
       }
     }
 
-    const updatedItem = await item.save();
+    const updateResult = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return { status: 'not-found' };
+
+      if (title) item.title = title.trim();
+      if (code) item.code = code.trim();
+      if (pdfUrl) item.pdfUrl = pdfUrl.trim();
+      if (creationDate) item.creationDate = new Date(creationDate);
+
+      if (tezina !== undefined && tezina !== null && tezina !== '') {
+        const tezinaValue = parseFloat(tezina);
+        if (!isNaN(tezinaValue)) {
+          item.tezina = tezinaValue;
+          if (neto !== undefined && neto !== null && neto !== '') {
+            const netoValue = parseFloat(neto);
+            if (!isNaN(netoValue)) item.neto = netoValue;
+          }
+        }
+      } else if (neto !== undefined && neto !== null && neto !== '') {
+        const netoValue = parseFloat(neto);
+        if (!isNaN(netoValue)) {
+          item.neto = netoValue;
+          item.tezina = netoValue;
+        }
+      }
+
+      const oldPhotoPublicId = item.approvalPhoto?.publicId || null;
+      if (uploadedPhoto) {
+        item.approvalPhoto = {
+          url: uploadedPhoto.url,
+          uploadDate: new Date(),
+          mimeType: req.file.mimetype,
+          publicId: uploadedPhoto.publicId,
+        };
+      }
+
+      const updatedItem = await saveItem(item);
+      return { status: 'updated', updatedItem, oldPhotoPublicId };
+    });
+
+    if (updateResult.status === 'not-found') {
+      if (uploadedPhoto?.publicId) {
+        await cloudinary.uploader.destroy(uploadedPhoto.publicId).catch(() => {});
+      }
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    const { updatedItem, oldPhotoPublicId } = updateResult;
+    if (oldPhotoPublicId && oldPhotoPublicId !== uploadedPhoto?.publicId) {
+      try {
+        await cloudinary.uploader.destroy(oldPhotoPublicId);
+      } catch (error) {
+        console.error('Error deleting replaced photo:', error);
+      }
+    }
+
     await updatedItem.populate('approvedBy', 'firstName lastName');
 
     res.json(updatedItem);
@@ -1284,17 +1258,20 @@ router.patch('/:id/pay', auth, async (req, res) => {
     }
 
     const { isPaid = true } = req.body;
-    const item = await Item.findById(req.params.id);
+    const item = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return null;
+
+      item.isPaid = !!isPaid;
+      item.paidAt = item.isPaid ? new Date() : null;
+      item.paidBy = item.isPaid ? req.user._id : null;
+
+      return saveItem(item);
+    });
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });
     }
-
-    item.isPaid = !!isPaid;
-    item.paidAt = item.isPaid ? new Date() : null;
-    item.paidBy = item.isPaid ? req.user._id : null;
-
-    await item.save();
     await item.populate('paidBy', 'firstName lastName email');
 
     res.json(item);
@@ -1574,7 +1551,9 @@ router.patch(
           hasDocument: !!item.approvalDocument,
         });
 
-        const updatedItem = await item.save();
+        const updatedItem = await itemMutations.withTransaction(async ({ saveItem }) =>
+          saveItem(item)
+        );
         await updatedItem.populate('approvedBy', 'firstName lastName');
 
         console.log('=== APPROVAL SUCCESS ===');
@@ -1600,7 +1579,9 @@ router.patch(
             // If there are available slots, link this item
             if (linkedItemsCount < matchingAcceptance.acceptedCount) {
               updatedItem.transportAcceptanceId = matchingAcceptance._id;
-              await updatedItem.save();
+              await itemMutations.withTransaction(async ({ saveItem }) =>
+                saveItem(updatedItem)
+              );
 
               // Add the registration to the acceptance's registrations array
               const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
@@ -1645,7 +1626,12 @@ router.patch(
             const speed = await calculateAverageSpeed(updatedItem, req.user);
             if (speed !== null) {
               updatedItem.prosjecnaBrzina = speed;
-              await Item.findByIdAndUpdate(updatedItem._id, { prosjecnaBrzina: speed });
+              await itemMutations.withTransaction(async ({ session, saveItem }) => {
+                const speedItem = await Item.findById(updatedItem._id).session(session);
+                if (!speedItem) return;
+                speedItem.prosjecnaBrzina = speed;
+                await saveItem(speedItem);
+              });
               console.log('Calculated average speed:', speed, 'km/h for item:', updatedItem._id);
             }
           } catch (speedError) {
@@ -1696,26 +1682,27 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
-    const item = await Item.findById(req.params.id);
-    if (!item) {
+    const deletionResult = await itemMutations.withTransaction(async ({ session, deleteItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return null;
+
+      const filesToDelete = [
+        item.approvalPhotoFront?.publicId,
+        item.approvalPhotoBack?.publicId,
+        item.approvalDocument?.publicId,
+      ].filter(Boolean);
+
+      await deleteItem(item);
+      return { filesToDelete };
+    });
+
+    if (!deletionResult) {
       console.log('Item not found:', req.params.id);
       return res.status(404).json({ message: 'Item not found' });
     }
 
-    // Clean up associated files before deleting
-    const filesToDelete = [];
-    if (item.approvalPhotoFront?.publicId) {
-      filesToDelete.push(item.approvalPhotoFront.publicId);
-    }
-    if (item.approvalPhotoBack?.publicId) {
-      filesToDelete.push(item.approvalPhotoBack.publicId);
-    }
-    if (item.approvalDocument?.publicId) {
-      filesToDelete.push(item.approvalDocument.publicId);
-    }
-
-    // Delete files from Cloudinary
-    for (const publicId of filesToDelete) {
+    // Delete external files only after the Item and its tombstone commit.
+    for (const publicId of deletionResult.filesToDelete) {
       try {
         await cloudinary.uploader.destroy(publicId);
         console.log('Deleted file from Cloudinary:', publicId);
@@ -1724,7 +1711,6 @@ router.delete('/:id', auth, async (req, res) => {
       }
     }
 
-    await item.deleteOne();
     console.log('Item successfully deleted:', req.params.id);
     res.json({ message: 'Item deleted successfully' });
   } catch (err) {
