@@ -29,6 +29,7 @@ const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const CodeMapping = require('../models/CodeMapping');
 const CodeLocation = require('../models/CodeLocation');
+const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
 
 const APPLY = process.argv.includes('--apply');
 const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
@@ -100,8 +101,14 @@ async function main() {
 
   console.log('\nApplying...');
 
-  const itemResult = await Item.updateMany({ code: FROM }, { $set: { code: TO } });
-  console.log(`Items recoded: matched=${itemResult.matchedCount} modified=${itemResult.modifiedCount}`);
+  const itemBulkMutations = createItemBulkMutationService();
+  const recodedItemCount = await itemBulkMutations.updateMatchingItems({
+    filter: { code: FROM },
+    mutateItem: item => {
+      item.code = TO;
+    },
+  });
+  console.log(`Items recoded: ${recodedItemCount}`);
 
   if (fromLocation) {
     if (toLocation) {

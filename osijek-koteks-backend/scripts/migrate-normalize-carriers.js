@@ -22,6 +22,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const { normalizeCarrier, carrierKey } = require('../utils/normalizeCarrier');
+const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
 
 const APPLY = process.argv.includes('--apply');
 const VERBOSE = process.argv.includes('--verbose');
@@ -114,21 +115,20 @@ async function main() {
 
   // Apply.
   console.log('\nApplying updates...');
+  const itemBulkMutations = createItemBulkMutationService();
   let docsUpdated = 0;
   for (const entry of plan) {
     for (const change of entry.changes) {
-      // Use updateMany with the literal string to avoid regex edge cases.
-      // We bypass the pre-update hook's normalization for the "from" match
-      // by using exact equality.
-      const result = await Item.updateMany(
-        { prijevoznik: change.from },
-        { $set: { prijevoznik: entry.canonical } }
-      );
-      docsUpdated += result.modifiedCount || 0;
+      const modifiedCount = await itemBulkMutations.updateMatchingItems({
+        filter: { prijevoznik: change.from },
+        mutateItem: item => {
+          item.prijevoznik = entry.canonical;
+        },
+      });
+      docsUpdated += modifiedCount;
       if (VERBOSE) {
         console.log(
-          `  matched=${result.matchedCount}  modified=${result.modifiedCount}  ` +
-            `"${change.from}" → "${entry.canonical}"`
+          `  modified=${modifiedCount}  "${change.from}" → "${entry.canonical}"`
         );
       }
     }

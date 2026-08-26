@@ -4,9 +4,10 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-// Import models
-const Item = require('./models/Item');
 const { initCarrierUnification } = require('./utils/carrierUnification');
+const { createItemBulkMutationService } = require('./services/itemBulkMutationService');
+
+const itemBulkMutations = createItemBulkMutationService();
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -108,9 +109,11 @@ const dataRetentionMiddleware = async (req, res, next) => {
 
     // Clean up old items
     if (req.path.includes('/api/items')) {
-      await Item.deleteMany({
-        creationDate: { $lt: cutoffDate },
-        approvalStatus: { $in: ['odobreno', 'odbijen'] },
+      await itemBulkMutations.deleteMatchingItems({
+        filter: {
+          creationDate: { $lt: cutoffDate },
+          approvalStatus: { $in: ['odobreno', 'odbijen'] },
+        },
       });
     }
 
