@@ -2,8 +2,10 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  DEFAULT_WORKER_CONFIG,
   enabledTargetNames,
   loadDeliveryNoteTargets,
+  loadDeliveryNoteWorkerConfig,
 } = require('../config/deliveryNoteTargets');
 
 test('loads production and staging independently without exposing secret values in errors', () => {
@@ -40,5 +42,25 @@ test('requires complete credentials only for enabled targets', () => {
         DELIVERY_NOTE_TARGET_PRODUCTION_URL: 'https://production.example/events',
       }),
     /missing: clientId, secret/
+  );
+});
+
+test('loads bounded worker configuration without accepting invalid numbers', () => {
+  assert.deepEqual(loadDeliveryNoteWorkerConfig({}), DEFAULT_WORKER_CONFIG);
+  assert.equal(
+    loadDeliveryNoteWorkerConfig({ DELIVERY_NOTE_WORKER_BATCH_SIZE: '10' }).batchSize,
+    10
+  );
+  assert.throws(
+    () => loadDeliveryNoteWorkerConfig({ DELIVERY_NOTE_WORKER_LEASE_MS: '0' }),
+    /positive integer/
+  );
+  assert.throws(
+    () =>
+      loadDeliveryNoteWorkerConfig({
+        DELIVERY_NOTE_WORKER_RETRY_BASE_MS: '10000',
+        DELIVERY_NOTE_WORKER_RETRY_MAX_MS: '5000',
+      }),
+    /must not be less/
   );
 });

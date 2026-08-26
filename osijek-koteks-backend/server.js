@@ -6,8 +6,11 @@ require('dotenv').config();
 
 const { initCarrierUnification } = require('./utils/carrierUnification');
 const { createItemBulkMutationService } = require('./services/itemBulkMutationService');
+const { createDeliveryNoteWorker } = require('./services/deliveryNoteWorker');
 
 const itemBulkMutations = createItemBulkMutationService();
+let deliveryNoteWorker = null;
+let shutdownPromise = null;
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -200,6 +203,8 @@ mongoose
     // Seed the unified carrier list (first run) and warm the alias-rule cache
     // that Item write hooks read from.
     await initCarrierUnification();
+    deliveryNoteWorker = createDeliveryNoteWorker();
+    deliveryNoteWorker.start();
     const port = process.env.PORT || 5000;
     server.listen(port, () => {
       console.log(`Server running on port ${port}`);
@@ -210,16 +215,31 @@ mongoose
     process.exit(1);
   });
 
-//Handle server shutdown gracefully
-process.on('SIGINT', async () => {
-  try {
+async function shutdown(signal) {
+  if (shutdownPromise) return shutdownPromise;
+
+  shutdownPromise = (async () => {
+    console.log(`Received ${signal}; shutting down cleanly`);
+    if (deliveryNoteWorker) await deliveryNoteWorker.stop();
+    if (server.listening) {
+      await new Promise((resolve, reject) => {
+        server.close(error => (error ? reject(error) : resolve()));
+      });
+    }
     await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error during shutdown:', err);
-    process.exit(1);
-  }
-});
+    console.log('Server, delivery worker, and MongoDB connection closed');
+  })();
+
+  return shutdownPromise;
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    shutdown(signal).catch(error => {
+      console.error('Error during shutdown:', error.message);
+      process.exitCode = 1;
+    });
+  });
+}
 
 module.exports = app;
