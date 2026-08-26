@@ -14,6 +14,10 @@ const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
 const { normalizeCarrier } = require('../utils/normalizeCarrier');
+const {
+  resolveCreatorOriginLocationCode,
+  resolveCreatorQuarryCode,
+} = require('../utils/quarryOrigin');
 // Function to extract RN code from filename with special pattern handling
 const extractRNFromFilename = (filename, defaultCode) => {
   if (!filename || typeof filename !== 'string') {
@@ -77,14 +81,6 @@ const normalizeCarrierName = name => {
   );
 };
 
-// Email-to-origin code mapping for speed calculation
-const CREATOR_EMAIL_TO_CODE = {
-  'velicki.vaga@velicki-kamen.hr': 'VELIČKI KAMEN VELIČANKA',
-  'vetovo.vaga@velicki-kamen.hr': 'VELIČKI KAMEN VETOVO',
-  'vaga.fukinac@kamen-psunj.hr': 'KAMEN - PSUNJ',
-  'vaga.molaris@osijek-koteks.hr': 'MOLARIS',
-};
-
 const IGNORED_APPROVER_EMAILS = new Set([
   'marko.krajina@osijek-koteks.hr',
   'zaposlenik.gradilista@osijek-koteks.hr',
@@ -95,10 +91,10 @@ const IGNORED_APPROVER_EMAILS = new Set([
 async function calculateAverageSpeed(item, approverUser) {
   if (IGNORED_APPROVER_EMAILS.has(approverUser.email)) return null;
 
-  const creator = await User.findById(item.createdBy).select('email');
+  const creator = await User.findById(item.createdBy).select('email quarryCode');
   if (!creator) return null;
 
-  const originCode = CREATOR_EMAIL_TO_CODE[creator.email];
+  const originCode = resolveCreatorOriginLocationCode(creator);
   if (!originCode) return null;
 
   const [originLoc, destLoc] = await Promise.all([
@@ -856,6 +852,7 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
       pdfUrl: pdfUrl.trim(),
       isAsfalt: !!req.file, // created via the Asfalt button when a PDF is attached
       createdBy: req.user._id, // ADD THIS LINE - Store who created the item
+      quarryCode: resolveCreatorQuarryCode(req.user) || undefined,
       creationDate: creationDate ? new Date(creationDate) : now,
       creationTime,
       approvalStatus: 'na čekanju',
