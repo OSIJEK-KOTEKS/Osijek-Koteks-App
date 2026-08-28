@@ -14,9 +14,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 
-const {
-  createDeliveryNoteBackfillService,
-} = require('../services/deliveryNoteBackfillService');
+const { createDeliveryNoteBackfillService } = require('../services/deliveryNoteBackfillService');
 
 const APPLY = process.argv.includes('--apply');
 const ALLOW_PRODUCTION = process.argv.includes('--allow-production');
@@ -25,7 +23,9 @@ function printResult(result) {
   console.log('\n=== Delivery-note backfill report ===');
   console.log(`Items scanned: ${result.scanned}`);
   console.log(`Items missing quarryCode: ${result.missingQuarryCode}`);
-  console.log(`Missing quarryCode values resolvable from bot users: ${result.resolvableQuarryCode}`);
+  console.log(
+    `Missing quarryCode values resolvable from bot users: ${result.resolvableQuarryCode}`
+  );
   console.log(`Missing quarryCode values still unresolved: ${result.unresolvedQuarryCode}`);
   console.log(`Items needing a new integration snapshot: ${result.syncChangesNeeded}`);
   if (APPLY) {
@@ -33,7 +33,9 @@ function printResult(result) {
     console.log(`Item quarryCode values filled: ${result.quarryCodesFilled}`);
   }
   if (result.unresolvedCreatorIds.length > 0) {
-    console.log(`Creator IDs needing an old-backend quarryCode: ${result.unresolvedCreatorIds.join(', ')}`);
+    console.log(
+      `Creator IDs needing an old-backend quarryCode: ${result.unresolvedCreatorIds.join(', ')}`
+    );
   }
 }
 

@@ -28,7 +28,7 @@ function request({
   const req = {
     method,
     originalUrl,
-    get: (name) => normalizedHeaders[name.toLowerCase()],
+    get: name => normalizedHeaders[name.toLowerCase()],
   };
 
   if (includeRawBody) {
@@ -95,7 +95,11 @@ test('rejects body tampering', async () => {
   );
 
   await assert.rejects(
-    () => verifyServiceRequest(request({ bodyString: '{"ok":false}', headers }), { clients, now: fixedNowMs }),
+    () =>
+      verifyServiceRequest(request({ bodyString: '{"ok":false}', headers }), {
+        clients,
+        now: fixedNowMs,
+      }),
     { code: 'body_hash_mismatch' }
   );
 });
@@ -123,17 +127,23 @@ test('rejects replayed nonces', async () => {
     ])
   );
 
-  await verifyServiceRequest(request({ method: 'GET', originalUrl: '/api/users/prijevoz/access', bodyString, headers }), {
-    clients,
-    now: fixedNowMs,
-  });
+  await verifyServiceRequest(
+    request({ method: 'GET', originalUrl: '/api/users/prijevoz/access', bodyString, headers }),
+    {
+      clients,
+      now: fixedNowMs,
+    }
+  );
 
   await assert.rejects(
     () =>
-      verifyServiceRequest(request({ method: 'GET', originalUrl: '/api/users/prijevoz/access', bodyString, headers }), {
-        clients,
-        now: fixedNowMs,
-      }),
+      verifyServiceRequest(
+        request({ method: 'GET', originalUrl: '/api/users/prijevoz/access', bodyString, headers }),
+        {
+          clients,
+          now: fixedNowMs,
+        }
+      ),
     { code: 'replayed_nonce' }
   );
 });
@@ -160,7 +170,11 @@ test('rejects disallowed paths', async () => {
   );
 
   await assert.rejects(
-    () => verifyServiceRequest(request({ method: 'GET', originalUrl: '/api/bills', bodyString: '', headers }), { clients, now: fixedNowMs }),
+    () =>
+      verifyServiceRequest(
+        request({ method: 'GET', originalUrl: '/api/bills', bodyString: '', headers }),
+        { clients, now: fixedNowMs }
+      ),
     { code: 'service_path_not_allowed' }
   );
 });

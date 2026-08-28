@@ -29,11 +29,7 @@ function normalizeCarrier(value) {
 function carrierKey(value) {
   if (value === null || value === undefined) return '';
   if (typeof value !== 'string') return '';
-  return value
-    .toLowerCase()
-    .replace(/[.,]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return value.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 module.exports = { normalizeCarrier, carrierKey };

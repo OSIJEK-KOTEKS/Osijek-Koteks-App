@@ -83,7 +83,10 @@ test('deletes matching Items through tombstone-producing transactions', async ()
   const count = await service.deleteMatchingItems({ filter: { expired: true } });
 
   assert.equal(count, 2);
-  assert.deepEqual(documents.map(item => item.id), ['2']);
+  assert.deepEqual(
+    documents.map(item => item.id),
+    ['2']
+  );
   assert.equal(testFixture.calls.filter(([name]) => name === 'deleteItem').length, 2);
 });
 

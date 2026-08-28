@@ -29,26 +29,26 @@ const extractRNFromFilename = (filename, defaultCode) => {
 
   // Check if filename contains a pattern between '#' signs
   // Pattern: #[anything]# where anything can include numbers, letters, spaces, and signs
-  const hashPattern = /#([^#]+)#/;  // Capturing group to extract content
+  const hashPattern = /#([^#]+)#/; // Capturing group to extract content
   const match = filename.match(hashPattern);
-  
+
   if (match && match[1]) {
     // Found a pattern between '#' signs, extract the content
     const extractedCode = match[1].trim();
     console.log('Extracted RN code from filename pattern:', {
       filename: filename.substring(0, 100) + '...',
       pattern: match[0],
-      extractedCode: extractedCode
+      extractedCode: extractedCode,
     });
     return extractedCode;
   }
-  
+
   // No special pattern found, return the default code
   return defaultCode;
 };
 
 // Helper function to extract first part of registration (same logic as transportRequests)
-const getFirstPartOfRegistration = (registration) => {
+const getFirstPartOfRegistration = registration => {
   if (!registration) return '';
 
   // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
@@ -106,8 +106,10 @@ async function calculateAverageSpeed(item, approverUser) {
   ]);
   if (!originLoc || !destLoc) return null;
 
-  const creationTime = item.creationDate instanceof Date ? item.creationDate : new Date(item.creationDate);
-  const approvalTime = item.approvalDate instanceof Date ? item.approvalDate : new Date(item.approvalDate);
+  const creationTime =
+    item.creationDate instanceof Date ? item.creationDate : new Date(item.creationDate);
+  const approvalTime =
+    item.approvalDate instanceof Date ? item.approvalDate : new Date(item.approvalDate);
   const timeDiffHours = (approvalTime - creationTime) / (1000 * 60 * 60);
 
   if (timeDiffHours <= 0 || timeDiffHours > 8) return null;
@@ -205,7 +207,7 @@ router.get('/acceptance/:acceptanceId/approved-registrations', auth, async (req,
     // Find all approved items linked to this acceptance
     const items = await Item.find({
       transportAcceptanceId: acceptanceId,
-      approvalStatus: 'odobreno'
+      approvalStatus: 'odobreno',
     }).select('registracija');
 
     // Return each linked item with its registration first part and item ID
@@ -234,8 +236,8 @@ router.get('/transport-item/:itemId', auth, async (req, res) => {
         path: 'transportAcceptanceId',
         populate: {
           path: 'requestId',
-          select: 'isplataPoT'
-        }
+          select: 'isplataPoT',
+        },
       });
 
     if (!item) {
@@ -257,7 +259,9 @@ router.get('/acceptance/:acceptanceId/registration/:registration', auth, async (
     // Find the item with this acceptance and registration
     const item = await Item.findOne({
       transportAcceptanceId: acceptanceId,
-      registracija: { $regex: new RegExp('^' + registration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+      registracija: {
+        $regex: new RegExp('^' + registration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+      },
     })
       .populate('createdBy', 'firstName lastName email company')
       .populate('approvedBy', 'firstName lastName')
@@ -266,8 +270,8 @@ router.get('/acceptance/:acceptanceId/registration/:registration', auth, async (
         path: 'transportAcceptanceId',
         populate: {
           path: 'requestId',
-          select: 'isplataPoT'
-        }
+          select: 'isplataPoT',
+        },
       });
 
     if (!item) {
@@ -671,7 +675,8 @@ router.get('/', auth, async (req, res) => {
     ]);
 
     const totalWeight = totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
-    const avgSpeed = avgSpeedResult.length > 0 ? Math.round(avgSpeedResult[0].avgSpeed * 10) / 10 : null;
+    const avgSpeed =
+      avgSpeedResult.length > 0 ? Math.round(avgSpeedResult[0].avgSpeed * 10) / 10 : null;
 
     res.json({
       items,
@@ -1562,7 +1567,12 @@ router.patch(
         console.log('========================');
 
         // If item was approved and has a registration, try to link it to a transport acceptance
-        if (updatedItem.approvalStatus === 'odobreno' && updatedItem.registracija && updatedItem.code && !updatedItem.transportAcceptanceId) {
+        if (
+          updatedItem.approvalStatus === 'odobreno' &&
+          updatedItem.registracija &&
+          updatedItem.code &&
+          !updatedItem.transportAcceptanceId
+        ) {
           // Find all approved acceptances with matching code and available slots
           const matchingAcceptances = await TransportAcceptance.find({
             status: 'approved',
@@ -1573,19 +1583,21 @@ router.patch(
             // Count how many approved items are already linked to this acceptance
             const linkedItemsCount = await Item.countDocuments({
               transportAcceptanceId: matchingAcceptance._id,
-              approvalStatus: 'odobreno'
+              approvalStatus: 'odobreno',
             });
 
             // If there are available slots, link this item
             if (linkedItemsCount < matchingAcceptance.acceptedCount) {
               updatedItem.transportAcceptanceId = matchingAcceptance._id;
-              await itemMutations.withTransaction(async ({ saveItem }) =>
-                saveItem(updatedItem)
-              );
+              await itemMutations.withTransaction(async ({ saveItem }) => saveItem(updatedItem));
 
               // Add the registration to the acceptance's registrations array
               const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
-              if (!matchingAcceptance.registrations.some(reg => getFirstPartOfRegistration(reg) === itemFirstPart)) {
+              if (
+                !matchingAcceptance.registrations.some(
+                  reg => getFirstPartOfRegistration(reg) === itemFirstPart
+                )
+              ) {
                 matchingAcceptance.registrations.push(updatedItem.registracija);
                 await matchingAcceptance.save();
               }
@@ -1593,7 +1605,7 @@ router.patch(
               console.log('Linked approved item to transport acceptance:', {
                 itemId: updatedItem._id,
                 acceptanceId: matchingAcceptance._id,
-                registration: updatedItem.registracija
+                registration: updatedItem.registracija,
               });
 
               // Check if the entire request is now complete
@@ -1608,11 +1620,16 @@ router.patch(
                   approvalStatus: 'odobreno',
                 });
                 if (totalAccepted > 0 && totalDelivered >= totalAccepted) {
-                  await TransportRequest.findByIdAndUpdate(matchingAcceptance.requestId, { status: 'Završen' });
+                  await TransportRequest.findByIdAndUpdate(matchingAcceptance.requestId, {
+                    status: 'Završen',
+                  });
                   console.log('Transport request marked as Završen:', matchingAcceptance.requestId);
                 }
               } catch (completionError) {
-                console.error('Error checking request completion (non-fatal):', completionError.message);
+                console.error(
+                  'Error checking request completion (non-fatal):',
+                  completionError.message
+                );
               }
 
               break;

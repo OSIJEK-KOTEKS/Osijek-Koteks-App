@@ -127,9 +127,7 @@ async function main() {
       });
       docsUpdated += modifiedCount;
       if (VERBOSE) {
-        console.log(
-          `  modified=${modifiedCount}  "${change.from}" → "${entry.canonical}"`
-        );
+        console.log(`  modified=${modifiedCount}  "${change.from}" → "${entry.canonical}"`);
       }
     }
   }

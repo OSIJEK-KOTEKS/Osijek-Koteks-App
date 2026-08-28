@@ -20,10 +20,7 @@ function resolveCreatorOriginLocationCode(creator) {
   const normalizedEmail =
     typeof creator?.email === 'string' ? creator.email.trim().toLowerCase() : null;
 
-  return (
-    LEGACY_CREATOR_EMAIL_TO_ORIGIN_CODE[normalizedEmail] ||
-    resolveCreatorQuarryCode(creator)
-  );
+  return LEGACY_CREATOR_EMAIL_TO_ORIGIN_CODE[normalizedEmail] || resolveCreatorQuarryCode(creator);
 }
 
 module.exports = {

@@ -1,10 +1,6 @@
 const { createItemMutationService } = require('./itemMutationService');
 
-function createItemBulkMutationService({
-  ItemModel,
-  itemMutationService,
-  batchSize = 100,
-} = {}) {
+function createItemBulkMutationService({ ItemModel, itemMutationService, batchSize = 100 } = {}) {
   if (!Number.isInteger(batchSize) || batchSize < 1) {
     throw new TypeError('batchSize must be a positive integer');
   }

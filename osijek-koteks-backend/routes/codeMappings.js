@@ -10,7 +10,9 @@ router.get('/', auth, async (req, res) => {
     res.json(mappings);
   } catch (error) {
     console.error('Error fetching code mappings:', error);
-    res.status(500).json({ message: 'Server error while fetching code mappings', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while fetching code mappings', error: error.message });
   }
 });
 
@@ -48,7 +50,9 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json(mapping);
   } catch (error) {
     console.error('Error creating code mapping:', error);
-    res.status(500).json({ message: 'Server error while creating code mapping', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while creating code mapping', error: error.message });
   }
 });
 
@@ -113,7 +117,9 @@ router.put('/:id', auth, async (req, res) => {
     res.json(mapping);
   } catch (error) {
     console.error('Error updating code mapping:', error);
-    res.status(500).json({ message: 'Server error while updating code mapping', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while updating code mapping', error: error.message });
   }
 });
 
@@ -132,7 +138,9 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ message: 'Code mapping deleted successfully' });
   } catch (error) {
     console.error('Error deleting code mapping:', error);
-    res.status(500).json({ message: 'Server error while deleting code mapping', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while deleting code mapping', error: error.message });
   }
 });
 

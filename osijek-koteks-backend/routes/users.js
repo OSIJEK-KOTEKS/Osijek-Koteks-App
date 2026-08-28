@@ -26,7 +26,7 @@ router.get('/prijevoz/access', auth, async (req, res) => {
     }
     const users = await User.find({
       canAccessPrijevoz: true,
-      role: { $ne: 'admin' }
+      role: { $ne: 'admin' },
     }).select('firstName lastName _id email company');
     res.json(users);
   } catch (error) {
@@ -162,11 +162,7 @@ router.patch('/:id', auth, async (req, res) => {
         ? normalizeQuarryCode(req.body.quarryCode)
         : normalizeQuarryCode(user.quarryCode);
 
-      if (
-        nextRole === 'bot' &&
-        !nextQuarryCode &&
-        (user.role !== 'bot' || quarryCodeWasProvided)
-      ) {
+      if (nextRole === 'bot' && !nextQuarryCode && (user.role !== 'bot' || quarryCodeWasProvided)) {
         return res.status(400).json({
           message: 'Quarry code is required when assigning the bot role',
         });
@@ -186,9 +182,10 @@ router.patch('/:id', auth, async (req, res) => {
       }
     });
 
-    const updatedUser = await user.save();
-    console.log('Updated user:', updatedUser); // Add this log
-    res.json(updatedUser);
+    await user.save();
+    const userResponse = await User.findById(user._id).select('-password');
+    console.log('User updated successfully:', { userId: user._id });
+    res.json(userResponse);
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ message: 'Server error' });

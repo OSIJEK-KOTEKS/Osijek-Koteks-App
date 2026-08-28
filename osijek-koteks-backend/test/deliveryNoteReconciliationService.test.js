@@ -90,9 +90,15 @@ test('traverses tied timestamps deterministically without gaps or duplicates', a
   const firstPage = await service.list({ limit: '2' });
   const secondPage = await service.list({ limit: '2', cursor: firstPage.nextCursor });
 
-  assert.deepEqual(firstPage.records.map(record => record.sourceId), ['a', 'b']);
+  assert.deepEqual(
+    firstPage.records.map(record => record.sourceId),
+    ['a', 'b']
+  );
   assert.equal(firstPage.records[1].eventType, 'DELETE');
-  assert.deepEqual(secondPage.records.map(record => record.sourceId), ['c']);
+  assert.deepEqual(
+    secondPage.records.map(record => record.sourceId),
+    ['c']
+  );
   assert.equal(secondPage.nextCursor, null);
   assert.deepEqual(Object.keys(firstPage.records[0]), [...EVENT_FIELDS]);
   assert.equal(firstPage.records[0]._id, undefined);
@@ -113,8 +119,14 @@ test('updatedAfter is strictly incremental while an omitted value performs a ful
   const full = await service.list();
   const incremental = await service.list({ updatedAfter: '2026-08-24T08:00:00Z' });
 
-  assert.deepEqual(full.records.map(record => record.sourceId), ['a', 'b', 'c']);
-  assert.deepEqual(incremental.records.map(record => record.sourceId), ['c']);
+  assert.deepEqual(
+    full.records.map(record => record.sourceId),
+    ['a', 'b', 'c']
+  );
+  assert.deepEqual(
+    incremental.records.map(record => record.sourceId),
+    ['c']
+  );
   assert.equal(incremental.records[0].eventType, 'DELETE');
 });
 

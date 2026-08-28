@@ -9,7 +9,11 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
 });
 
 function enabled(value) {
-  return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+  return ['1', 'true', 'yes', 'on'].includes(
+    String(value || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function loadDeliveryNoteTargets(env = process.env) {
@@ -83,11 +87,7 @@ function loadDeliveryNoteWorkerConfig(env = process.env) {
       'DELIVERY_NOTE_WORKER_RETRY_MAX_MS',
       DEFAULT_WORKER_CONFIG.retryMaxMs
     ),
-    leaseMs: positiveInteger(
-      env,
-      'DELIVERY_NOTE_WORKER_LEASE_MS',
-      DEFAULT_WORKER_CONFIG.leaseMs
-    ),
+    leaseMs: positiveInteger(env, 'DELIVERY_NOTE_WORKER_LEASE_MS', DEFAULT_WORKER_CONFIG.leaseMs),
     httpTimeoutMs: positiveInteger(
       env,
       'DELIVERY_NOTE_WORKER_HTTP_TIMEOUT_MS',

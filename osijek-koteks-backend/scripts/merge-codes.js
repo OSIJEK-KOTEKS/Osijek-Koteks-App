@@ -32,7 +32,7 @@ const CodeLocation = require('../models/CodeLocation');
 const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
 
 const APPLY = process.argv.includes('--apply');
-const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const positional = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const [FROM, TO] = positional;
 
 async function main() {
@@ -68,7 +68,9 @@ async function main() {
 
   console.log('\n=== Plan ===');
   console.log(`Items "${FROM}": ${fromItemCount}   →  will be recoded to "${TO}"`);
-  console.log(`Items "${TO}":   ${toItemCount}   (unchanged; total after merge: ${fromItemCount + toItemCount})`);
+  console.log(
+    `Items "${TO}":   ${toItemCount}   (unchanged; total after merge: ${fromItemCount + toItemCount})`
+  );
 
   console.log(
     `CodeMapping "${FROM}": ${fromMapping ? `exists ("${fromMapping.name}") — will be DELETED` : 'none'}`
@@ -79,7 +81,9 @@ async function main() {
 
   if (fromLocation) {
     if (toLocation) {
-      console.log(`CodeLocation "${FROM}": exists — will be DELETED ("${TO}" already has a location)`);
+      console.log(
+        `CodeLocation "${FROM}": exists — will be DELETED ("${TO}" already has a location)`
+      );
     } else {
       console.log(`CodeLocation "${FROM}": exists — will be MOVED to "${TO}"`);
     }
@@ -130,7 +134,7 @@ async function main() {
   await mongoose.disconnect();
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error('Merge failed:', err);
   mongoose.disconnect().finally(() => process.exit(1));
 });

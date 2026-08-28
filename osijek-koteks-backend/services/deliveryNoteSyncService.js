@@ -1,7 +1,4 @@
-const {
-  DELIVERY_NOTE_EVENT_TYPES,
-  buildDeliveryNoteEvent,
-} = require('../utils/deliveryNoteEvent');
+const { DELIVERY_NOTE_EVENT_TYPES, buildDeliveryNoteEvent } = require('../utils/deliveryNoteEvent');
 
 const SNAPSHOT_FIELDS = Object.freeze([
   'eventType',
@@ -91,11 +88,9 @@ function createDeliveryNoteSyncService({
       sourceUpdatedAt,
     });
 
-    const currentState = await SyncState.findOne(
-      { sourceId: candidateEvent.sourceId },
-      null,
-      { session }
-    );
+    const currentState = await SyncState.findOne({ sourceId: candidateEvent.sourceId }, null, {
+      session,
+    });
 
     if (hasSameIntegrationSnapshot(currentState, candidateEvent)) {
       return { event: null, changed: false };
@@ -116,11 +111,11 @@ function createDeliveryNoteSyncService({
       };
     }
 
-    await SyncState.replaceOne(
-      { sourceId: candidateEvent.sourceId },
-      candidateEvent,
-      { session, upsert: true, runValidators: true }
-    );
+    await SyncState.replaceOne({ sourceId: candidateEvent.sourceId }, candidateEvent, {
+      session,
+      upsert: true,
+      runValidators: true,
+    });
     await Outbox.create(
       [
         {
