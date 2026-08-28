@@ -1,4 +1,3 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { serviceAuthHeadersPresent, verifyServiceRequest } = require('../utils/serviceAuth');
 
@@ -20,7 +19,9 @@ const auth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     // Verify token (do not log the decoded payload)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Load only for bearer requests. Service-to-service HMAC requests do not
+    // need the JWT implementation.
+    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
 
     // Find user and attach to request
     const user = await User.findById(decoded.id);

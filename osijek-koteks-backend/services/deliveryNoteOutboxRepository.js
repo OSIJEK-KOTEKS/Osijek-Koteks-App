@@ -21,12 +21,13 @@ function createDeliveryNoteOutboxRepository({ OutboxModel } = {}) {
         sort: { createdAt: 1, _id: 1 },
         arrayFilters: [
           {
-            'delivery.target': target,
-            'delivery.deliveredAt': null,
-            'delivery.nextAttemptAt': { $lte: now },
-            $or: [
-              { 'delivery.leaseUntil': null },
-              { 'delivery.leaseUntil': { $lte: now } },
+            $and: [
+              { 'delivery.target': target },
+              { 'delivery.deliveredAt': null },
+              { 'delivery.nextAttemptAt': { $lte: now } },
+              {
+                $or: [{ 'delivery.leaseUntil': null }, { 'delivery.leaseUntil': { $lte: now } }],
+              },
             ],
           },
         ],
