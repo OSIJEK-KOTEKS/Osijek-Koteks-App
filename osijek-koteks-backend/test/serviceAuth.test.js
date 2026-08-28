@@ -14,7 +14,7 @@ const fixedTimestamp = Math.floor(fixedNowMs / 1000).toString();
 
 function request({
   method = 'POST',
-  originalUrl = '/api/transport-requests',
+  originalUrl = '/api/test/integration',
   bodyString = '{"ok":true}',
   rawBody = bodyString,
   includeRawBody = true,
@@ -43,9 +43,9 @@ test('verifies a signed service request', async () => {
   const bodyString = '{"ok":true}';
   const headers = createServiceAuthHeaders({
     method: 'POST',
-    pathWithQuery: '/api/transport-requests',
+    pathWithQuery: '/api/test/integration',
     bodyString,
-    clientId: 'prijevoz',
+    clientId: 'integration-test-client',
     secret: 'test-secret',
     timestamp: fixedTimestamp,
     nonce: 'nonce-1234567890',
@@ -53,10 +53,10 @@ test('verifies a signed service request', async () => {
   const clients = parseServiceClients(
     JSON.stringify([
       {
-        clientId: 'prijevoz',
+        clientId: 'integration-test-client',
         secret: 'test-secret',
         actorUserId: '507f1f77bcf86cd799439011',
-        allowed: [{ method: 'POST', pathPrefix: '/api/transport-requests' }],
+        allowed: [{ method: 'POST', pathPrefix: '/api/test/integration' }],
       },
     ])
   );
@@ -68,7 +68,7 @@ test('verifies a signed service request', async () => {
     now: fixedNowMs,
   });
 
-  assert.equal(client.clientId, 'prijevoz');
+  assert.equal(client.clientId, 'integration-test-client');
   assert.equal(client.actorUserId, '507f1f77bcf86cd799439011');
 });
 
@@ -76,9 +76,9 @@ test('rejects body tampering', async () => {
   clearNonceCache();
   const headers = createServiceAuthHeaders({
     method: 'POST',
-    pathWithQuery: '/api/transport-requests',
+    pathWithQuery: '/api/test/integration',
     bodyString: '{"ok":true}',
-    clientId: 'prijevoz',
+    clientId: 'integration-test-client',
     secret: 'test-secret',
     timestamp: fixedTimestamp,
     nonce: 'nonce-1234567891',
@@ -86,10 +86,10 @@ test('rejects body tampering', async () => {
   const clients = parseServiceClients(
     JSON.stringify([
       {
-        clientId: 'prijevoz',
+        clientId: 'integration-test-client',
         secret: 'test-secret',
         actorUserId: '507f1f77bcf86cd799439011',
-        allowed: [{ method: 'POST', pathPrefix: '/api/transport-requests' }],
+        allowed: [{ method: 'POST', pathPrefix: '/api/test/integration' }],
       },
     ])
   );
@@ -109,9 +109,9 @@ test('rejects replayed nonces', async () => {
   const bodyString = '';
   const headers = createServiceAuthHeaders({
     method: 'GET',
-    pathWithQuery: '/api/users/prijevoz/access',
+    pathWithQuery: '/api/integrations/delivery-note-sync-state',
     bodyString,
-    clientId: 'prijevoz',
+    clientId: 'integration-test-client',
     secret: 'test-secret',
     timestamp: fixedTimestamp,
     nonce: 'nonce-1234567892',
@@ -119,16 +119,21 @@ test('rejects replayed nonces', async () => {
   const clients = parseServiceClients(
     JSON.stringify([
       {
-        clientId: 'prijevoz',
+        clientId: 'integration-test-client',
         secret: 'test-secret',
         actorUserId: '507f1f77bcf86cd799439011',
-        allowed: [{ method: 'GET', pathPrefix: '/api/users/prijevoz/access' }],
+        allowed: [{ method: 'GET', pathPrefix: '/api/integrations/delivery-note-sync-state' }],
       },
     ])
   );
 
   await verifyServiceRequest(
-    request({ method: 'GET', originalUrl: '/api/users/prijevoz/access', bodyString, headers }),
+    request({
+      method: 'GET',
+      originalUrl: '/api/integrations/delivery-note-sync-state',
+      bodyString,
+      headers,
+    }),
     {
       clients,
       now: fixedNowMs,
@@ -138,7 +143,12 @@ test('rejects replayed nonces', async () => {
   await assert.rejects(
     () =>
       verifyServiceRequest(
-        request({ method: 'GET', originalUrl: '/api/users/prijevoz/access', bodyString, headers }),
+        request({
+          method: 'GET',
+          originalUrl: '/api/integrations/delivery-note-sync-state',
+          bodyString,
+          headers,
+        }),
         {
           clients,
           now: fixedNowMs,
@@ -153,7 +163,7 @@ test('rejects disallowed paths', async () => {
   const headers = createServiceAuthHeaders({
     method: 'GET',
     pathWithQuery: '/api/bills',
-    clientId: 'prijevoz',
+    clientId: 'integration-test-client',
     secret: 'test-secret',
     timestamp: fixedTimestamp,
     nonce: 'nonce-1234567893',
@@ -161,10 +171,10 @@ test('rejects disallowed paths', async () => {
   const clients = parseServiceClients(
     JSON.stringify([
       {
-        clientId: 'prijevoz',
+        clientId: 'integration-test-client',
         secret: 'test-secret',
         actorUserId: '507f1f77bcf86cd799439011',
-        allowed: [{ method: 'GET', pathPrefix: '/api/transport-requests' }],
+        allowed: [{ method: 'GET', pathPrefix: '/api/integrations/delivery-note-sync-state' }],
       },
     ])
   );
@@ -186,7 +196,7 @@ test('rejects multipart service requests before accepting an empty body signatur
     method: 'PATCH',
     pathWithQuery,
     bodyString: '',
-    clientId: 'prijevoz',
+    clientId: 'integration-test-client',
     secret: 'test-secret',
     timestamp: fixedTimestamp,
     nonce: 'nonce-1234567894',
@@ -194,7 +204,7 @@ test('rejects multipart service requests before accepting an empty body signatur
   const clients = parseServiceClients(
     JSON.stringify([
       {
-        clientId: 'prijevoz',
+        clientId: 'integration-test-client',
         secret: 'test-secret',
         actorUserId: '507f1f77bcf86cd799439011',
         allowed: [{ method: 'PATCH', pathPrefix: '/api/items' }],
@@ -225,9 +235,9 @@ test('rejects service requests with a declared body that was not captured', asyn
   clearNonceCache();
   const headers = createServiceAuthHeaders({
     method: 'POST',
-    pathWithQuery: '/api/transport-requests',
+    pathWithQuery: '/api/test/integration',
     bodyString: '',
-    clientId: 'prijevoz',
+    clientId: 'integration-test-client',
     secret: 'test-secret',
     timestamp: fixedTimestamp,
     nonce: 'nonce-1234567895',
@@ -235,10 +245,10 @@ test('rejects service requests with a declared body that was not captured', asyn
   const clients = parseServiceClients(
     JSON.stringify([
       {
-        clientId: 'prijevoz',
+        clientId: 'integration-test-client',
         secret: 'test-secret',
         actorUserId: '507f1f77bcf86cd799439011',
-        allowed: [{ method: 'POST', pathPrefix: '/api/transport-requests' }],
+        allowed: [{ method: 'POST', pathPrefix: '/api/test/integration' }],
       },
     ])
   );
