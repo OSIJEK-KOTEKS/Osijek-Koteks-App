@@ -287,6 +287,8 @@ const Dashboard: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [inTransitOnly, setInTransitOnly] = useState(false);
   const [asfaltOnly, setAsfaltOnly] = useState(false);
+  // "Bez asfalta" is the default view: Asfalt documents are hidden until asked for.
+  const [excludeAsfalt, setExcludeAsfalt] = useState(true);
   const [paidStatus, setPaidStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
 
   // Pagination state
@@ -521,6 +523,7 @@ const Dashboard: React.FC = () => {
             sortOrder,
             ...(inTransitOnly && { inTransitOnly: true }),
             ...(asfaltOnly && { asfaltOnly: true }),
+            ...(!asfaltOnly && excludeAsfalt && { excludeAsfalt: true }),
             ...(paidStatus !== 'all' && { paidStatus }),
           };
         }
@@ -574,6 +577,7 @@ const Dashboard: React.FC = () => {
       sortOrder,
       inTransitOnly,
       asfaltOnly,
+      excludeAsfalt,
       paidStatus,
       searchMode,
       searchValue,
@@ -692,6 +696,21 @@ const Dashboard: React.FC = () => {
     setPaidStatus(status);
   }, []);
 
+  // The two asfalt toggles are mutually exclusive — turning one on clears the other.
+  const handleAsfaltOnlyChange = useCallback((next: boolean) => {
+    setAsfaltOnly(next);
+    if (next) {
+      setExcludeAsfalt(false);
+    }
+  }, []);
+
+  const handleExcludeAsfaltChange = useCallback((next: boolean) => {
+    setExcludeAsfalt(next);
+    if (next) {
+      setAsfaltOnly(false);
+    }
+  }, []);
+
   // Effects with proper dependencies
   useEffect(() => {
     if (!searchMode) {
@@ -706,6 +725,7 @@ const Dashboard: React.FC = () => {
     sortOrder,
     inTransitOnly,
     asfaltOnly,
+    excludeAsfalt,
     paidStatus,
     searchMode, // Added searchMode to dependencies
     handleFilterChange,
@@ -934,6 +954,11 @@ const Dashboard: React.FC = () => {
     if (inTransitOnly) {
       filters.push('Samo u tranzitu');
     }
+    if (asfaltOnly) {
+      filters.push('Samo asfalt');
+    } else if (excludeAsfalt && !isOnlyAsfaltUser) {
+      filters.push('Bez asfalta');
+    }
     if (paidStatus === 'paid') {
       filters.push('Plaćen');
     } else if (paidStatus === 'unpaid') {
@@ -977,6 +1002,7 @@ const Dashboard: React.FC = () => {
           sortOrder,
           ...(inTransitOnly && { inTransitOnly: true }),
           ...(asfaltOnly && { asfaltOnly: true }),
+          ...(!asfaltOnly && excludeAsfalt && { excludeAsfalt: true }),
           ...(paidStatus !== 'all' && { paidStatus }),
         };
       }
@@ -1131,7 +1157,9 @@ const Dashboard: React.FC = () => {
           onInTransitChange={setInTransitOnly}
           asfaltOnly={asfaltOnly}
           lockedToAsfalt={isOnlyAsfaltUser}
-          onAsfaltChange={setAsfaltOnly}
+          onAsfaltChange={handleAsfaltOnlyChange}
+          excludeAsfalt={excludeAsfalt}
+          onExcludeAsfaltChange={handleExcludeAsfaltChange}
         />
       </DashboardContainer>
 

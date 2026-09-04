@@ -149,6 +149,7 @@ export interface ItemFilters {
   createdByUser?: string;
   paidStatus?: 'paid' | 'unpaid';
   asfaltOnly?: boolean;
+  excludeAsfalt?: boolean;
 }
 
 export interface Bill {

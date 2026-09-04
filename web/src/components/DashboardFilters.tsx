@@ -132,7 +132,9 @@ interface DashboardFiltersProps {
   onInTransitChange: (inTransit: boolean) => void;
   asfaltOnly: boolean;
   onAsfaltChange: (asfaltOnly: boolean) => void;
-  /** "Samo asfalt" users always get asfalt-only results, so the toggle is hidden. */
+  excludeAsfalt: boolean;
+  onExcludeAsfaltChange: (excludeAsfalt: boolean) => void;
+  /** "Samo asfalt" users always get asfalt-only results, so the toggles are hidden. */
   lockedToAsfalt?: boolean;
 }
 
@@ -167,6 +169,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   onInTransitChange,
   asfaltOnly,
   onAsfaltChange,
+  excludeAsfalt,
+  onExcludeAsfaltChange,
   lockedToAsfalt = false,
 }) => {
   const handleKeyPress = (event: React.KeyboardEvent) => {
@@ -417,12 +421,20 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   🚚 U tranzitu
                 </TransitPresetButton>
                 {!lockedToAsfalt && (
-                  <TransitPresetButton
-                    onClick={() => onAsfaltChange(!asfaltOnly)}
-                    type="button"
-                    $active={asfaltOnly}>
-                    🛣️ Samo asfalt
-                  </TransitPresetButton>
+                  <>
+                    <TransitPresetButton
+                      onClick={() => onAsfaltChange(!asfaltOnly)}
+                      type="button"
+                      $active={asfaltOnly}>
+                      🛣️ Samo asfalt
+                    </TransitPresetButton>
+                    <TransitPresetButton
+                      onClick={() => onExcludeAsfaltChange(!excludeAsfalt)}
+                      type="button"
+                      $active={excludeAsfalt}>
+                      🚫 Bez asfalta
+                    </TransitPresetButton>
+                  </>
                 )}
               </DatePresets>
             )}
@@ -433,6 +445,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   Odabrani period: {formatDateRange(startDate, endDate)}
                   {inTransitOnly && ' (samo u tranzitu)'}
                   {asfaltOnly && ' (samo asfalt)'}
+                  {!lockedToAsfalt && !asfaltOnly && excludeAsfalt && ' (bez asfalta)'}
                 </DateRangeDisplay>
                 <RangeLimitInfo>Maksimalni raspon: 366 dana</RangeLimitInfo>
               </>

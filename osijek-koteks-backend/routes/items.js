@@ -457,6 +457,7 @@ router.get('/', auth, async (req, res) => {
       createdByUser,
       paidStatus,
       asfaltOnly,
+      excludeAsfalt,
     } = req.query;
 
     const page = parseInt(req.query.page) || 1;
@@ -576,6 +577,10 @@ router.get('/', auth, async (req, res) => {
     // users get it pinned on regardless of what the client asks for.
     if (asfaltOnly === 'true' || isAsfaltOnlyUser(req.user)) {
       query.isAsfalt = true;
+    } else if (excludeAsfalt === 'true') {
+      // "Bez asfalta": the dashboard's default view. $ne covers legacy items
+      // saved before isAsfalt existed.
+      query.isAsfalt = { $ne: true };
     }
 
     // Paid status filtering
