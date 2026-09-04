@@ -5,6 +5,7 @@ const test = require('node:test');
 
 const mutationEntryPoints = [
   path.join(__dirname, '..', 'routes', 'items.js'),
+  path.join(__dirname, '..', 'routes', 'carrierUnification.js'),
   path.join(__dirname, '..', 'server.js'),
   path.join(__dirname, '..', 'scripts', 'merge-codes.js'),
   path.join(__dirname, '..', 'scripts', 'migrate-normalize-carriers.js'),

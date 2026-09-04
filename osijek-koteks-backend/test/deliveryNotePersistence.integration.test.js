@@ -19,6 +19,7 @@ const {
   createDeliveryNoteReconciliationService,
 } = require('../services/deliveryNoteReconciliationService');
 const { createDeliveryNoteSyncService } = require('../services/deliveryNoteSyncService');
+const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
 const { createItemMutationService } = require('../services/itemMutationService');
 const { buildDeliveryNoteEvent } = require('../utils/deliveryNoteEvent');
 const { clearNonceCache, createServiceAuthHeaders } = require('../utils/serviceAuth');
@@ -213,6 +214,75 @@ test('commits Item, latest state, and target deliveries together', async () => {
     outbox.deliveries.map(delivery => delivery.target),
     ['PRODUCTION', 'STAGING']
   );
+});
+
+test('retroactive carrier unification republishes every corrected Item', async () => {
+  const sourceCarrier = 'AP IVIC';
+  const canonicalCarrier = 'AP IVIC IVICA';
+  const items = [];
+  for (let index = 0; index < 4; index += 1) {
+    items.push(
+      await createItem({
+        title: `RN-CARRIER-${index + 1}`,
+        prijevoznik: sourceCarrier,
+      })
+    );
+  }
+
+  const originalStates = await DeliveryNoteSyncState.find({
+    sourceId: { $in: items.map(item => item.id) },
+  }).lean();
+  assert.equal(originalStates.length, 4);
+  assert.ok(originalStates.every(state => state.carrierName === sourceCarrier));
+
+  const bulkMutations = createItemBulkMutationService({
+    ItemModel: Item,
+    itemMutationService: itemMutations,
+    batchSize: 2,
+  });
+  const updatedCount = await bulkMutations.updateMatchingItems({
+    filter: { prijevoznik: sourceCarrier },
+    mutateItem(item) {
+      item.prijevoznik = canonicalCarrier;
+    },
+  });
+
+  assert.equal(updatedCount, 4);
+
+  const [storedItems, correctedStates, correctedOutboxEvents] = await Promise.all([
+    Item.find({ _id: { $in: items.map(item => item._id) } }).lean(),
+    DeliveryNoteSyncState.find({ sourceId: { $in: items.map(item => item.id) } }).lean(),
+    DeliveryNoteOutbox.find({
+      'event.sourceId': { $in: items.map(item => item.id) },
+      'event.carrierName': canonicalCarrier,
+    }).lean(),
+  ]);
+
+  assert.equal(storedItems.length, 4);
+  assert.ok(storedItems.every(item => item.prijevoznik === canonicalCarrier));
+  assert.equal(correctedStates.length, 4);
+  assert.ok(correctedStates.every(state => state.carrierName === canonicalCarrier));
+  assert.equal(correctedOutboxEvents.length, 4);
+  correctedOutboxEvents.forEach(event => {
+    assert.deepEqual(
+      event.deliveries.map(delivery => delivery.target),
+      ['PRODUCTION', 'STAGING']
+    );
+  });
+
+  const originalStateBySourceId = new Map(originalStates.map(state => [state.sourceId, state]));
+  correctedStates.forEach(state => {
+    const original = originalStateBySourceId.get(state.sourceId);
+    assert.notEqual(state.eventId, original.eventId);
+    assert.ok(state.sourceUpdatedAt > original.sourceUpdatedAt);
+  });
+
+  const reconciliation = createDeliveryNoteReconciliationService({
+    SyncStateModel: DeliveryNoteSyncState,
+  });
+  const page = await reconciliation.list({ limit: '10' });
+  assert.equal(page.records.length, 4);
+  assert.ok(page.records.every(record => record.carrierName === canonicalCarrier));
 });
 
 test('enqueues only meaningful updates and retains a DELETE tombstone', async () => {

@@ -10,6 +10,9 @@ const {
   refreshAliasCache,
   seedCanonicalCarriers,
 } = require('../utils/carrierUnification');
+const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
+
+const itemBulkMutations = createItemBulkMutationService();
 
 const adminOnly = (req, res, next) => {
   if (req.user.role !== 'admin') {
@@ -30,12 +33,12 @@ async function applyRuleToItems(fromKey, to) {
   const variants = allValues.filter(v => typeof v === 'string' && carrierKey(v) === fromKey);
   if (variants.length === 0) return 0;
 
-  const result = await Item.updateMany(
-    { prijevoznik: { $in: variants } },
-    { $set: { prijevoznik: to } }
-  );
-
-  return result.modifiedCount || 0;
+  return itemBulkMutations.updateMatchingItems({
+    filter: { prijevoznik: { $in: variants } },
+    mutateItem(item) {
+      item.prijevoznik = to;
+    },
+  });
 }
 
 // ─── Canonical list (the unified names from the scales' Excel list) ───────────
