@@ -1,8 +1,8 @@
-const axios = require('axios');
 const { createServiceAuthHeaders } = require('./serviceAuth');
 
-function createServiceJsonClient({ baseUrl, clientId, secret }) {
+function createServiceJsonClient({ baseUrl, clientId, secret, httpClient }) {
   const normalizedBaseUrl = (baseUrl || '').replace(/\/$/, '');
+  const requestClient = httpClient || require('axios');
 
   if (!normalizedBaseUrl) {
     throw new Error('service base URL is required');
@@ -27,7 +27,7 @@ function createServiceJsonClient({ baseUrl, clientId, secret }) {
       headers['Content-Type'] = 'application/json';
     }
 
-    const response = await axios.request({
+    const response = await requestClient.request({
       method,
       url: `${normalizedBaseUrl}${pathWithQuery}`,
       headers,

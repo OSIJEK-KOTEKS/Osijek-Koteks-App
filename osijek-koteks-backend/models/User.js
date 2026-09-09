@@ -34,6 +34,14 @@ const UserSchema = new mongoose.Schema({
     enum: ['admin', 'user', 'bot', 'pc-user'],
     default: 'user',
   },
+  // Canonical quarry identifier shared with the transport backend. New bot
+  // users receive it through the admin API; it remains optional in the schema
+  // so existing bot records can be migrated safely.
+  quarryCode: {
+    type: String,
+    trim: true,
+    uppercase: true,
+  },
   isVerified: { type: Boolean, default: false },
   phoneNumber: { type: String },
   hasFullAccess: { type: Boolean, default: false },

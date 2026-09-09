@@ -69,7 +69,9 @@ const sanitizeName = (value, fallback = 'bill-items') => {
 
 const getGoogleDriveDownloadUrl = url => {
   const driveIdMatch =
-    url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/open\?id=([a-zA-Z0-9_-]+)/);
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/open\?id=([a-zA-Z0-9_-]+)/);
 
   if (driveIdMatch?.[1]) {
     return `https://drive.google.com/uc?export=download&id=${driveIdMatch[1]}`;
@@ -96,7 +98,9 @@ const getItemPdfDownloadName = item => {
 
 const getBillAttachmentName = attachment => {
   const baseName =
-    (attachment && (attachment.originalName || (attachment.url && attachment.url.split('/').pop()))) || 'bill-attachment';
+    (attachment &&
+      (attachment.originalName || (attachment.url && attachment.url.split('/').pop()))) ||
+    'bill-attachment';
   const normalized = baseName.trim().replace(/\s+/g, '-');
   return normalized.toLowerCase().endsWith('.pdf') ? normalized : `${normalized}.pdf`;
 };
@@ -126,7 +130,12 @@ const formatDateAndTime = (creationDate, creationTime) => {
   const date = parseDateValue(creationDate);
   if (!date && !creationTime) return 'N/A';
   const datePart = date
-    ? date.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zagreb' })
+    ? date.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'Europe/Zagreb',
+      })
     : safeText(creationDate);
   return creationTime ? `${datePart} ${creationTime}` : datePart;
 };
@@ -135,7 +144,11 @@ const formatTimeOnly = (dateValue, explicitTime) => {
   if (explicitTime) return safeText(explicitTime);
   const date = parseDateValue(dateValue);
   if (!date) return 'N/A';
-  return date.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zagreb' });
+  return date.toLocaleTimeString('hr-HR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Zagreb',
+  });
 };
 
 const formatApprovalDate = approvalDate => {
@@ -181,7 +194,10 @@ const buildBillItemsDetailPdf = async (bill, req) => {
 
     const absoluteUrl = getAbsoluteUrl(photo.url, req);
     try {
-      const response = await axios.get(absoluteUrl, { responseType: 'arraybuffer', timeout: 15000 });
+      const response = await axios.get(absoluteUrl, {
+        responseType: 'arraybuffer',
+        timeout: 15000,
+      });
       const bytes = response.data;
       const mime = photo.mimeType || response.headers['content-type'] || '';
       const image =
@@ -205,7 +221,10 @@ const buildBillItemsDetailPdf = async (bill, req) => {
       page.drawImage(image, { x: MARGIN, y: y - drawHeight, width: drawWidth, height: drawHeight });
       y -= drawHeight + 12;
     } catch (err) {
-      console.error('Failed to embed approval photo in bill items PDF', { url: absoluteUrl, error: err?.message });
+      console.error('Failed to embed approval photo in bill items PDF', {
+        url: absoluteUrl,
+        error: err?.message,
+      });
     }
   };
 
@@ -216,7 +235,12 @@ const buildBillItemsDetailPdf = async (bill, req) => {
 
   for (let index = 0; index < bill.items.length; index += 1) {
     const item = bill.items[index];
-    page.drawText(`#${index + 1} ${safeText(item.title)}`, { x: MARGIN, y, size: 13, font: boldFont });
+    page.drawText(`#${index + 1} ${safeText(item.title)}`, {
+      x: MARGIN,
+      y,
+      size: 13,
+      font: boldFont,
+    });
     nextLine(18);
     drawLabelValue('RN', safeText(item.code));
     drawLabelValue('Registracija', safeText(item.registracija));
@@ -224,8 +248,8 @@ const buildBillItemsDetailPdf = async (bill, req) => {
       typeof item.tezina === 'number'
         ? `${(item.tezina / 1000).toFixed(3)} t`
         : typeof item.neto === 'number'
-        ? `${item.neto} kg`
-        : 'N/A';
+          ? `${item.neto} kg`
+          : 'N/A';
     drawLabelValue('Težina', weightValue);
     drawLabelValue('Datum kreiranja', formatDateAndTime(item.creationDate, item.creationTime));
     drawLabelValue('Vrijeme kreiranja', formatTimeOnly(item.creationDate, item.creationTime));
@@ -283,7 +307,9 @@ router.post('/', auth, ensureRacuniAccess, upload.single('billPdf'), async (req,
     }
 
     if (req.user.role !== 'admin') {
-      const unauthorized = items.find(item => item.createdBy.toString() !== req.user._id.toString());
+      const unauthorized = items.find(
+        item => item.createdBy.toString() !== req.user._id.toString()
+      );
       if (unauthorized) {
         return res.status(403).json({ message: 'You can only attach your own items' });
       }
@@ -312,7 +338,9 @@ router.post('/', auth, ensureRacuniAccess, upload.single('billPdf'), async (req,
     });
 
     await bill.save();
-    const populated = await baseBillQuery().findById(bill._id).populate('createdBy', 'firstName lastName email');
+    const populated = await baseBillQuery()
+      .findById(bill._id)
+      .populate('createdBy', 'firstName lastName email');
     res.status(201).json(populated);
   } catch (error) {
     console.error('Error creating bill:', error);
@@ -323,7 +351,9 @@ router.post('/', auth, ensureRacuniAccess, upload.single('billPdf'), async (req,
 // Get single bill (for completeness)
 router.get('/:id', auth, ensureRacuniAccess, async (req, res) => {
   try {
-    const bill = await baseBillQuery().findById(req.params.id).populate('createdBy', 'firstName lastName email');
+    const bill = await baseBillQuery()
+      .findById(req.params.id)
+      .populate('createdBy', 'firstName lastName email');
     if (!bill) {
       return res.status(404).json({ message: 'Bill not found' });
     }
@@ -342,7 +372,9 @@ router.get('/:id', auth, ensureRacuniAccess, async (req, res) => {
 // Download bill items as ZIP
 router.get('/:id/zip', auth, ensureRacuniAccess, async (req, res) => {
   try {
-    const bill = await baseBillQuery().findById(req.params.id).populate('createdBy', 'firstName lastName email');
+    const bill = await baseBillQuery()
+      .findById(req.params.id)
+      .populate('createdBy', 'firstName lastName email');
     if (!bill) {
       return res.status(404).json({ message: 'Bill not found' });
     }
@@ -372,7 +404,10 @@ router.get('/:id/zip', auth, ensureRacuniAccess, async (req, res) => {
         folder.file(getBillAttachmentName(bill.attachment), response.data);
         added += 1;
       } catch (err) {
-        console.error('Failed to fetch bill attachment for zip:', { attachmentUrl, error: err?.message });
+        console.error('Failed to fetch bill attachment for zip:', {
+          attachmentUrl,
+          error: err?.message,
+        });
       }
     }
 

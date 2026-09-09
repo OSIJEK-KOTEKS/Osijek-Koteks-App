@@ -44,6 +44,13 @@ const ItemSchema = new mongoose.Schema(
       ref: 'User',
       required: true, // Make it required for new items
     },
+    // Snapshot of the creator bot's canonical quarry code. It is copied when
+    // the Item is created so later user changes do not rewrite history.
+    quarryCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
     neto: {
       type: Number,
       required: false,
@@ -201,6 +208,7 @@ ItemSchema.index({ approvalStatus: 1 });
 ItemSchema.index({ creationDate: -1 });
 ItemSchema.index({ prijevoznik: 1 });
 ItemSchema.index({ createdBy: 1 });
+ItemSchema.index({ quarryCode: 1 });
 
 ItemSchema.methods.toJSON = function () {
   const obj = this.toObject();

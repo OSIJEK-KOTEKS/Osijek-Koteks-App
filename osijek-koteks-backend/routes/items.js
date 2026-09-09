@@ -14,6 +14,13 @@ const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
 const { normalizeCarrier } = require('../utils/normalizeCarrier');
+const {
+  resolveCreatorOriginLocationCode,
+  resolveCreatorQuarryCode,
+} = require('../utils/quarryOrigin');
+const { createItemMutationService } = require('../services/itemMutationService');
+
+const itemMutations = createItemMutationService();
 // Function to extract RN code from filename with special pattern handling
 const extractRNFromFilename = (filename, defaultCode) => {
   if (!filename || typeof filename !== 'string') {
@@ -22,26 +29,26 @@ const extractRNFromFilename = (filename, defaultCode) => {
 
   // Check if filename contains a pattern between '#' signs
   // Pattern: #[anything]# where anything can include numbers, letters, spaces, and signs
-  const hashPattern = /#([^#]+)#/;  // Capturing group to extract content
+  const hashPattern = /#([^#]+)#/; // Capturing group to extract content
   const match = filename.match(hashPattern);
-  
+
   if (match && match[1]) {
     // Found a pattern between '#' signs, extract the content
     const extractedCode = match[1].trim();
     console.log('Extracted RN code from filename pattern:', {
       filename: filename.substring(0, 100) + '...',
       pattern: match[0],
-      extractedCode: extractedCode
+      extractedCode: extractedCode,
     });
     return extractedCode;
   }
-  
+
   // No special pattern found, return the default code
   return defaultCode;
 };
 
 // Helper function to extract first part of registration (same logic as transportRequests)
-const getFirstPartOfRegistration = (registration) => {
+const getFirstPartOfRegistration = registration => {
   if (!registration) return '';
 
   // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
@@ -77,14 +84,6 @@ const normalizeCarrierName = name => {
   );
 };
 
-// Email-to-origin code mapping for speed calculation
-const CREATOR_EMAIL_TO_CODE = {
-  'velicki.vaga@velicki-kamen.hr': 'VELIČKI KAMEN VELIČANKA',
-  'vetovo.vaga@velicki-kamen.hr': 'VELIČKI KAMEN VETOVO',
-  'vaga.fukinac@kamen-psunj.hr': 'KAMEN - PSUNJ',
-  'vaga.molaris@osijek-koteks.hr': 'MOLARIS',
-};
-
 const IGNORED_APPROVER_EMAILS = new Set([
   'marko.krajina@osijek-koteks.hr',
   'zaposlenik.gradilista@osijek-koteks.hr',
@@ -95,10 +94,10 @@ const IGNORED_APPROVER_EMAILS = new Set([
 async function calculateAverageSpeed(item, approverUser) {
   if (IGNORED_APPROVER_EMAILS.has(approverUser.email)) return null;
 
-  const creator = await User.findById(item.createdBy).select('email');
+  const creator = await User.findById(item.createdBy).select('email quarryCode');
   if (!creator) return null;
 
-  const originCode = CREATOR_EMAIL_TO_CODE[creator.email];
+  const originCode = resolveCreatorOriginLocationCode(creator);
   if (!originCode) return null;
 
   const [originLoc, destLoc] = await Promise.all([
@@ -107,8 +106,10 @@ async function calculateAverageSpeed(item, approverUser) {
   ]);
   if (!originLoc || !destLoc) return null;
 
-  const creationTime = item.creationDate instanceof Date ? item.creationDate : new Date(item.creationDate);
-  const approvalTime = item.approvalDate instanceof Date ? item.approvalDate : new Date(item.approvalDate);
+  const creationTime =
+    item.creationDate instanceof Date ? item.creationDate : new Date(item.creationDate);
+  const approvalTime =
+    item.approvalDate instanceof Date ? item.approvalDate : new Date(item.approvalDate);
   const timeDiffHours = (approvalTime - creationTime) / (1000 * 60 * 60);
 
   if (timeDiffHours <= 0 || timeDiffHours > 8) return null;
@@ -206,7 +207,7 @@ router.get('/acceptance/:acceptanceId/approved-registrations', auth, async (req,
     // Find all approved items linked to this acceptance
     const items = await Item.find({
       transportAcceptanceId: acceptanceId,
-      approvalStatus: 'odobreno'
+      approvalStatus: 'odobreno',
     }).select('registracija');
 
     // Return each linked item with its registration first part and item ID
@@ -235,8 +236,8 @@ router.get('/transport-item/:itemId', auth, async (req, res) => {
         path: 'transportAcceptanceId',
         populate: {
           path: 'requestId',
-          select: 'isplataPoT'
-        }
+          select: 'isplataPoT',
+        },
       });
 
     if (!item) {
@@ -258,7 +259,9 @@ router.get('/acceptance/:acceptanceId/registration/:registration', auth, async (
     // Find the item with this acceptance and registration
     const item = await Item.findOne({
       transportAcceptanceId: acceptanceId,
-      registracija: { $regex: new RegExp('^' + registration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+      registracija: {
+        $regex: new RegExp('^' + registration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+      },
     })
       .populate('createdBy', 'firstName lastName email company')
       .populate('approvedBy', 'firstName lastName')
@@ -267,8 +270,8 @@ router.get('/acceptance/:acceptanceId/registration/:registration', auth, async (
         path: 'transportAcceptanceId',
         populate: {
           path: 'requestId',
-          select: 'isplataPoT'
-        }
+          select: 'isplataPoT',
+        },
       });
 
     if (!item) {
@@ -677,7 +680,8 @@ router.get('/', auth, async (req, res) => {
     ]);
 
     const totalWeight = totalWeightResult.length > 0 ? totalWeightResult[0].totalWeight : 0;
-    const avgSpeed = avgSpeedResult.length > 0 ? Math.round(avgSpeedResult[0].avgSpeed * 10) / 10 : null;
+    const avgSpeed =
+      avgSpeedResult.length > 0 ? Math.round(avgSpeedResult[0].avgSpeed * 10) / 10 : null;
 
     res.json({
       items,
@@ -790,157 +794,138 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
     };
     const incomingWeight = parseWeight(tezina) !== null ? parseWeight(tezina) : parseWeight(neto);
 
-    // Items with the same title are replaced only when their weight matches
-    // the incoming one (a re-upload of the same load). An item with the same
-    // title but a different weight is a different load and is kept.
-    const existingItems = await Item.find({ title: title.trim() });
+    const { newItem, replacedAssetPublicIds } = await itemMutations.withTransaction(
+      async ({ session, saveItem, deleteItem }) => {
+        const replacedAssets = new Set();
 
-    for (const existingItem of existingItems) {
-      const existingWeight =
-        parseWeight(existingItem.tezina) !== null
-          ? parseWeight(existingItem.tezina)
-          : parseWeight(existingItem.neto);
+        // Items with the same title are replaced only when their weight matches
+        // the incoming one (a re-upload of the same load). An item with the same
+        // title but a different weight is a different load and is kept.
+        const existingItems = await Item.find({ title: title.trim() }).session(session);
 
-      if (existingWeight !== incomingWeight) {
-        console.log('Keeping existing item with same title but different weight:', {
-          id: existingItem._id,
-          existingWeight,
-          incomingWeight,
-        });
-        continue;
-      }
+        for (const existingItem of existingItems) {
+          const existingWeight =
+            parseWeight(existingItem.tezina) !== null
+              ? parseWeight(existingItem.tezina)
+              : parseWeight(existingItem.neto);
 
-      console.log('Found existing item with same title and weight:', existingItem._id);
-
-      // Delete the existing item (including any associated files)
-      if (existingItem.approvalPhotoFront?.publicId) {
-        try {
-          await cloudinary.uploader.destroy(existingItem.approvalPhotoFront.publicId);
-          console.log('Deleted old front photo from Cloudinary');
-        } catch (error) {
-          console.error('Error deleting old front photo:', error);
-        }
-      }
-
-      if (existingItem.approvalPhotoBack?.publicId) {
-        try {
-          await cloudinary.uploader.destroy(existingItem.approvalPhotoBack.publicId);
-          console.log('Deleted old back photo from Cloudinary');
-        } catch (error) {
-          console.error('Error deleting old back photo:', error);
-        }
-      }
-
-      if (existingItem.approvalDocument?.publicId) {
-        try {
-          await cloudinary.uploader.destroy(existingItem.approvalDocument.publicId);
-          console.log('Deleted old document from Cloudinary');
-        } catch (error) {
-          console.error('Error deleting old document:', error);
-        }
-      }
-
-      // Delete the item from database
-      await Item.findByIdAndDelete(existingItem._id);
-      console.log('Deleted existing item from database:', existingItem._id);
-    }
-
-    const now = new Date();
-    const creationTime = now.toLocaleTimeString('hr-HR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Zagreb',
-    });
-
-    // Create the new item object with all fields including createdBy
-    const item = new Item({
-      title: title.trim(),
-      code: extractRNFromFilename(title, code.trim()),
-      registracija: registracija ? registracija.trim() : undefined,
-      prijevoznik: normalizeCarrier(prijevoznik),
-      pdfUrl: pdfUrl.trim(),
-      isAsfalt: !!req.file, // created via the Asfalt button when a PDF is attached
-      createdBy: req.user._id, // ADD THIS LINE - Store who created the item
-      creationDate: creationDate ? new Date(creationDate) : now,
-      creationTime,
-      approvalStatus: 'na čekanju',
-    });
-
-    // BACKWARD COMPATIBILITY: Handle both neto and tezina fields
-    // Priority: explicit tezina > explicit neto > undefined
-    if (tezina !== undefined && tezina !== null && tezina !== '') {
-      // New web app sends both neto and tezina
-      const tezinaValue = parseFloat(tezina);
-      const netoValue =
-        neto !== undefined && neto !== null && neto !== '' ? parseFloat(neto) : tezinaValue;
-
-      if (!isNaN(tezinaValue)) {
-        item.tezina = tezinaValue;
-        item.neto = !isNaN(netoValue) ? netoValue : tezinaValue;
-        console.log('Using explicit tezina value:', {
-          neto: item.neto,
-          tezina: item.tezina,
-        });
-      }
-    } else if (neto !== undefined && neto !== null && neto !== '') {
-      // Older versions or when only neto is provided
-      const netoValue = parseFloat(neto);
-      if (!isNaN(netoValue)) {
-        item.neto = netoValue;
-        item.tezina = netoValue; // Set tezina to the same value as neto for consistency
-        console.log('Using neto as tezina value:', {
-          neto: item.neto,
-          tezina: item.tezina,
-        });
-      }
-    }
-    // If neither is provided, both remain undefined (which is fine)
-
-    // Save the new item
-    const newItem = await item.save();
-    console.log('Created new item:', {
-      id: newItem._id,
-      title: newItem.title.substring(0, 50) + '...',
-      neto: newItem.neto,
-      tezina: newItem.tezina,
-      prijevoznik: newItem.prijevoznik,
-      createdBy: newItem.createdBy, // LOG the creator
-    });
-
-    // After saving the item, check if there's an approved transport acceptance with matching code
-    // and available slots (linked approved items < acceptedCount)
-    if (newItem.registracija && newItem.code) {
-      const matchingAcceptances = await TransportAcceptance.find({
-        status: 'approved',
-        gradiliste: newItem.code,
-      }).sort({ createdAt: 1 }); // Get oldest first
-
-      for (const matchingAcceptance of matchingAcceptances) {
-        // Count how many approved items are already linked to this acceptance
-        const linkedItemsCount = await Item.countDocuments({
-          transportAcceptanceId: matchingAcceptance._id,
-          approvalStatus: 'odobreno'
-        });
-
-        // If there are available slots, link this item
-        if (linkedItemsCount < matchingAcceptance.acceptedCount) {
-          newItem.transportAcceptanceId = matchingAcceptance._id;
-          await newItem.save();
-
-          // Add the registration to the acceptance's registrations array
-          const itemFirstPart = getFirstPartOfRegistration(newItem.registracija);
-          if (!matchingAcceptance.registrations.some(reg => getFirstPartOfRegistration(reg) === itemFirstPart)) {
-            matchingAcceptance.registrations.push(newItem.registracija);
-            await matchingAcceptance.save();
+          if (existingWeight !== incomingWeight) {
+            console.log('Keeping existing item with same title but different weight:', {
+              id: existingItem._id,
+              existingWeight,
+              incomingWeight,
+            });
+            continue;
           }
 
-          console.log('Linked item to transport acceptance:', {
-            itemId: newItem._id,
-            acceptanceId: matchingAcceptance._id,
-            registration: newItem.registracija
-          });
-          break;
+          console.log('Replacing existing item with same title and weight:', existingItem._id);
+          [
+            existingItem.approvalPhotoFront?.publicId,
+            existingItem.approvalPhotoBack?.publicId,
+            existingItem.approvalDocument?.publicId,
+          ]
+            .filter(Boolean)
+            .forEach(publicId => replacedAssets.add(publicId));
+
+          await deleteItem(existingItem);
         }
+
+        const now = new Date();
+        const creationTime = now.toLocaleTimeString('hr-HR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Europe/Zagreb',
+        });
+
+        const item = new Item({
+          title: title.trim(),
+          code: extractRNFromFilename(title, code.trim()),
+          registracija: registracija ? registracija.trim() : undefined,
+          prijevoznik: normalizeCarrier(prijevoznik),
+          pdfUrl: pdfUrl.trim(),
+          isAsfalt: !!req.file,
+          createdBy: req.user._id,
+          quarryCode: resolveCreatorQuarryCode(req.user) || undefined,
+          creationDate: creationDate ? new Date(creationDate) : now,
+          creationTime,
+          approvalStatus: 'na čekanju',
+        });
+
+        // BACKWARD COMPATIBILITY: Handle both neto and tezina fields.
+        if (tezina !== undefined && tezina !== null && tezina !== '') {
+          const tezinaValue = parseFloat(tezina);
+          const netoValue =
+            neto !== undefined && neto !== null && neto !== '' ? parseFloat(neto) : tezinaValue;
+
+          if (!isNaN(tezinaValue)) {
+            item.tezina = tezinaValue;
+            item.neto = !isNaN(netoValue) ? netoValue : tezinaValue;
+          }
+        } else if (neto !== undefined && neto !== null && neto !== '') {
+          const netoValue = parseFloat(neto);
+          if (!isNaN(netoValue)) {
+            item.neto = netoValue;
+            item.tezina = netoValue;
+          }
+        }
+
+        const savedItem = await saveItem(item);
+
+        // Preserve the old TransportAcceptance auto-link behavior inside the
+        // same transaction as Item creation.
+        if (savedItem.registracija && savedItem.code) {
+          const matchingAcceptances = await TransportAcceptance.find({
+            status: 'approved',
+            gradiliste: savedItem.code,
+          })
+            .sort({ createdAt: 1 })
+            .session(session);
+
+          for (const matchingAcceptance of matchingAcceptances) {
+            const linkedItemsCount = await Item.countDocuments({
+              transportAcceptanceId: matchingAcceptance._id,
+              approvalStatus: 'odobreno',
+            }).session(session);
+
+            if (linkedItemsCount < matchingAcceptance.acceptedCount) {
+              savedItem.transportAcceptanceId = matchingAcceptance._id;
+              await saveItem(savedItem);
+
+              const itemFirstPart = getFirstPartOfRegistration(savedItem.registracija);
+              if (
+                !matchingAcceptance.registrations.some(
+                  reg => getFirstPartOfRegistration(reg) === itemFirstPart
+                )
+              ) {
+                matchingAcceptance.registrations.push(savedItem.registracija);
+                await matchingAcceptance.save({ session });
+              }
+
+              console.log('Linked item to transport acceptance:', {
+                itemId: savedItem._id,
+                acceptanceId: matchingAcceptance._id,
+                registration: savedItem.registracija,
+              });
+              break;
+            }
+          }
+        }
+
+        return {
+          newItem: savedItem,
+          replacedAssetPublicIds: [...replacedAssets],
+        };
+      }
+    );
+
+    // External file deletion cannot participate in MongoDB's transaction. It
+    // runs only after commit so a database rollback never removes live files.
+    for (const publicId of replacedAssetPublicIds) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+        console.log('Deleted replaced Item asset from Cloudinary');
+      } catch (error) {
+        console.error('Error deleting replaced Item asset:', error);
       }
     }
 
@@ -992,11 +977,26 @@ router.patch('/:id/code', auth, async (req, res) => {
     // REMOVED: Duplicate code check - allow multiple items to have the same code
     console.log('ℹ️  Allowing duplicate codes as per admin requirements');
 
-    // Find and update the item
-    console.log('🔍 Finding item by ID...');
-    const item = await Item.findById(req.params.id);
+    const updateResult = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return { status: 'not-found' };
 
-    if (!item) {
+      const user = req.user;
+      const hasAccess = isAsfaltOnlyUser(user)
+        ? item.isAsfalt === true
+        : (user.role === 'admin' && (!user.codes || user.codes.length === 0)) ||
+          user.codes.includes(item.code) ||
+          user.hasFullAccess;
+      if (!hasAccess) return { status: 'forbidden' };
+
+      const oldCode = item.code;
+      item.code = trimmedCode;
+      await saveItem(item);
+
+      return { status: 'updated', item, oldCode, user };
+    });
+
+    if (updateResult.status === 'not-found') {
       console.log('❌ Item not found:', req.params.id);
       return res.status(404).json({
         message: 'Item not found',
@@ -1004,64 +1004,14 @@ router.patch('/:id/code', auth, async (req, res) => {
       });
     }
 
-    console.log('✅ Item found:', {
-      id: item._id,
-      currentCode: item.code,
-      title: item.title.substring(0, 50),
-    });
-
-    // Check if admin has access to this item
-    console.log('🔍 Checking user access...');
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      console.log('❌ User not found:', req.user._id);
-      return res.status(404).json({
-        message: 'User not found',
-        messageHr: 'Korisnik nije pronađen',
-      });
-    }
-
-    console.log('✅ User found:', {
-      id: user._id,
-      role: user.role,
-      codes: user.codes,
-      hasFullAccess: user.hasFullAccess,
-    });
-
-    // Apply access control logic
-    const hasAccess = isAsfaltOnlyUser(user)
-      ? item.isAsfalt === true // Samo asfalt: any code, but Asfalt items only
-      : (user.role === 'admin' && (!user.codes || user.codes.length === 0)) || // Admin with no codes
-        user.codes.includes(item.code) || // User has the specific code
-        user.hasFullAccess; // User has full access flag
-
-    console.log('🔐 Access control check:', {
-      isAdminWithNoCodes: user.role === 'admin' && (!user.codes || user.codes.length === 0),
-      hasSpecificCode: user.codes.includes(item.code),
-      hasFullAccess: user.hasFullAccess,
-      onlyAsfalt: user.onlyAsfalt,
-      finalAccess: hasAccess,
-    });
-
-    if (!hasAccess) {
-      console.log('❌ Access denied for user:', user._id, 'to item:', item._id);
+    if (updateResult.status === 'forbidden') {
       return res.status(403).json({
         message: 'Access denied to this item',
         messageHr: 'Pristup ovoj stavci je odbijen',
       });
     }
 
-    console.log('✅ Access control passed');
-
-    // Store the old code for logging
-    const oldCode = item.code;
-
-    // Update the code (duplicates are now allowed)
-    console.log('💾 Updating code from', oldCode, 'to', trimmedCode);
-    item.code = trimmedCode;
-
-    console.log('💾 Saving item...');
-    await item.save();
+    const { item, oldCode, user } = updateResult;
 
     console.log('=== CODE UPDATE SUCCESS ===');
     console.log('Item ID:', item._id);
@@ -1227,57 +1177,11 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
     }
 
     const { title, code, neto, tezina, pdfUrl, creationDate } = req.body;
-    const item = await Item.findById(req.params.id);
-
-    if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
-    }
-
-    // Update basic fields
-    if (title) item.title = title.trim();
-    if (code) item.code = code.trim();
-    if (pdfUrl) item.pdfUrl = pdfUrl.trim();
-    if (creationDate) item.creationDate = new Date(creationDate);
-
-    // Update neto and tezina fields - backward compatible
-    if (tezina !== undefined && tezina !== null && tezina !== '') {
-      const tezinaValue = parseFloat(tezina);
-      if (!isNaN(tezinaValue)) {
-        item.tezina = tezinaValue;
-        // Also update neto if provided, otherwise keep existing
-        if (neto !== undefined && neto !== null && neto !== '') {
-          const netoValue = parseFloat(neto);
-          if (!isNaN(netoValue)) {
-            item.neto = netoValue;
-          }
-        }
-      }
-    } else if (neto !== undefined && neto !== null && neto !== '') {
-      const netoValue = parseFloat(neto);
-      if (!isNaN(netoValue)) {
-        item.neto = netoValue;
-        item.tezina = netoValue; // Keep tezina in sync with neto
-      }
-    }
-
-    // Handle photo upload if present
+    let uploadedPhoto = null;
     if (req.file) {
       try {
         console.log('Uploading new photo to Cloudinary...');
-        const cloudinaryResponse = await uploadToCloudinary(req.file);
-        console.log('Cloudinary response:', cloudinaryResponse);
-
-        // Delete old photo from Cloudinary if exists
-        if (item.approvalPhoto && item.approvalPhoto.publicId) {
-          await cloudinary.uploader.destroy(item.approvalPhoto.publicId);
-        }
-
-        item.approvalPhoto = {
-          url: cloudinaryResponse.url,
-          uploadDate: new Date(),
-          mimeType: req.file.mimetype,
-          publicId: cloudinaryResponse.publicId,
-        };
+        uploadedPhoto = await uploadToCloudinary(req.file);
       } catch (error) {
         console.error('Error uploading image:', error);
         return res.status(500).json({
@@ -1287,7 +1191,62 @@ router.patch('/:id', auth, upload.single('photo'), async (req, res) => {
       }
     }
 
-    const updatedItem = await item.save();
+    const updateResult = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return { status: 'not-found' };
+
+      if (title) item.title = title.trim();
+      if (code) item.code = code.trim();
+      if (pdfUrl) item.pdfUrl = pdfUrl.trim();
+      if (creationDate) item.creationDate = new Date(creationDate);
+
+      if (tezina !== undefined && tezina !== null && tezina !== '') {
+        const tezinaValue = parseFloat(tezina);
+        if (!isNaN(tezinaValue)) {
+          item.tezina = tezinaValue;
+          if (neto !== undefined && neto !== null && neto !== '') {
+            const netoValue = parseFloat(neto);
+            if (!isNaN(netoValue)) item.neto = netoValue;
+          }
+        }
+      } else if (neto !== undefined && neto !== null && neto !== '') {
+        const netoValue = parseFloat(neto);
+        if (!isNaN(netoValue)) {
+          item.neto = netoValue;
+          item.tezina = netoValue;
+        }
+      }
+
+      const oldPhotoPublicId = item.approvalPhoto?.publicId || null;
+      if (uploadedPhoto) {
+        item.approvalPhoto = {
+          url: uploadedPhoto.url,
+          uploadDate: new Date(),
+          mimeType: req.file.mimetype,
+          publicId: uploadedPhoto.publicId,
+        };
+      }
+
+      const updatedItem = await saveItem(item);
+      return { status: 'updated', updatedItem, oldPhotoPublicId };
+    });
+
+    if (updateResult.status === 'not-found') {
+      if (uploadedPhoto?.publicId) {
+        await cloudinary.uploader.destroy(uploadedPhoto.publicId).catch(() => {});
+      }
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    const { updatedItem, oldPhotoPublicId } = updateResult;
+    if (oldPhotoPublicId && oldPhotoPublicId !== uploadedPhoto?.publicId) {
+      try {
+        await cloudinary.uploader.destroy(oldPhotoPublicId);
+      } catch (error) {
+        console.error('Error deleting replaced photo:', error);
+      }
+    }
+
     await updatedItem.populate('approvedBy', 'firstName lastName');
 
     res.json(updatedItem);
@@ -1309,17 +1268,20 @@ router.patch('/:id/pay', auth, async (req, res) => {
     }
 
     const { isPaid = true } = req.body;
-    const item = await Item.findById(req.params.id);
+    const item = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return null;
+
+      item.isPaid = !!isPaid;
+      item.paidAt = item.isPaid ? new Date() : null;
+      item.paidBy = item.isPaid ? req.user._id : null;
+
+      return saveItem(item);
+    });
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });
     }
-
-    item.isPaid = !!isPaid;
-    item.paidAt = item.isPaid ? new Date() : null;
-    item.paidBy = item.isPaid ? req.user._id : null;
-
-    await item.save();
     await item.populate('paidBy', 'firstName lastName email');
 
     res.json(item);
@@ -1390,30 +1352,31 @@ router.patch(
         return res.status(400).json({ message: 'Invalid approval status' });
       }
 
-      // Update basic approval fields
-      item.approvalStatus = approvalStatus;
+      // Prepare changes outside the transaction while files are uploaded.
+      const approvalChanges = {
+        approvalStatus,
+        approvalDate: new Date(),
+        approvedBy: req.user._id,
+      };
 
-      // FIX: Store approvalDate as Date object, not Croatian string
-      item.approvalDate = new Date(); // This will be converted to Croatian string in toJSON method
-
-      item.approvedBy = req.user._id;
-
-      console.log('Updated basic approval fields:', {
-        approvalStatus: item.approvalStatus,
-        approvalDate: item.approvalDate, // This is now a Date object
-        approvedBy: item.approvedBy,
-      });
+      console.log('Prepared basic approval fields:', approvalChanges);
 
       // Handle in_transit field with careful type checking
       if (inTransit !== undefined && inTransit !== null) {
         if (typeof inTransit === 'string') {
-          item.in_transit = inTransit.toLowerCase() === 'true';
+          approvalChanges.in_transit = inTransit.toLowerCase() === 'true';
         } else if (typeof inTransit === 'boolean') {
-          item.in_transit = inTransit;
+          approvalChanges.in_transit = inTransit;
         } else {
-          item.in_transit = false; // Safe default
+          approvalChanges.in_transit = false; // Safe default
         }
-        console.log('Set in_transit to:', item.in_transit, 'from:', inTransit, typeof inTransit);
+        console.log(
+          'Set in_transit to:',
+          approvalChanges.in_transit,
+          'from:',
+          inTransit,
+          typeof inTransit
+        );
       }
 
       // Handle neto field ONLY if it's provided and valid
@@ -1421,16 +1384,8 @@ router.patch(
       if (neto !== undefined && neto !== null && neto !== '') {
         const netoValue = parseFloat(neto);
         if (!isNaN(netoValue) && isFinite(netoValue)) {
-          item.neto = netoValue;
-          console.log('Updated neto to:', item.neto);
-
-          // ONLY set tezina if the item doesn't already have it (preserve original from creation)
-          if (item.tezina === undefined || item.tezina === null) {
-            item.tezina = netoValue;
-            console.log('Set tezina to match neto:', item.tezina);
-          } else {
-            console.log('Preserved existing tezina:', item.tezina);
-          }
+          approvalChanges.neto = netoValue;
+          console.log('Prepared neto:', approvalChanges.neto);
         } else {
           console.warn('Invalid neto value provided:', neto);
         }
@@ -1454,7 +1409,7 @@ router.patch(
             !isNaN(location.coordinates.latitude) &&
             !isNaN(location.coordinates.longitude)
           ) {
-            item.approvalLocation = {
+            approvalChanges.approvalLocation = {
               coordinates: {
                 latitude: location.coordinates.latitude,
                 longitude: location.coordinates.longitude,
@@ -1462,7 +1417,7 @@ router.patch(
               accuracy: typeof location.accuracy === 'number' ? location.accuracy : 0,
               timestamp: location.timestamp ? new Date(location.timestamp) : new Date(),
             };
-            console.log('Set approval location:', item.approvalLocation);
+            console.log('Set approval location:', approvalChanges.approvalLocation);
           } else {
             console.warn('Invalid location data structure:', location);
           }
@@ -1501,7 +1456,7 @@ router.patch(
               }
             }
 
-            item.approvalPhotoFront = {
+            approvalChanges.approvalPhotoFront = {
               url: frontResponse.url,
               uploadDate: new Date(),
               mimeType: frontFile.mimetype,
@@ -1533,7 +1488,7 @@ router.patch(
               }
             }
 
-            item.approvalPhotoBack = {
+            approvalChanges.approvalPhotoBack = {
               url: backResponse.url,
               uploadDate: new Date(),
               mimeType: backFile.mimetype,
@@ -1565,7 +1520,7 @@ router.patch(
               }
             }
 
-            item.approvalDocument = {
+            approvalChanges.approvalDocument = {
               url: pdfResponse.url,
               uploadDate: new Date(),
               mimeType: pdfFile.mimetype,
@@ -1586,21 +1541,32 @@ router.patch(
 
       // Save the updated item with validation
       try {
-        console.log('Saving item with final data:', {
-          id: item._id,
-          approvalStatus: item.approvalStatus,
-          inTransit: item.in_transit,
-          neto: item.neto,
-          tezina: item.tezina,
-          approvalDate: item.approvalDate, // Now a Date object
-          hasLocation: !!item.approvalLocation,
-          hasFrontPhoto: !!item.approvalPhotoFront,
-          hasBackPhoto: !!item.approvalPhotoBack,
-          hasDocument: !!item.approvalDocument,
-        });
+        const approvalResult = await itemMutations.withTransaction(
+          async ({ session, saveItem }) => {
+            const freshItem = await Item.findById(req.params.id).session(session);
+            if (!freshItem) return { status: 'not-found' };
+            if (isAsfaltOnlyUser(req.user) && freshItem.isAsfalt !== true) {
+              return { status: 'forbidden' };
+            }
 
-        const updatedItem = await item.save();
-        await updatedItem.populate('approvedBy', 'firstName lastName');
+            freshItem.set(approvalChanges);
+            // Preserve the current weight, including changes made during upload.
+            if (approvalChanges.neto !== undefined && freshItem.tezina == null) {
+              freshItem.tezina = approvalChanges.neto;
+            }
+            return { status: 'updated', item: await saveItem(freshItem) };
+          }
+        );
+        if (approvalResult.status === 'not-found') {
+          return res.status(404).json({ message: 'Item not found' });
+        }
+        if (approvalResult.status === 'forbidden') {
+          return res.status(403).json({
+            message: 'Access denied to this item',
+            messageHr: 'Pristup ovoj stavci je odbijen',
+          });
+        }
+        let updatedItem = approvalResult.item;
 
         console.log('=== APPROVAL SUCCESS ===');
         console.log('Item saved successfully:', updatedItem._id);
@@ -1608,7 +1574,12 @@ router.patch(
         console.log('========================');
 
         // If item was approved and has a registration, try to link it to a transport acceptance
-        if (updatedItem.approvalStatus === 'odobreno' && updatedItem.registracija && updatedItem.code && !updatedItem.transportAcceptanceId) {
+        if (
+          updatedItem.approvalStatus === 'odobreno' &&
+          updatedItem.registracija &&
+          updatedItem.code &&
+          !updatedItem.transportAcceptanceId
+        ) {
           // Find all approved acceptances with matching code and available slots
           const matchingAcceptances = await TransportAcceptance.find({
             status: 'approved',
@@ -1619,17 +1590,37 @@ router.patch(
             // Count how many approved items are already linked to this acceptance
             const linkedItemsCount = await Item.countDocuments({
               transportAcceptanceId: matchingAcceptance._id,
-              approvalStatus: 'odobreno'
+              approvalStatus: 'odobreno',
             });
 
             // If there are available slots, link this item
             if (linkedItemsCount < matchingAcceptance.acceptedCount) {
-              updatedItem.transportAcceptanceId = matchingAcceptance._id;
-              await updatedItem.save();
+              const linkedItem = await itemMutations.withTransaction(
+                async ({ session, saveItem }) => {
+                  const freshItem = await Item.findById(updatedItem._id).session(session);
+                  if (
+                    !freshItem ||
+                    freshItem.transportAcceptanceId ||
+                    freshItem.approvalStatus !== 'odobreno' ||
+                    freshItem.code !== matchingAcceptance.gradiliste ||
+                    freshItem.registracija !== updatedItem.registracija
+                  ) {
+                    return null;
+                  }
+                  freshItem.transportAcceptanceId = matchingAcceptance._id;
+                  return saveItem(freshItem);
+                }
+              );
+              if (!linkedItem) break;
+              updatedItem = linkedItem;
 
               // Add the registration to the acceptance's registrations array
               const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
-              if (!matchingAcceptance.registrations.some(reg => getFirstPartOfRegistration(reg) === itemFirstPart)) {
+              if (
+                !matchingAcceptance.registrations.some(
+                  reg => getFirstPartOfRegistration(reg) === itemFirstPart
+                )
+              ) {
                 matchingAcceptance.registrations.push(updatedItem.registracija);
                 await matchingAcceptance.save();
               }
@@ -1637,7 +1628,7 @@ router.patch(
               console.log('Linked approved item to transport acceptance:', {
                 itemId: updatedItem._id,
                 acceptanceId: matchingAcceptance._id,
-                registration: updatedItem.registracija
+                registration: updatedItem.registracija,
               });
 
               // Check if the entire request is now complete
@@ -1652,11 +1643,16 @@ router.patch(
                   approvalStatus: 'odobreno',
                 });
                 if (totalAccepted > 0 && totalDelivered >= totalAccepted) {
-                  await TransportRequest.findByIdAndUpdate(matchingAcceptance.requestId, { status: 'Završen' });
+                  await TransportRequest.findByIdAndUpdate(matchingAcceptance.requestId, {
+                    status: 'Završen',
+                  });
                   console.log('Transport request marked as Završen:', matchingAcceptance.requestId);
                 }
               } catch (completionError) {
-                console.error('Error checking request completion (non-fatal):', completionError.message);
+                console.error(
+                  'Error checking request completion (non-fatal):',
+                  completionError.message
+                );
               }
 
               break;
@@ -1670,13 +1666,20 @@ router.patch(
             const speed = await calculateAverageSpeed(updatedItem, req.user);
             if (speed !== null) {
               updatedItem.prosjecnaBrzina = speed;
-              await Item.findByIdAndUpdate(updatedItem._id, { prosjecnaBrzina: speed });
+              await itemMutations.withTransaction(async ({ session, saveItem }) => {
+                const speedItem = await Item.findById(updatedItem._id).session(session);
+                if (!speedItem) return;
+                speedItem.prosjecnaBrzina = speed;
+                await saveItem(speedItem);
+              });
               console.log('Calculated average speed:', speed, 'km/h for item:', updatedItem._id);
             }
           } catch (speedError) {
             console.error('Speed calculation error (non-fatal):', speedError.message);
           }
         }
+
+        await updatedItem.populate('approvedBy', 'firstName lastName');
 
         // Return the updated item
         if (updatedItem.approvalStatus === 'odobreno') {
@@ -1721,26 +1724,27 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
-    const item = await Item.findById(req.params.id);
-    if (!item) {
+    const deletionResult = await itemMutations.withTransaction(async ({ session, deleteItem }) => {
+      const item = await Item.findById(req.params.id).session(session);
+      if (!item) return null;
+
+      const filesToDelete = [
+        item.approvalPhotoFront?.publicId,
+        item.approvalPhotoBack?.publicId,
+        item.approvalDocument?.publicId,
+      ].filter(Boolean);
+
+      await deleteItem(item);
+      return { filesToDelete };
+    });
+
+    if (!deletionResult) {
       console.log('Item not found:', req.params.id);
       return res.status(404).json({ message: 'Item not found' });
     }
 
-    // Clean up associated files before deleting
-    const filesToDelete = [];
-    if (item.approvalPhotoFront?.publicId) {
-      filesToDelete.push(item.approvalPhotoFront.publicId);
-    }
-    if (item.approvalPhotoBack?.publicId) {
-      filesToDelete.push(item.approvalPhotoBack.publicId);
-    }
-    if (item.approvalDocument?.publicId) {
-      filesToDelete.push(item.approvalDocument.publicId);
-    }
-
-    // Delete files from Cloudinary
-    for (const publicId of filesToDelete) {
+    // Delete external files only after the Item and its tombstone commit.
+    for (const publicId of deletionResult.filesToDelete) {
       try {
         await cloudinary.uploader.destroy(publicId);
         console.log('Deleted file from Cloudinary:', publicId);
@@ -1749,7 +1753,6 @@ router.delete('/:id', auth, async (req, res) => {
       }
     }
 
-    await item.deleteOne();
     console.log('Item successfully deleted:', req.params.id);
     res.json({ message: 'Item deleted successfully' });
   } catch (err) {

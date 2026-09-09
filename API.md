@@ -7,26 +7,24 @@ This document describes the backend API implemented in `osijek-koteks-backend` a
 - Base URL used by current clients: `https://osijek-koteks-app.onrender.com`
 - API prefix: `/api`
 - User auth: JWT bearer token in `Authorization: Bearer <token>`
-- Service auth: HMAC-signed JSON requests for backend-to-backend calls
+- Integration auth: HMAC-signed requests for delivery-note reconciliation
 - Default content type: `application/json`
 - Upload endpoints use `multipart/form-data`
 - Real-time side channel: Socket.IO is enabled on the same origin
 
 ## Authentication Model
 
-Most routes require either a valid user JWT or a valid service signature. The
-auth middleware:
+Application routes require a valid user JWT. The auth middleware:
 
 - reads `Authorization` header
 - requires the `Bearer <token>` format
 - verifies token with `JWT_SECRET`
 - loads the full user document and assigns it to `req.user`
 
-For backend-to-backend JSON calls, the middleware also accepts HMAC service
-headers:
+The delivery-note reconciliation endpoint also accepts these HMAC service headers:
 
 ```http
-X-OK-Service-Client: prijevoz-backend
+X-OK-Service-Client: transport-reconciliation
 X-OK-Service-Timestamp: 1700000000
 X-OK-Service-Nonce: nonce-or-uuid
 X-OK-Service-Body-SHA256: hex-sha256-of-raw-body
@@ -43,11 +41,12 @@ nonce
 body_sha256
 ```
 
-`SERVICE_AUTH_CLIENTS_JSON` configures allowed service clients. Each entry must
-include `clientId`, `secret`, `actorUserId`, and an `allowed` list of
-`method`/`pathPrefix` objects. A valid service request is mapped to the local
-actor user, so existing route authorization still applies. Service auth is
-intended for JSON endpoints only.
+`SERVICE_AUTH_CLIENTS_JSON` configures allowed service clients. Each entry must include `clientId`,
+`secret`, `actorUserId`, and an `allowed` list of `method`/`pathPrefix` objects. A valid request is
+mapped to the local actor user, so existing authorization still applies. Production and staging
+clients must use different credentials and should be restricted to
+`GET /api/integrations/delivery-note-sync-state`. Leave the client array empty until reconciliation
+is configured.
 
 Common auth failures:
 

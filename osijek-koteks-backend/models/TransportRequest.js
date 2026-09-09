@@ -5,7 +5,13 @@ const TransportRequestSchema = new mongoose.Schema(
     kamenolom: {
       type: String,
       required: true,
-      enum: ['VELIČKI KAMEN VELIČANKA', 'VELIČKI KAMEN VETOVO', 'KAMEN - PSUNJ', 'MOLARIS', 'PRODORINA'],
+      enum: [
+        'VELIČKI KAMEN VELIČANKA',
+        'VELIČKI KAMEN VETOVO',
+        'KAMEN - PSUNJ',
+        'MOLARIS',
+        'PRODORINA',
+      ],
     },
     gradiliste: {
       type: String,
@@ -60,7 +66,7 @@ const TransportRequestSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       required: true,
       validate: {
-        validator: function(value) {
+        validator: function (value) {
           // Must be either the string "All" or an array of ObjectIds
           if (value === 'All') return true;
           if (Array.isArray(value)) {
@@ -68,8 +74,8 @@ const TransportRequestSchema = new mongoose.Schema(
           }
           return false;
         },
-        message: 'assignedTo must be either "All" or an array of valid user IDs'
-      }
+        message: 'assignedTo must be either "All" or an array of valid user IDs',
+      },
     },
   },
   {
