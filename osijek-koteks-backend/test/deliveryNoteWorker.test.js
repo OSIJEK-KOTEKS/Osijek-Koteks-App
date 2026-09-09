@@ -106,26 +106,90 @@ test('sanitizes errors without retaining HTTP bodies or messages', () => {
   assert.equal(safeDeliveryError({ code: 'ECONNRESET', message: 'private URL' }), 'ECONNRESET');
 });
 
-test('clean shutdown waits for an in-flight delivery', async () => {
-  let releaseRequest;
-  let claimed = false;
+test('production keeps polling while a staging request is stalled', { timeout: 5000 }, async t => {
+  let releaseStagingRequest;
+  const stagingRequest = new Promise(resolve => {
+    releaseStagingRequest = resolve;
+  });
+  let finishProduction;
+  const productionFinished = new Promise(resolve => {
+    finishProduction = resolve;
+  });
+  const claimed = { PRODUCTION: 0, STAGING: 0 };
+  const delivered = [];
+  const failed = [];
+  const worker = createDeliveryNoteWorker({
+    targets: [TARGETS[1], TARGETS[0]],
+    config: { ...CONFIG, batchSize: 2, pollIntervalMs: 1 },
+    repository: {
+      async claimNext({ target, leaseToken }) {
+        const index = ++claimed[target];
+        return { outboxId: `outbox-${index}`, event: event(), attemptCount: 0, target, leaseToken };
+      },
+      async markDelivered(result) {
+        delivered.push(result);
+        if (delivered.length === 3) finishProduction();
+      },
+      async markFailed(result) {
+        failed.push(result);
+      },
+    },
+    logger: { warn() {}, error() {} },
+    clientFactory: ({ clientId }) => ({
+      async requestJson() {
+        if (clientId === 'staging-client') {
+          await stagingRequest;
+          throw Object.assign(new Error('staging timed out'), { code: 'ETIMEDOUT' });
+        }
+      },
+    }),
+  });
+  t.after(async () => {
+    const stopping = worker.stop();
+    releaseStagingRequest();
+    await stopping;
+  });
+
+  worker.start();
+  await productionFinished;
+
+  // Three deliveries require a second production poll with a batch size of two.
+  assert.deepEqual(
+    delivered.map(result => result.target),
+    ['PRODUCTION', 'PRODUCTION', 'PRODUCTION']
+  );
+  assert.equal(claimed.STAGING, 1);
+  assert.equal(failed.length, 0);
+
+  const stopping = worker.stop();
+  releaseStagingRequest();
+  await stopping;
+  assert.equal(claimed.STAGING, 1);
+  assert.equal(failed.length, 1);
+  assert.equal(failed[0].target, 'STAGING');
+  assert.equal(failed[0].lastError, 'ETIMEDOUT');
+});
+
+test('clean shutdown waits for in-flight deliveries to every target', async () => {
+  const releaseRequests = new Map();
+  const claimed = new Set();
   let stopFinished = false;
   const repository = {
     async claimNext({ target, leaseToken }) {
-      if (claimed) return null;
-      claimed = true;
+      if (claimed.has(target)) return null;
+      claimed.add(target);
       return { outboxId: 'outbox-1', event: event(), attemptCount: 0, target, leaseToken };
     },
     async markDelivered() {},
     async markFailed() {},
   };
   const worker = createDeliveryNoteWorker({
-    targets: [TARGETS[0]],
+    targets: TARGETS,
     config: CONFIG,
     repository,
     logger: { warn() {}, error() {} },
-    clientFactory: () => ({
-      requestJson: () => new Promise(resolve => (releaseRequest = resolve)),
+    clientFactory: ({ clientId }) => ({
+      requestJson: () => new Promise(resolve => releaseRequests.set(clientId, resolve)),
     }),
   });
 
@@ -137,7 +201,36 @@ test('clean shutdown waits for an in-flight delivery', async () => {
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(stopFinished, false);
 
-  releaseRequest({ outcome: 'APPLIED' });
+  releaseRequests.get('production-client')({ outcome: 'APPLIED' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(stopFinished, false);
+
+  releaseRequests.get('staging-client')({ outcome: 'APPLIED' });
   await stopping;
   assert.equal(stopFinished, true);
+});
+
+test('clean shutdown wakes every idle target and allows a restart', { timeout: 5000 }, async () => {
+  const claims = [];
+  const worker = createDeliveryNoteWorker({
+    targets: TARGETS,
+    config: CONFIG,
+    repository: {
+      async claimNext({ target }) {
+        claims.push(target);
+        return null;
+      },
+    },
+    clientFactory: () => ({}),
+  });
+
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    const running = worker.start();
+    assert.equal(worker.start(), running);
+    await new Promise(resolve => setImmediate(resolve));
+    await worker.stop();
+    await running;
+  }
+
+  assert.deepEqual(claims, ['PRODUCTION', 'STAGING', 'PRODUCTION', 'STAGING']);
 });

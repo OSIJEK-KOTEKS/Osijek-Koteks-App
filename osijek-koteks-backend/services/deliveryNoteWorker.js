@@ -43,8 +43,7 @@ function createDeliveryNoteWorker({
   );
   let stopping = false;
   let loopPromise = null;
-  let wakeTimer = null;
-  let wakeResolver = null;
+  const pollWakeups = new Set();
 
   async function deliverOne(target) {
     const claimTime = now();
@@ -84,34 +83,40 @@ function createDeliveryNoteWorker({
     return true;
   }
 
-  async function runOnce() {
+  async function runTargetBatch(target) {
     let processed = 0;
-    for (const target of enabledTargets) {
-      for (let index = 0; index < config.batchSize && !stopping; index += 1) {
-        const claimed = await deliverOne(target);
-        if (!claimed) break;
-        processed += 1;
-      }
+    for (let index = 0; index < config.batchSize && !stopping; index += 1) {
+      const claimed = await deliverOne(target);
+      if (!claimed) break;
+      processed += 1;
     }
     return processed;
   }
 
+  async function runOnce() {
+    const processed = await Promise.all(enabledTargets.map(runTargetBatch));
+    return processed.reduce((total, count) => total + count, 0);
+  }
+
   function waitForNextPoll() {
     return new Promise(resolve => {
-      wakeResolver = resolve;
-      wakeTimer = setTimeout(resolve, config.pollIntervalMs);
-    }).finally(() => {
-      wakeResolver = null;
-      wakeTimer = null;
+      const wake = () => {
+        clearTimeout(timer);
+        pollWakeups.delete(wake);
+        resolve();
+      };
+      const timer = setTimeout(wake, config.pollIntervalMs);
+      pollWakeups.add(wake);
     });
   }
 
-  async function runLoop() {
+  async function runLoop(target) {
     while (!stopping) {
       try {
-        await runOnce();
+        await runTargetBatch(target);
       } catch (error) {
         logger.error('Delivery-note worker cycle failed', {
+          target: target.name,
           error: safeDeliveryError(error),
         });
       }
@@ -122,14 +127,13 @@ function createDeliveryNoteWorker({
   function start() {
     if (loopPromise) return loopPromise;
     stopping = false;
-    loopPromise = runLoop();
+    loopPromise = Promise.all(enabledTargets.map(runLoop));
     return loopPromise;
   }
 
   async function stop() {
     stopping = true;
-    if (wakeTimer) clearTimeout(wakeTimer);
-    if (wakeResolver) wakeResolver();
+    for (const wake of pollWakeups) wake();
     await loopPromise;
     loopPromise = null;
   }
