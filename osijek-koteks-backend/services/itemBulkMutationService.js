@@ -16,18 +16,23 @@ function createItemBulkMutationService({ ItemModel, itemMutationService, batchSi
     if (typeof mutateItem !== 'function') throw new TypeError('mutateItem is required');
 
     let processedCount = 0;
+    let lastId;
     while (true) {
-      const batchCount = await itemMutations.withTransaction(async ({ session, saveItem }) => {
-        const items = await loadBatch(filter, session);
+      const batch = await itemMutations.withTransaction(async ({ session, saveItem }) => {
+        const batchFilter =
+          lastId === undefined ? filter : { $and: [filter, { _id: { $gt: lastId } }] };
+        const items = await loadBatch(batchFilter, session);
         for (const item of items) {
           await mutateItem(item);
           await saveItem(item);
         }
-        return items.length;
+        return { count: items.length, lastId: items.at(-1)?._id };
       });
 
-      if (batchCount === 0) return processedCount;
-      processedCount += batchCount;
+      if (batch.count === 0) return processedCount;
+      // Advance only after commit so transaction retries process the same batch.
+      lastId = batch.lastId;
+      processedCount += batch.count;
     }
   }
 

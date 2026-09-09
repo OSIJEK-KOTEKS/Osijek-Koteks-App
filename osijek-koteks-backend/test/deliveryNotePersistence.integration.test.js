@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const { execFile } = require('node:child_process');
+const path = require('node:path');
+const { promisify } = require('node:util');
 const { after, before, beforeEach, test } = require('node:test');
 
 const { MongoDBContainer } = require('@testcontainers/mongodb');
@@ -285,6 +288,41 @@ test('retroactive carrier unification republishes every corrected Item', async (
   assert.ok(page.records.every(record => record.carrierName === canonicalCarrier));
 });
 
+test('carrier migration matches raw whitespace variants and leaves canonical rows untouched', async () => {
+  const canonicalItem = await createItem({ prijevoznik: 'ACME' });
+  const legacyItems = [
+    itemData({ _id: new mongoose.Types.ObjectId(), prijevoznik: 'ACME ' }),
+    itemData({ _id: new mongoose.Types.ObjectId(), prijevoznik: ' ACME' }),
+  ];
+  // Native insertion retains the legacy whitespace that Mongoose would trim on writes.
+  await Item.collection.insertMany(legacyItems);
+  const uri = new URL(mongoContainer.getConnectionString());
+  uri.pathname = '/milestone9';
+  uri.searchParams.set('directConnection', 'true');
+  uri.searchParams.set('serverSelectionTimeoutMS', '5000');
+  const runMigration = () =>
+    promisify(execFile)(
+      process.execPath,
+      [path.join(__dirname, '../scripts/migrate-normalize-carriers.js'), '--apply'],
+      {
+        env: { ...process.env, MONGODB_URI: uri.toString() },
+        timeout: 20000,
+      }
+    );
+
+  const { stdout } = await runMigration();
+  assert.match(stdout, /Done\. Updated 2 document\(s\)/);
+  const storedCanonical = await Item.findById(canonicalItem._id).lean();
+  assert.equal(storedCanonical.updatedAt.getTime(), canonicalItem.updatedAt.getTime());
+  for (const legacy of legacyItems) {
+    assert.equal((await Item.findById(legacy._id)).prijevoznik, 'ACME');
+    const state = await DeliveryNoteSyncState.findOne({ sourceId: legacy._id.toString() });
+    assert.equal(state.carrierName, 'ACME');
+  }
+  assert.equal(await DeliveryNoteOutbox.countDocuments(), 3);
+  assert.match((await runMigration()).stdout, /Nothing to consolidate/);
+});
+
 test('enqueues only meaningful updates and retains a DELETE tombstone', async () => {
   const createdItem = await createItem();
   const originalState = await DeliveryNoteSyncState.findOne({ sourceId: createdItem.id }).lean();
@@ -525,6 +563,45 @@ test('actual HMAC Item routes publish every meaningful update and the DELETE tom
   assert.equal(tombstone.eventType, 'DELETE');
   assert.equal(tombstone.destinationCode, 'VINKOVCI');
   assert.equal(tombstone.quarryCode, '23453');
+});
+
+test('approval publishes the current destination after an edit between initial read and save', async t => {
+  const item = await createItem();
+  const originalExec = Item.Query.prototype.exec;
+  let edited = false;
+  t.mock.method(Item.Query.prototype, 'exec', async function (...args) {
+    const result = await originalExec.apply(this, args);
+    if (!edited && this.op === 'findOne' && !this.getOptions().session && result?.id === item.id) {
+      edited = true;
+      // The approval request retains its initial document while another transaction commits.
+      await itemMutations.withTransaction(async ({ session, saveItem }) => {
+        const current = await Item.findById(item._id).session(session);
+        current.code = 'OSIJEK';
+        current.tezina = 26000;
+        await saveItem(current);
+      });
+    }
+    return result;
+  });
+
+  const response = await signedApiRequest({
+    actor: 'admin',
+    method: 'PATCH',
+    path: `/api/items/${item.id}/approval`,
+    body: { approvalStatus: 'odobreno', neto: 27000, inTransit: true },
+  });
+  assert.equal(response.status, 200, response.text);
+  assert.ok(edited);
+  assert.equal(response.body.code, 'OSIJEK');
+  assert.equal(response.body.tezina, 26000);
+  assert.equal(response.body.neto, 27000);
+  const stored = await Item.findById(item._id);
+  const state = await DeliveryNoteSyncState.findOne({ sourceId: item.id });
+  const outbox = await DeliveryNoteOutbox.findOne({ 'event.eventId': state.eventId });
+  assert.equal(stored.code, 'OSIJEK');
+  assert.equal(stored.approvalStatus, 'odobreno');
+  assert.equal(state.destinationCode, 'OSIJEK');
+  assert.equal(outbox.event.destinationCode, 'OSIJEK');
 });
 
 test('actual replacement route publishes the old DELETE and new UPSERT', async () => {

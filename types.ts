@@ -41,6 +41,7 @@ export interface User {
   company: string;
   codes: string[];
   role: 'admin' | 'user' | 'bot';
+  quarryCode?: string;
   isVerified: boolean;
   phoneNumber?: string;
   hasFullAccess?: boolean;
@@ -53,6 +54,7 @@ export interface RegistrationData {
   lastName: string;
   company: string;
   role: 'admin' | 'user' | 'bot';
+  quarryCode?: string;
   codes: string[];
   hasFullAccess?: boolean;
 }

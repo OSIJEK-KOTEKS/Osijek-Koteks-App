@@ -13,7 +13,9 @@ function queryResult(getItems) {
       return this;
     },
     async session() {
-      return getItems().slice(0, this.batchSize);
+      return getItems()
+        .sort((a, b) => a._id.localeCompare(b._id))
+        .slice(0, this.batchSize);
     },
   };
 }
@@ -23,7 +25,10 @@ function fixture(documents, matches) {
   const ItemModel = {
     find: filter => {
       calls.push(['find', filter]);
-      return queryResult(() => documents.filter(matches));
+      const cursor = filter.$and?.find(condition => condition._id)?._id.$gt;
+      return queryResult(() =>
+        documents.filter(item => matches(item) && (!cursor || item._id > cursor))
+      );
     },
   };
   const itemMutationService = {
@@ -32,10 +37,10 @@ function fixture(documents, matches) {
       return work({
         session: { id: 'bulk-session' },
         async saveItem(item) {
-          calls.push(['saveItem', item.id]);
+          calls.push(['saveItem', item._id]);
         },
         async deleteItem(item) {
-          calls.push(['deleteItem', item.id]);
+          calls.push(['deleteItem', item._id]);
           documents.splice(documents.indexOf(item), 1);
         },
       });
@@ -47,10 +52,10 @@ function fixture(documents, matches) {
 
 test('updates matching Items in bounded transactional batches', async () => {
   const documents = [
-    { id: '1', code: 'OLD' },
-    { id: '2', code: 'OLD' },
-    { id: '3', code: 'OLD' },
-    { id: '4', code: 'KEEP' },
+    { _id: '1', code: 'OLD' },
+    { _id: '2', code: 'OLD' },
+    { _id: '3', code: 'OLD' },
+    { _id: '4', code: 'KEEP' },
   ];
   const testFixture = fixture(documents, item => item.code === 'OLD');
   const service = createItemBulkMutationService({ ...testFixture, batchSize: 2 });
@@ -73,9 +78,9 @@ test('updates matching Items in bounded transactional batches', async () => {
 
 test('deletes matching Items through tombstone-producing transactions', async () => {
   const documents = [
-    { id: '1', expired: true },
-    { id: '2', expired: false },
-    { id: '3', expired: true },
+    { _id: '1', expired: true },
+    { _id: '2', expired: false },
+    { _id: '3', expired: true },
   ];
   const testFixture = fixture(documents, item => item.expired);
   const service = createItemBulkMutationService({ ...testFixture, batchSize: 1 });
@@ -84,7 +89,7 @@ test('deletes matching Items through tombstone-producing transactions', async ()
 
   assert.equal(count, 2);
   assert.deepEqual(
-    documents.map(item => item.id),
+    documents.map(item => item._id),
     ['2']
   );
   assert.equal(testFixture.calls.filter(([name]) => name === 'deleteItem').length, 2);
@@ -92,4 +97,26 @@ test('deletes matching Items through tombstone-producing transactions', async ()
 
 test('rejects an unsafe batch size', () => {
   assert.throws(() => createItemBulkMutationService({ batchSize: 0 }), /positive integer/);
+});
+
+test('visits each matching Item once even when the mutation leaves it matching', async () => {
+  const documents = [
+    { _id: '3', code: 'ACME' },
+    { _id: '1', code: 'ACME' },
+    { _id: '4', code: 'KEEP' },
+    { _id: '2', code: 'ACME' },
+  ];
+  const testFixture = fixture(documents, item => item.code === 'ACME');
+  const service = createItemBulkMutationService({ ...testFixture, batchSize: 2 });
+  const visited = [];
+  const count = await service.updateMatchingItems({
+    filter: { code: 'ACME' },
+    mutateItem(item) {
+      assert.ok(!visited.includes(item._id), 'An Item must not be processed twice');
+      visited.push(item._id);
+      item.code = 'ACME';
+    },
+  });
+  assert.equal(count, 3);
+  assert.deepEqual(visited, ['1', '2', '3']);
 });

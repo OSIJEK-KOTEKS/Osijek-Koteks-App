@@ -1347,30 +1347,31 @@ router.patch(
         return res.status(400).json({ message: 'Invalid approval status' });
       }
 
-      // Update basic approval fields
-      item.approvalStatus = approvalStatus;
+      // Prepare changes outside the transaction while files are uploaded.
+      const approvalChanges = {
+        approvalStatus,
+        approvalDate: new Date(),
+        approvedBy: req.user._id,
+      };
 
-      // FIX: Store approvalDate as Date object, not Croatian string
-      item.approvalDate = new Date(); // This will be converted to Croatian string in toJSON method
-
-      item.approvedBy = req.user._id;
-
-      console.log('Updated basic approval fields:', {
-        approvalStatus: item.approvalStatus,
-        approvalDate: item.approvalDate, // This is now a Date object
-        approvedBy: item.approvedBy,
-      });
+      console.log('Prepared basic approval fields:', approvalChanges);
 
       // Handle in_transit field with careful type checking
       if (inTransit !== undefined && inTransit !== null) {
         if (typeof inTransit === 'string') {
-          item.in_transit = inTransit.toLowerCase() === 'true';
+          approvalChanges.in_transit = inTransit.toLowerCase() === 'true';
         } else if (typeof inTransit === 'boolean') {
-          item.in_transit = inTransit;
+          approvalChanges.in_transit = inTransit;
         } else {
-          item.in_transit = false; // Safe default
+          approvalChanges.in_transit = false; // Safe default
         }
-        console.log('Set in_transit to:', item.in_transit, 'from:', inTransit, typeof inTransit);
+        console.log(
+          'Set in_transit to:',
+          approvalChanges.in_transit,
+          'from:',
+          inTransit,
+          typeof inTransit
+        );
       }
 
       // Handle neto field ONLY if it's provided and valid
@@ -1378,16 +1379,8 @@ router.patch(
       if (neto !== undefined && neto !== null && neto !== '') {
         const netoValue = parseFloat(neto);
         if (!isNaN(netoValue) && isFinite(netoValue)) {
-          item.neto = netoValue;
-          console.log('Updated neto to:', item.neto);
-
-          // ONLY set tezina if the item doesn't already have it (preserve original from creation)
-          if (item.tezina === undefined || item.tezina === null) {
-            item.tezina = netoValue;
-            console.log('Set tezina to match neto:', item.tezina);
-          } else {
-            console.log('Preserved existing tezina:', item.tezina);
-          }
+          approvalChanges.neto = netoValue;
+          console.log('Prepared neto:', approvalChanges.neto);
         } else {
           console.warn('Invalid neto value provided:', neto);
         }
@@ -1411,7 +1404,7 @@ router.patch(
             !isNaN(location.coordinates.latitude) &&
             !isNaN(location.coordinates.longitude)
           ) {
-            item.approvalLocation = {
+            approvalChanges.approvalLocation = {
               coordinates: {
                 latitude: location.coordinates.latitude,
                 longitude: location.coordinates.longitude,
@@ -1419,7 +1412,7 @@ router.patch(
               accuracy: typeof location.accuracy === 'number' ? location.accuracy : 0,
               timestamp: location.timestamp ? new Date(location.timestamp) : new Date(),
             };
-            console.log('Set approval location:', item.approvalLocation);
+            console.log('Set approval location:', approvalChanges.approvalLocation);
           } else {
             console.warn('Invalid location data structure:', location);
           }
@@ -1458,7 +1451,7 @@ router.patch(
               }
             }
 
-            item.approvalPhotoFront = {
+            approvalChanges.approvalPhotoFront = {
               url: frontResponse.url,
               uploadDate: new Date(),
               mimeType: frontFile.mimetype,
@@ -1490,7 +1483,7 @@ router.patch(
               }
             }
 
-            item.approvalPhotoBack = {
+            approvalChanges.approvalPhotoBack = {
               url: backResponse.url,
               uploadDate: new Date(),
               mimeType: backFile.mimetype,
@@ -1522,7 +1515,7 @@ router.patch(
               }
             }
 
-            item.approvalDocument = {
+            approvalChanges.approvalDocument = {
               url: pdfResponse.url,
               uploadDate: new Date(),
               mimeType: pdfFile.mimetype,
@@ -1543,23 +1536,32 @@ router.patch(
 
       // Save the updated item with validation
       try {
-        console.log('Saving item with final data:', {
-          id: item._id,
-          approvalStatus: item.approvalStatus,
-          inTransit: item.in_transit,
-          neto: item.neto,
-          tezina: item.tezina,
-          approvalDate: item.approvalDate, // Now a Date object
-          hasLocation: !!item.approvalLocation,
-          hasFrontPhoto: !!item.approvalPhotoFront,
-          hasBackPhoto: !!item.approvalPhotoBack,
-          hasDocument: !!item.approvalDocument,
-        });
+        const approvalResult = await itemMutations.withTransaction(
+          async ({ session, saveItem }) => {
+            const freshItem = await Item.findById(req.params.id).session(session);
+            if (!freshItem) return { status: 'not-found' };
+            if (isAsfaltOnlyUser(req.user) && freshItem.isAsfalt !== true) {
+              return { status: 'forbidden' };
+            }
 
-        const updatedItem = await itemMutations.withTransaction(async ({ saveItem }) =>
-          saveItem(item)
+            freshItem.set(approvalChanges);
+            // Preserve the current weight, including changes made during upload.
+            if (approvalChanges.neto !== undefined && freshItem.tezina == null) {
+              freshItem.tezina = approvalChanges.neto;
+            }
+            return { status: 'updated', item: await saveItem(freshItem) };
+          }
         );
-        await updatedItem.populate('approvedBy', 'firstName lastName');
+        if (approvalResult.status === 'not-found') {
+          return res.status(404).json({ message: 'Item not found' });
+        }
+        if (approvalResult.status === 'forbidden') {
+          return res.status(403).json({
+            message: 'Access denied to this item',
+            messageHr: 'Pristup ovoj stavci je odbijen',
+          });
+        }
+        let updatedItem = approvalResult.item;
 
         console.log('=== APPROVAL SUCCESS ===');
         console.log('Item saved successfully:', updatedItem._id);
@@ -1588,8 +1590,24 @@ router.patch(
 
             // If there are available slots, link this item
             if (linkedItemsCount < matchingAcceptance.acceptedCount) {
-              updatedItem.transportAcceptanceId = matchingAcceptance._id;
-              await itemMutations.withTransaction(async ({ saveItem }) => saveItem(updatedItem));
+              const linkedItem = await itemMutations.withTransaction(
+                async ({ session, saveItem }) => {
+                  const freshItem = await Item.findById(updatedItem._id).session(session);
+                  if (
+                    !freshItem ||
+                    freshItem.transportAcceptanceId ||
+                    freshItem.approvalStatus !== 'odobreno' ||
+                    freshItem.code !== matchingAcceptance.gradiliste ||
+                    freshItem.registracija !== updatedItem.registracija
+                  ) {
+                    return null;
+                  }
+                  freshItem.transportAcceptanceId = matchingAcceptance._id;
+                  return saveItem(freshItem);
+                }
+              );
+              if (!linkedItem) break;
+              updatedItem = linkedItem;
 
               // Add the registration to the acceptance's registrations array
               const itemFirstPart = getFirstPartOfRegistration(updatedItem.registracija);
@@ -1655,6 +1673,8 @@ router.patch(
             console.error('Speed calculation error (non-fatal):', speedError.message);
           }
         }
+
+        await updatedItem.populate('approvedBy', 'firstName lastName');
 
         // Return the updated item
         if (updatedItem.approvalStatus === 'odobreno') {

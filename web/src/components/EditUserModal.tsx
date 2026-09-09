@@ -205,6 +205,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         email: user.email,
         company: user.company,
         role: user.role,
+        quarryCode: user.quarryCode || '',
         codes: [...user.codes],
         assignedRegistrations: [...(user.assignedRegistrations || [])],
         isVerified: user.isVerified,
@@ -263,13 +264,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?._id) return;
+    if (formData.role === 'bot' && !formData.quarryCode?.trim()) {
+      setError('Kod kamenoloma je obavezan za bot korisnike');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
 
     try {
       console.log('Submitting form data:', formData);
-      await apiService.updateUser(user._id, formData);
+      await apiService.updateUser(user._id, {
+        ...formData,
+        quarryCode: formData.role === 'bot' ? formData.quarryCode?.trim() : undefined,
+      });
       onSuccess();
       onClose();
     } catch (err) {
@@ -386,6 +394,21 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <option value="bot">Bot</option>
             </Select>
           </FormGroup>
+
+          {formData.role === 'bot' && (
+            <FormGroup>
+              <Label htmlFor="editQuarryCode">Kod kamenoloma</Label>
+              <Input
+                id="editQuarryCode"
+                type="text"
+                value={formData.quarryCode || ''}
+                onChange={e => setFormData({ ...formData, quarryCode: e.target.value })}
+                required
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </FormGroup>
+          )}
 
           {formData.role !== 'admin' && (
             <FormGroup>
@@ -508,7 +531,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   </CodeBadge>
                 ))
               ) : (
-                <div style={{ color: '#999', fontStyle: 'italic' }}>Nema dodijeljenih registracija</div>
+                <div style={{ color: '#999', fontStyle: 'italic' }}>
+                  Nema dodijeljenih registracija
+                </div>
               )}
             </CodesList>
           </FormGroup>

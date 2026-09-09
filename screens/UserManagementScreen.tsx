@@ -27,6 +27,7 @@ interface UserFormData {
   lastName: string;
   company: string;
   role: 'admin' | 'user' | 'bot';
+  quarryCode: string;
   codes: string[];
   password?: string;
   newPassword?: string;
@@ -76,6 +77,7 @@ export const UserManagementScreen: React.FC = () => {
     lastName: '',
     company: '',
     role: 'user',
+    quarryCode: '',
     codes: [],
     password: '',
     isVerified: false,
@@ -144,6 +146,7 @@ export const UserManagementScreen: React.FC = () => {
       lastName: user.lastName,
       company: user.company,
       role: user.role,
+      quarryCode: user.quarryCode || '',
       codes: user.codes,
       isVerified: user.isVerified,
       hasFullAccess: user.hasFullAccess || false,
@@ -196,6 +199,10 @@ export const UserManagementScreen: React.FC = () => {
       Alert.alert('Greška', 'Firma je obavezna');
       return false;
     }
+    if (formData.role === 'bot' && !formData.quarryCode.trim()) {
+      Alert.alert('Greška', 'Kod kamenoloma je obavezan za bot korisnike');
+      return false;
+    }
     return true;
   };
 
@@ -210,13 +217,17 @@ export const UserManagementScreen: React.FC = () => {
           lastName: formData.lastName,
           company: formData.company,
           role: formData.role,
+          quarryCode: formData.role === 'bot' ? formData.quarryCode.trim() : undefined,
           codes: formData.codes,
         };
 
         await apiService.createUser(registrationData);
       } else if (selectedUser?._id) {
         const { password, newPassword, _id, ...updateData } = formData;
-        await apiService.updateUser(selectedUser._id, updateData);
+        await apiService.updateUser(selectedUser._id, {
+          ...updateData,
+          quarryCode: formData.role === 'bot' ? formData.quarryCode.trim() : undefined,
+        });
 
         // Handle password update if new password is provided
         if (newPassword) {
@@ -483,6 +494,17 @@ export const UserManagementScreen: React.FC = () => {
                     </View>
                   )}
                 </View>
+                {formData.role === 'bot' && (
+                  <Input
+                    label="Kod kamenoloma"
+                    placeholder="Unesite kod kamenoloma"
+                    value={formData.quarryCode}
+                    onChangeText={text => setFormData({ ...formData, quarryCode: text })}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    containerStyle={styles.inputContainer}
+                  />
+                )}
                 {formData.role !== 'admin' && (
                   <View style={styles.fullAccessContainer}>
                     <Text style={styles.fullAccessLabel}>Pristup dokumentima</Text>

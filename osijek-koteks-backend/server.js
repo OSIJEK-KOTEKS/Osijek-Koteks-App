@@ -7,10 +7,10 @@ require('dotenv').config();
 const { initCarrierUnification } = require('./utils/carrierUnification');
 const { createItemBulkMutationService } = require('./services/itemBulkMutationService');
 const { createDeliveryNoteWorker } = require('./services/deliveryNoteWorker');
+const { createServerShutdown } = require('./services/serverShutdownService');
 
 const itemBulkMutations = createItemBulkMutationService();
 let deliveryNoteWorker = null;
-let shutdownPromise = null;
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -217,23 +217,13 @@ mongoose
     process.exit(1);
   });
 
-async function shutdown(signal) {
-  if (shutdownPromise) return shutdownPromise;
-
-  shutdownPromise = (async () => {
-    console.log(`Received ${signal}; shutting down cleanly`);
+const shutdown = createServerShutdown({
+  io,
+  stopWorker: async () => {
     if (deliveryNoteWorker) await deliveryNoteWorker.stop();
-    if (server.listening) {
-      await new Promise((resolve, reject) => {
-        server.close(error => (error ? reject(error) : resolve()));
-      });
-    }
-    await mongoose.connection.close();
-    console.log('Server, delivery worker, and MongoDB connection closed');
-  })();
-
-  return shutdownPromise;
-}
+  },
+  closeDatabase: () => mongoose.connection.close(),
+});
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => {

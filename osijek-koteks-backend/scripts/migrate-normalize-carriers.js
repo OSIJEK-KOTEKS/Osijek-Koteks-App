@@ -120,7 +120,8 @@ async function main() {
   for (const entry of plan) {
     for (const change of entry.changes) {
       const modifiedCount = await itemBulkMutations.updateMatchingItems({
-        filter: { prijevoznik: change.from },
+        // $expr preserves the raw variant instead of applying the schema's trim setter.
+        filter: { $expr: { $eq: ['$prijevoznik', { $literal: change.from }] } },
         mutateItem: item => {
           item.prijevoznik = entry.canonical;
         },
