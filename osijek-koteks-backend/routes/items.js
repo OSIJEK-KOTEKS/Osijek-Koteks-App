@@ -21,6 +21,12 @@ const {
 const { createItemMutationService } = require('../services/itemMutationService');
 const { parseRobaFromPdfUrl } = require('../utils/parseRoba');
 
+// Loads under one tonne are not real deliveries — almost all of them are 0 kg
+// rows the scale produced. They are created and then discarded immediately, so
+// downstream systems see the same UPSERT/DELETE pair they would for any other
+// short-lived item. scripts/remove-underweight-items.js uses the same cutoff.
+const UNDER_WEIGHT_KG = 1000;
+
 const itemMutations = createItemMutationService();
 // Function to extract RN code from filename with special pattern handling
 const extractRNFromFilename = (filename, defaultCode) => {
@@ -795,8 +801,12 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
     };
     const incomingWeight = parseWeight(tezina) !== null ? parseWeight(tezina) : parseWeight(neto);
 
+    // A missing weight means "unknown", not "light", so it is left alone.
+    const isUnderWeight = incomingWeight !== null && incomingWeight < UNDER_WEIGHT_KG;
+
     // Read the delivered material off the scale ticket. Asfalt otpremnice have
-    // no "Roba:" block, so only the bot's tickets are worth fetching.
+    // no "Roba:" block, so only the bot's tickets are worth fetching, and an
+    // underweight load is about to be discarded — no point downloading its PDF.
     //
     // Deliberately before the transaction below: this is a download from
     // Google Drive that routinely takes a second or two, and holding a Mongo
@@ -807,7 +817,7 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
     // up anything that comes back empty.
     let roba = null;
     let robaSifra = null;
-    if (!req.file) {
+    if (!req.file && !isUnderWeight) {
       try {
         ({ roba, robaSifra } = await parseRobaFromPdfUrl(pdfUrl.trim()));
         console.log('Read Roba from item PDF:', { roba, robaSifra });
@@ -954,6 +964,47 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
       } catch (error) {
         console.error('Error deleting replaced Item asset:', error);
       }
+    }
+
+    // Discard the underweight load. Deleting it through the mutation service
+    // (rather than skipping creation) keeps the delivery-note trail honest:
+    // targets see the item arrive and then go, exactly as they would if an
+    // admin had deleted it by hand.
+    if (isUnderWeight) {
+      const discarded = await itemMutations.withTransaction(async ({ session, deleteItem }) => {
+        const fresh = await Item.findById(newItem._id).session(session);
+        if (!fresh) return null;
+
+        const filesToDelete = [
+          fresh.approvalPhotoFront?.publicId,
+          fresh.approvalPhotoBack?.publicId,
+          fresh.approvalDocument?.publicId,
+        ].filter(Boolean);
+
+        await deleteItem(fresh);
+        return { filesToDelete };
+      });
+
+      for (const publicId of discarded?.filesToDelete || []) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.error('Error deleting discarded Item asset:', error);
+        }
+      }
+
+      console.log('Discarded underweight item:', {
+        id: newItem._id,
+        title: newItem.title,
+        tezina: newItem.tezina,
+        neto: newItem.neto,
+      });
+
+      return res.status(200).json({
+        message: `Item discarded: weight is under ${UNDER_WEIGHT_KG} kg`,
+        discarded: true,
+        tezina: newItem.tezina,
+      });
     }
 
     res.status(201).json(newItem);

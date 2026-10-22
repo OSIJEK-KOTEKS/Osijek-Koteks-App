@@ -680,3 +680,50 @@ test('old TransportAcceptance link and TransportRequest completion still work', 
   assert.equal(storedRequest.status, 'Završen');
   assert.equal(await DeliveryNoteOutbox.countDocuments(), 2);
 });
+
+test('discards a load under one tonne and publishes both its arrival and removal', async () => {
+  const outboxBefore = await DeliveryNoteOutbox.countDocuments();
+  const body = apiItem({ neto: 500, tezina: 500 });
+
+  const response = await signedApiRequest({
+    actor: 'bot',
+    method: 'POST',
+    path: '/api/items',
+    body,
+  });
+
+  assert.equal(response.status, 200, response.text);
+  assert.equal(response.body.discarded, true);
+
+  // Nothing is left behind in the collection.
+  assert.equal(await Item.countDocuments({ title: body.title }), 0);
+
+  // The targets saw it arrive and then go, rather than never hearing of it:
+  // one UPSERT from the create, one DELETE from the discard.
+  assert.equal(await DeliveryNoteOutbox.countDocuments(), outboxBefore + 2);
+});
+
+test('keeps a load of exactly one tonne, and one whose weight is unknown', async () => {
+  const atCutoff = await signedApiRequest({
+    actor: 'bot',
+    method: 'POST',
+    path: '/api/items',
+    body: apiItem({ neto: 1000, tezina: 1000 }),
+  });
+  assert.equal(atCutoff.status, 201, atCutoff.text);
+  assert.equal(atCutoff.body.tezina, 1000);
+
+  // A missing weight means "unknown", not "light" — it must not be discarded.
+  const noWeight = apiItem();
+  delete noWeight.neto;
+  delete noWeight.tezina;
+
+  const unknown = await signedApiRequest({
+    actor: 'bot',
+    method: 'POST',
+    path: '/api/items',
+    body: noWeight,
+  });
+  assert.equal(unknown.status, 201, unknown.text);
+  assert.equal(await Item.countDocuments({ title: noWeight.title }), 1);
+});
