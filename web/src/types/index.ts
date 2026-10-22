@@ -39,6 +39,9 @@ export interface Item {
   neto?: number;
   tezina?: number;
   prijevoznik?: string;
+  // Material read off the "Roba:" block of the scale ticket PDF (non-asfalt items)
+  roba?: string | null;
+  robaSifra?: string | null;
   pdfUrl: string;
   isAsfalt?: boolean;
   creationDate: string;

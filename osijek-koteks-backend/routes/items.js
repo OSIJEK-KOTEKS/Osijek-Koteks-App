@@ -14,6 +14,7 @@ const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
 const { normalizeCarrier } = require('../utils/normalizeCarrier');
+const { parseRobaFromPdfUrl } = require('../utils/parseRoba');
 // Function to extract RN code from filename with special pattern handling
 const extractRNFromFilename = (filename, defaultCode) => {
   if (!filename || typeof filename !== 'string') {
@@ -865,6 +866,25 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
       creationTime,
       approvalStatus: 'na čekanju',
     });
+
+    // Read the delivered material off the scale ticket. Asfalt otpremnice
+    // have no "Roba:" block, so only the bot's tickets are worth fetching.
+    // Best effort by design: a Drive hiccup or an unfamiliar ticket layout
+    // must never stop an item being created — scripts/backfill-roba.js
+    // sweeps up anything that comes back empty.
+    if (!item.isAsfalt) {
+      try {
+        const { roba, robaSifra } = await parseRobaFromPdfUrl(item.pdfUrl);
+        item.roba = roba;
+        item.robaSifra = robaSifra;
+        console.log('Read Roba from item PDF:', { roba, robaSifra });
+      } catch (err) {
+        console.error('Failed to read Roba from item PDF:', {
+          pdfUrl: item.pdfUrl,
+          error: err?.message,
+        });
+      }
+    }
 
     // BACKWARD COMPATIBILITY: Handle both neto and tezina fields
     // Priority: explicit tezina > explicit neto > undefined

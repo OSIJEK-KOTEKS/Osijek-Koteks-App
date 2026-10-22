@@ -59,6 +59,24 @@ const ItemSchema = new mongoose.Schema(
       required: false,
       trim: true,
     },
+    // Material delivered, read off the "Roba:" block of the scale ticket PDF
+    // when the item is created. Stays null on asfalt items (their otpremnica
+    // has no such block) and whenever the ticket could not be read.
+    roba: {
+      type: String,
+      required: false,
+      trim: true,
+      default: null,
+    },
+    // The supplier's own code for that material (the "* Šifra:" line under
+    // Roba). Stable across spelling drift in the name, so prefer it when
+    // grouping or filtering.
+    robaSifra: {
+      type: String,
+      required: false,
+      trim: true,
+      default: null,
+    },
     pdfUrl: {
       type: String,
       required: true,

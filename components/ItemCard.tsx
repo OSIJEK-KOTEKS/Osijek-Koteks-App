@@ -103,6 +103,14 @@ export const ItemCard = React.memo(
                   <Text style={styles.detailValue}>{item.code}</Text>
                 </View>
 
+                {/* Material, read off the scale ticket when the item was created */}
+                {item.roba && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Roba:</Text>
+                    <Text style={styles.detailValue}>{item.roba}</Text>
+                  </View>
+                )}
+
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Kreiran:</Text>
                   <Text style={styles.detailValue}>

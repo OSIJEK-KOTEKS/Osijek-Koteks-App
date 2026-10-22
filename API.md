@@ -113,6 +113,8 @@ Important access rules:
   "neto": 12345,
   "tezina": 12345,
   "prijevoznik": "string",
+  "roba": "string|null",
+  "robaSifra": "string|null",
   "pdfUrl": "string",
   "creationDate": "DD.MM.YYYY",
   "creationTime": "HH:mm",
@@ -568,6 +570,7 @@ Behavior:
 - `creationTime` is generated server-side in `Europe/Zagreb`
 - initial `approvalStatus` is `na čekanju`
 - `neto` and `tezina` are synchronized if only one is provided
+- for non-asfalt items the server downloads `pdfUrl` and reads `roba` / `robaSifra` off the ticket's "Roba:" block; both stay `null` if the download or parse fails, and the item is still created
 - if an approved transport acceptance already exists for the same `code`, the item may be auto-linked
 
 Response: created item.

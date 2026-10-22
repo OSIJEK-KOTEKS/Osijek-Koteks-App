@@ -8,6 +8,7 @@ const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const axios = require('axios');
 const JSZip = require('jszip');
 const { PDFDocument, StandardFonts } = require('pdf-lib');
+const { getGoogleDriveDownloadUrl } = require('../utils/pdfDownload');
 
 const ensureRacuniAccess = (req, res, next) => {
   if (req.user.role === 'admin' || req.user.canAccessRacuni) {
@@ -58,24 +59,13 @@ const baseBillQuery = () =>
   Bill.find().populate({
     path: 'items',
     select:
-      'title code pdfUrl creationDate creationTime registracija prijevoznik approvalStatus approvalDate approvedBy in_transit isPaid neto tezina approvalLocation approvalDocument approvalPhotoFront approvalPhotoBack',
+      'title code pdfUrl creationDate creationTime registracija prijevoznik roba robaSifra approvalStatus approvalDate approvedBy in_transit isPaid neto tezina approvalLocation approvalDocument approvalPhotoFront approvalPhotoBack',
     populate: { path: 'approvedBy', select: 'firstName lastName email' },
   });
 
 const sanitizeName = (value, fallback = 'bill-items') => {
   if (!value || typeof value !== 'string' || !value.trim()) return fallback;
   return value.trim().replace(/[^\w.-]+/g, '-');
-};
-
-const getGoogleDriveDownloadUrl = url => {
-  const driveIdMatch =
-    url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/open\?id=([a-zA-Z0-9_-]+)/);
-
-  if (driveIdMatch?.[1]) {
-    return `https://drive.google.com/uc?export=download&id=${driveIdMatch[1]}`;
-  }
-
-  return url;
 };
 
 const getPdfDownloadUrl = (url, req) => {

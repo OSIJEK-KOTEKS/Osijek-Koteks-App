@@ -1214,6 +1214,13 @@ const Dashboard: React.FC = () => {
                     </ItemDetails>
                   )}
 
+                  {/* Material, read off the scale ticket when the item was created */}
+                  {item.roba && (
+                    <ItemDetails>
+                      <strong>Roba:</strong> {item.roba}
+                    </ItemDetails>
+                  )}
+
                   {/* Display prijevoznik if it exists */}
                   {item.prijevoznik && (
                     <ItemDetails>

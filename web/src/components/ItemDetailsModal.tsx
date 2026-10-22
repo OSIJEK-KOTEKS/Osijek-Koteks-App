@@ -180,6 +180,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, isOpen, onClo
           <strong>RN:</strong> {getFormattedCode(item.code)}
         </ItemDetail>
 
+        {item.roba && (
+          <ItemDetail>
+            <strong>Roba:</strong> {item.roba}
+            {item.robaSifra && <> (šifra {item.robaSifra})</>}
+          </ItemDetail>
+        )}
+
         {item.prijevoznik && (
           <ItemDetail>
             <strong>Prijevoznik:</strong> {item.prijevoznik}
