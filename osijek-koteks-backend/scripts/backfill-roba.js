@@ -12,6 +12,7 @@
  *   node scripts/backfill-roba.js                     # dry run, prints plan
  *   node scripts/backfill-roba.js --apply             # actually update DB
  *   node scripts/backfill-roba.js --apply --limit=50  # work through in batches
+ *   node scripts/backfill-roba.js --apply --since-hours=2   # only recent arrivals
  *   node scripts/backfill-roba.js --apply --verbose
  *
  * Reads MONGODB_URI from .env (same as server.js).
@@ -32,6 +33,16 @@ const VERBOSE = process.argv.includes('--verbose');
 const limitArg = process.argv.find(arg => arg.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 0;
 
+// --since-hours=N restricts the sweep to items created in the last N hours,
+// for catching up on what arrived while a deploy was in flight.
+const sinceArg = process.argv.find(arg => arg.startsWith('--since-hours='));
+const SINCE_HOURS = sinceArg ? parseFloat(sinceArg.split('=')[1]) : 0;
+
+if (sinceArg && !(SINCE_HOURS > 0)) {
+  console.error('--since-hours must be a positive number of hours. Aborting.');
+  process.exit(1);
+}
+
 async function main() {
   if (!process.env.MONGODB_URI) {
     console.error('MONGODB_URI is not set. Aborting.');
@@ -46,6 +57,12 @@ async function main() {
     pdfUrl: { $exists: true, $ne: '' },
     $or: [{ roba: null }, { roba: { $exists: false } }],
   };
+
+  if (SINCE_HOURS > 0) {
+    const cutoff = new Date(Date.now() - SINCE_HOURS * 60 * 60 * 1000);
+    filter.creationDate = { $gte: cutoff };
+    console.log(`Only items created since ${cutoff.toISOString()} (last ${SINCE_HOURS}h).`);
+  }
 
   const total = await Item.countDocuments(filter);
 
