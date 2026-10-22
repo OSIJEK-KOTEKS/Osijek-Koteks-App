@@ -110,12 +110,32 @@ export const buildBillPrintPdf = async (bill: Bill, token: string) => {
     }
   };
 
+  // Widths add up to the usable width (PAGE_WIDTH - 2 * MARGIN = 515.28).
+  // Roba gets the second-widest column because material names run long
+  // ("V-K-AGREGAT DOLOM. 0/63 (TAMPON)"); anything that still overflows is
+  // cut by fitText below rather than running into the next column.
   const columns = [
-    { key: 'title', label: 'Dokument', width: 210 },
-    { key: 'code', label: 'RN', width: 90 },
-    { key: 'status', label: 'Status', width: 90 },
-    { key: 'prijevoznik', label: 'Prijevoznik', width: 90 },
+    { key: 'title', label: 'Dokument', width: 150 },
+    { key: 'code', label: 'RN', width: 60 },
+    { key: 'status', label: 'Status', width: 60 },
+    { key: 'prijevoznik', label: 'Prijevoznik', width: 85 },
+    { key: 'roba', label: 'Roba', width: 160 },
   ] as const;
+
+  // Trims text to a column, leaving a small gutter so neighbouring cells
+  // never touch. Measured with the same font the cell is drawn in.
+  const fitText = (text: string, width: number, size: number, bold = false) => {
+    const usedFont = bold ? boldFont : font;
+    const maxWidth = width - 6;
+    const ascii = toAscii(text);
+    if (usedFont.widthOfTextAtSize(ascii, size) <= maxWidth) return ascii;
+
+    let trimmed = ascii;
+    while (trimmed.length > 1 && usedFont.widthOfTextAtSize(trimmed + '...', size) > maxWidth) {
+      trimmed = trimmed.slice(0, -1);
+    }
+    return trimmed + '...';
+  };
 
   // Add original attachment before the table so it appears first
   if (bill.attachment?.url) {
@@ -144,7 +164,7 @@ export const buildBillPrintPdf = async (bill: Bill, token: string) => {
     if (!page) addPage();
     let x = MARGIN;
     columns.forEach(col => {
-      drawText(col.label, x, 11, true);
+      drawText(fitText(col.label, col.width, 11, true), x, 11, true);
       x += col.width;
     });
     nextLine(14);
@@ -166,11 +186,12 @@ export const buildBillPrintPdf = async (bill: Bill, token: string) => {
       safeText(item.code),
       statusLabel(item.approvalStatus),
       safeText(item.prijevoznik),
+      safeText(item.roba),
     ];
 
     cells.forEach((text, idx) => {
       const col = columns[idx];
-      drawText(toAscii(text), x, 10, false);
+      drawText(fitText(text, col.width, 10), x, 10, false);
       x += col.width;
     });
 

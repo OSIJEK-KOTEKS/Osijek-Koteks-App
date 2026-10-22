@@ -232,6 +232,7 @@ const buildBillItemsDetailPdf = async (bill, req) => {
     nextLine(18);
     drawLabelValue('RN', safeText(item.code));
     drawLabelValue('Registracija', safeText(item.registracija));
+    drawLabelValue('Roba', safeText(item.roba));
     const weightValue =
       typeof item.tezina === 'number'
         ? `${(item.tezina / 1000).toFixed(3)} t`

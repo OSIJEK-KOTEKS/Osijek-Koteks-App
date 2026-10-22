@@ -526,6 +526,8 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               <option value="date-desc">Najnoviji prvo</option>
               <option value="date-asc">Najstariji prvo</option>
               <option value="approved-first">Odobreni prvo</option>
+              <option value="roba-asc">Roba (A-Ž)</option>
+              <option value="roba-desc">Roba (Ž-A)</option>
             </Select>
           </FilterInputContainer>
         </FilterSection>

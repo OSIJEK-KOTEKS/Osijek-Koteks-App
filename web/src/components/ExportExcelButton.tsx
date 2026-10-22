@@ -118,7 +118,49 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
     return `${fileName}.xlsx`;
   };
 
-  const prepareExcelData = (itemsToExport: Item[]) => {
+  // One row per item, shared by the RN sheets and the per-material sheets
+  // so the two can never drift apart.
+  const buildItemRows = (rows: Item[]) =>
+    rows.map((item, index) => ({
+      'Redni broj': index + 1,
+      'Broj otpremnice': item.title,
+      'Radni nalog': getFormattedCode(item.code),
+      Dobavljač: getDisplayNameForUser(item),
+      Prijevoznik: item.prijevoznik || '-',
+      Registracija: item.registracija || '-',
+      Roba: item.roba || '-',
+      'Težina (t)': item.tezina !== undefined ? item.tezina / 1000 : null,
+      'Razlika u vaganju (%)':
+        item.approvalStatus === 'odobreno' && item.neto !== undefined
+          ? item.neto > 1000
+            ? '/'
+            : item.neto
+          : null,
+      'Datum kreiranja otpremnice': item.creationTime
+        ? `${item.creationDate} ${item.creationTime}`
+        : item.creationDate,
+      Status: item.approvalStatus,
+      'Plaćen Prijevoz': item.isPaid ? 'Da' : 'Ne',
+      'U tranzitu': item.in_transit ? 'Da' : 'Ne',
+      Odobrio: item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-',
+      'Datum odobrenja': item.approvalDate || '-',
+      'Lokacija - Širina': item.approvalLocation?.coordinates?.latitude || null,
+      'Lokacija - Dužina': item.approvalLocation?.coordinates?.longitude || null,
+      'Lokacija - Točnost': item.approvalLocation?.accuracy || null,
+    }));
+
+  // Groups the export by material. Items backfilled before the material was
+  // being read, and asfalt loads whose otpremnica has no "Roba:" block, land
+  // in one "Bez robe" group rather than being dropped.
+  const groupByRoba = (itemsToExport: Item[]) =>
+    itemsToExport.reduce((acc, item) => {
+      const roba = item.roba && item.roba.trim() ? item.roba.trim() : 'Bez robe';
+      if (!acc[roba]) acc[roba] = [];
+      acc[roba].push(item);
+      return acc;
+    }, {} as Record<string, Item[]>);
+
+  const prepareExcelData = (itemsToExport: Item[], includeRobaSheets: boolean) => {
     // Group items by code
     const itemsByCode = itemsToExport.reduce((acc, item) => {
       const code = item.code;
@@ -137,32 +179,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
     // Prepare data for each code sheet
     const codeSheets = sortedCodes.map(code => {
       const codeItems = itemsByCode[code];
-      const codeData = codeItems.map((item, index) => ({
-        'Redni broj': index + 1,
-        'Broj otpremnice': item.title,
-        'Radni nalog': getFormattedCode(item.code),
-        Dobavljač: getDisplayNameForUser(item),
-        Prijevoznik: item.prijevoznik || '-',
-        Registracija: item.registracija || '-',
-        'Težina (t)': item.tezina !== undefined ? item.tezina / 1000 : null,
-        'Razlika u vaganju (%)':
-          item.approvalStatus === 'odobreno' && item.neto !== undefined
-            ? item.neto > 1000
-              ? '/'
-              : item.neto
-            : null,
-        'Datum kreiranja otpremnice': item.creationTime
-          ? `${item.creationDate} ${item.creationTime}`
-          : item.creationDate,
-        Status: item.approvalStatus,
-        'Plaćen Prijevoz': item.isPaid ? 'Da' : 'Ne',
-        'U tranzitu': item.in_transit ? 'Da' : 'Ne',
-        Odobrio: item.approvedBy ? `${item.approvedBy.firstName} ${item.approvedBy.lastName}` : '-',
-        'Datum odobrenja': item.approvalDate || '-',
-        'Lokacija - Širina': item.approvalLocation?.coordinates?.latitude || null,
-        'Lokacija - Dužina': item.approvalLocation?.coordinates?.longitude || null,
-        'Lokacija - Točnost': item.approvalLocation?.accuracy || null,
-      }));
+      const codeData = buildItemRows(codeItems);
 
       // Calculate totals for this code
       const totals = {
@@ -237,7 +254,35 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       ['Filter - U tranzitu:', inTransitOnly ? 'Da' : 'Ne'],
     ];
 
-    return { codeSheets, summaryData };
+    // One sheet per material, in the same shape as the RN sheets, plus a
+    // matching block in the summary. Only when asked for, so an export that
+    // declines the prompt is byte-for-byte what it was before.
+    const robaSheets = includeRobaSheets
+      ? Object.entries(groupByRoba(itemsToExport))
+          .sort(([a], [b]) => a.localeCompare(b, 'hr'))
+          .map(([roba, robaItems]) => ({
+            roba,
+            data: buildItemRows(robaItems),
+            totals: {
+              count: robaItems.length,
+              weight: formatNumber(
+                robaItems.reduce((sum, item) => sum + (item.tezina || 0), 0) / 1000,
+                3
+              ),
+            },
+          }))
+      : [];
+
+    if (includeRobaSheets && robaSheets.length > 0) {
+      summaryData.push(
+        ['', ''],
+        ['SAŽETAK PO ROBI', ''],
+        ['Roba', 'Broj dokumenata', 'Težina (t)'],
+        ...robaSheets.map(sheet => [sheet.roba, sheet.totals.count, sheet.totals.weight])
+      );
+    }
+
+    return { codeSheets, summaryData, robaSheets };
   };
 
   const handleExport = useCallback(async () => {
@@ -263,44 +308,78 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         return;
       }
 
-      const { codeSheets, summaryData } = prepareExcelData(itemsToExport);
+      // Only worth asking when there is something to group by.
+      const robaTypes = Object.keys(groupByRoba(itemsToExport)).filter(roba => roba !== 'Bez robe');
+      const includeRobaSheets =
+        robaTypes.length > 0 &&
+        window.confirm(
+          [
+            'Želite li da izvještaj sadrži i zaseban list za svaku vrstu robe?',
+            '',
+            `Pronađeno vrsta robe: ${robaTypes.length}. Postojeći listovi ostaju nepromijenjeni.`,
+          ].join('\n')
+        );
+
+      const { codeSheets, summaryData, robaSheets } = prepareExcelData(
+        itemsToExport,
+        includeRobaSheets
+      );
 
       // Create workbook
       const workbook = XLSX.utils.book_new();
 
-      // Helper function to format numeric columns in a worksheet
+      // Number formats are looked up by column heading rather than by a fixed
+      // index: the columns have shifted before when one was inserted, and the
+      // formats silently followed the wrong data.
+      const numericFormats: Record<string, string> = {
+        'Težina (t)': '#,##0.000',
+        'Razlika u vaganju (%)': '#,##0.00',
+        'Lokacija - Širina': '#,##0.000000',
+        'Lokacija - Dužina': '#,##0.000000',
+        'Lokacija - Točnost': '#,##0',
+      };
+
       const formatNumericColumns = (worksheet: any) => {
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
 
-        for (let row = 1; row <= range.e.r; row++) {
-          // Format Težina (t) column (now column G, index 6)
-          const weightCell = XLSX.utils.encode_cell({ r: row, c: 6 });
-          if (worksheet[weightCell] && typeof worksheet[weightCell].v === 'number') {
-            worksheet[weightCell].z = '#,##0.000';
-          }
+        const columnOf = new Map<string, number>();
+        for (let col = range.s.c; col <= range.e.c; col += 1) {
+          const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: col })];
+          if (header && typeof header.v === 'string') columnOf.set(header.v, col);
+        }
 
-          // Format Razlika u vaganju column (now column H, index 7)
-          const percentCell = XLSX.utils.encode_cell({ r: row, c: 7 });
-          if (worksheet[percentCell] && typeof worksheet[percentCell].v === 'number') {
-            worksheet[percentCell].z = '#,##0.00';
-          }
+        Object.entries(numericFormats).forEach(([heading, format]) => {
+          const col = columnOf.get(heading);
+          if (col === undefined) return;
 
-          // Format Lokacija - Širina column (now column N, index 13)
-          const latCell = XLSX.utils.encode_cell({ r: row, c: 13 });
-          if (worksheet[latCell] && typeof worksheet[latCell].v === 'number') {
-            worksheet[latCell].z = '#,##0.000000';
+          for (let row = range.s.r + 1; row <= range.e.r; row += 1) {
+            const cell = worksheet[XLSX.utils.encode_cell({ r: row, c: col })];
+            if (cell && typeof cell.v === 'number') cell.z = format;
           }
+        });
+      };
 
-          // Format Lokacija - Dužina column (now column O, index 14)
-          const lngCell = XLSX.utils.encode_cell({ r: row, c: 14 });
-          if (worksheet[lngCell] && typeof worksheet[lngCell].v === 'number') {
-            worksheet[lngCell].z = '#,##0.000000';
-          }
+      // Excel rejects a duplicate sheet name and silently mangles the illegal
+      // characters, so every name goes through here. Material names are long
+      // enough that two of them can collide once trimmed to 31 characters.
+      const usedSheetNames = new Set<string>();
+      const ILLEGAL_SHEET_CHARS = [String.fromCharCode(92), '/', '?', '*', '[', ']', ':'];
+      const uniqueSheetName = (base: string) => {
+        let name =
+          ILLEGAL_SHEET_CHARS.reduce((acc, ch) => acc.split(ch).join('_'), base || 'List').trim() ||
+          'List';
+        if (name.length > 31) name = name.substring(0, 31);
+        if (!usedSheetNames.has(name)) {
+          usedSheetNames.add(name);
+          return name;
+        }
 
-          // Format Lokacija - Točnost column (now column P, index 15)
-          const accCell = XLSX.utils.encode_cell({ r: row, c: 15 });
-          if (worksheet[accCell] && typeof worksheet[accCell].v === 'number') {
-            worksheet[accCell].z = '#,##0';
+        for (let suffix = 2; ; suffix += 1) {
+          const tail = `_${suffix}`;
+          const candidate = name.substring(0, 31 - tail.length) + tail;
+          if (!usedSheetNames.has(candidate)) {
+            usedSheetNames.add(candidate);
+            return candidate;
           }
         }
       };
@@ -313,6 +392,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         { wch: 15 }, // Dobavljač (NEW COLUMN)
         { wch: 30 }, // Prijevoznik
         { wch: 15 }, // Registracija
+        { wch: 32 }, // Roba
         { wch: 12 }, // Težina
         { wch: 18 }, // Razlika u vaganju
         { wch: 20 }, // Datum kreiranja
@@ -336,30 +416,20 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
         { wch: 12 },
         { wch: 12 },
       ];
-      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Sažetak');
+      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, uniqueSheetName('Sažetak'));
 
-      // Create individual sheets for each code
-      codeSheets.forEach(codeSheet => {
-        const worksheet = XLSX.utils.json_to_sheet(codeSheet.data);
-
-        // Format numeric columns
+      const appendDataSheet = (rows: any[], name: string) => {
+        const worksheet = XLSX.utils.json_to_sheet(rows);
         formatNumericColumns(worksheet);
-
-        // Set column widths
         worksheet['!cols'] = standardColWidths;
+        XLSX.utils.book_append_sheet(workbook, worksheet, uniqueSheetName(name));
+      };
 
-        // Create a valid sheet name (Excel has restrictions on sheet names)
-        let sheetName = codeSheet.code;
+      // One sheet per RN, exactly as before.
+      codeSheets.forEach(codeSheet => appendDataSheet(codeSheet.data, codeSheet.code));
 
-        // Excel sheet name restrictions: max 31 chars, no special chars
-        sheetName = sheetName.replace(/[\\\/\?\*\[\]:]/g, '_');
-        if (sheetName.length > 31) {
-          sheetName = sheetName.substring(0, 31);
-        }
-
-        // Add sheet to workbook
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-      });
+      // Then one per material, when the export was asked for them.
+      robaSheets.forEach(robaSheet => appendDataSheet(robaSheet.data, robaSheet.roba));
 
       // Generate filename and download
       const fileName = generateFileName();

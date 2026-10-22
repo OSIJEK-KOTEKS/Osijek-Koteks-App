@@ -635,6 +635,21 @@ router.get('/', auth, async (req, res) => {
           creationDate: -1,
         };
         break;
+      // Groups a material's loads together, newest first within each group.
+      // Items with no material yet sort as null: first ascending, last
+      // descending — so roba-desc is the one that keeps them out of the way.
+      case 'roba-asc':
+        sort = {
+          roba: 1,
+          creationDate: -1,
+        };
+        break;
+      case 'roba-desc':
+        sort = {
+          roba: -1,
+          creationDate: -1,
+        };
+        break;
       default:
         sort = { creationDate: -1 };
     }
