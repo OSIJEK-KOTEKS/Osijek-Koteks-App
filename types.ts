@@ -78,9 +78,6 @@ export interface Item {
   registracija?: string;
   neto?: number;
   tezina?: number; // NEW: Add tezina field
-  // Material read off the "Roba:" block of the scale ticket PDF (non-asfalt items)
-  roba?: string | null;
-  robaSifra?: string | null;
   pdfUrl: string;
   creationDate: string;
   creationTime?: string;
