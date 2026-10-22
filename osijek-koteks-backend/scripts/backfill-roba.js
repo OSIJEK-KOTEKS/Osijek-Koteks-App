@@ -41,18 +41,25 @@ async function main() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log(`Connected. Mode: ${APPLY ? 'APPLY' : 'DRY RUN'}`);
 
-  const query = Item.find({
+  const filter = {
     isAsfalt: { $ne: true },
     pdfUrl: { $exists: true, $ne: '' },
     $or: [{ roba: null }, { roba: { $exists: false } }],
-  })
-    .select('_id title pdfUrl')
-    .sort({ creationDate: -1 });
+  };
 
+  const total = await Item.countDocuments(filter);
+
+  // Newest first, so a limited run samples what is currently arriving.
+  const query = Item.find(filter).select('_id title pdfUrl').sort({ creationDate: -1 });
   if (LIMIT > 0) query.limit(LIMIT);
 
   const items = await query;
-  console.log(`${items.length} item(s) without roba.\n`);
+
+  if (items.length < total) {
+    console.log(`${total} item(s) without roba; this run takes the newest ${items.length}.\n`);
+  } else {
+    console.log(`${total} item(s) without roba.\n`);
+  }
 
   let filled = 0;
   const failures = [];
@@ -91,7 +98,8 @@ async function main() {
   }
 
   console.log(
-    `\nDone. ${APPLY ? 'Updated' : 'Would update'} ${filled} of ${items.length} item(s).`
+    `\nDone. ${APPLY ? 'Updated' : 'Would update'} ${filled} of the ${items.length} item(s) tried` +
+      `${items.length < total ? `; ${total - items.length} still to go` : ''}.`
   );
 
   if (failures.length > 0) {
