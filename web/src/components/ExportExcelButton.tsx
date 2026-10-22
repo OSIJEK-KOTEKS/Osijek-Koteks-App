@@ -331,8 +331,10 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       // Number formats are looked up by column heading rather than by a fixed
       // index: the columns have shifted before when one was inserted, and the
       // formats silently followed the wrong data.
+      const WEIGHT_HEADING = 'Težina (t)';
+
       const numericFormats: Record<string, string> = {
-        'Težina (t)': '#,##0.000',
+        [WEIGHT_HEADING]: '#,##0.000',
         'Razlika u vaganju (%)': '#,##0.00',
         'Lokacija - Širina': '#,##0.000000',
         'Lokacija - Dužina': '#,##0.000000',
@@ -418,8 +420,46 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({
       ];
       XLSX.utils.book_append_sheet(workbook, summaryWorksheet, uniqueSheetName('Sažetak'));
 
+      // Closing line on every data sheet: how many documents it holds and what
+      // they weigh in total. Written as a real number, not text, so it can be
+      // read straight into another calculation; formatNumericColumns picks up
+      // the weight format for it because it sits in the Težina column.
+      const appendTotalsRow = (worksheet: any, rows: any[]) => {
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+
+        let weightColumn = -1;
+        for (let col = range.s.c; col <= range.e.c; col += 1) {
+          const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: col })];
+          if (header && header.v === WEIGHT_HEADING) {
+            weightColumn = col;
+            break;
+          }
+        }
+
+        // Rounded to the gram: summing tonnes converted from kg leaves float
+        // noise (900.4799999999999), which the cell format hides but the
+        // formula bar does not.
+        const totalWeight =
+          Math.round(
+            rows.reduce(
+              (sum, row) =>
+                sum + (typeof row[WEIGHT_HEADING] === 'number' ? row[WEIGHT_HEADING] : 0),
+              0
+            ) * 1000
+          ) / 1000;
+
+        // null leaves a cell untouched rather than writing an empty string.
+        const totals: (string | number | null)[] = new Array(range.e.c + 1).fill(null);
+        totals[0] = 'UKUPNO';
+        totals[1] = `${rows.length} dok.`;
+        if (weightColumn >= 0) totals[weightColumn] = totalWeight;
+
+        XLSX.utils.sheet_add_aoa(worksheet, [totals], { origin: -1 });
+      };
+
       const appendDataSheet = (rows: any[], name: string) => {
         const worksheet = XLSX.utils.json_to_sheet(rows);
+        appendTotalsRow(worksheet, rows);
         formatNumericColumns(worksheet);
         worksheet['!cols'] = standardColWidths;
         XLSX.utils.book_append_sheet(workbook, worksheet, uniqueSheetName(name));
