@@ -692,11 +692,16 @@ test('discards a load under one tonne and publishes both its arrival and removal
     body,
   });
 
-  assert.equal(response.status, 200, response.text);
-  assert.equal(response.body.discarded, true);
+  // The uploader must not be able to tell. It gets the same 201 and the same
+  // item body it would for any other load, the _id included.
+  assert.equal(response.status, 201, response.text);
+  assert.ok(response.body._id, 'the response must still carry the item id');
+  assert.equal(response.body.title, body.title);
+  assert.equal(response.body.tezina, 500);
 
   // Nothing is left behind in the collection.
   assert.equal(await Item.countDocuments({ title: body.title }), 0);
+  assert.equal(await Item.countDocuments({ _id: response.body._id }), 0);
 
   // The targets saw it arrive and then go, rather than never hearing of it:
   // one UPSERT from the create, one DELETE from the discard.
@@ -726,4 +731,28 @@ test('keeps a load of exactly one tonne, and one whose weight is unknown', async
   });
   assert.equal(unknown.status, 201, unknown.text);
   assert.equal(await Item.countDocuments({ title: noWeight.title }), 1);
+});
+
+test('an uploader cannot tell a discarded load from a kept one', async () => {
+  const kept = await signedApiRequest({
+    actor: 'bot',
+    method: 'POST',
+    path: '/api/items',
+    body: apiItem({ neto: 24500, tezina: 24500 }),
+  });
+
+  const discarded = await signedApiRequest({
+    actor: 'bot',
+    method: 'POST',
+    path: '/api/items',
+    body: apiItem({ neto: 500, tezina: 500 }),
+  });
+
+  // Same status and the same set of fields on the way out — the only
+  // difference is that one of the two rows no longer exists.
+  assert.equal(discarded.status, kept.status);
+  assert.deepEqual(Object.keys(discarded.body).sort(), Object.keys(kept.body).sort());
+
+  assert.equal(await Item.countDocuments({ _id: kept.body._id }), 1);
+  assert.equal(await Item.countDocuments({ _id: discarded.body._id }), 0);
 });

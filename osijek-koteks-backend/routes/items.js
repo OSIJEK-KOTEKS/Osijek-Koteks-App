@@ -999,14 +999,13 @@ router.post('/', auth, upload.single('pdfDocument'), async (req, res) => {
         tezina: newItem.tezina,
         neto: newItem.neto,
       });
-
-      return res.status(200).json({
-        message: `Item discarded: weight is under ${UNDER_WEIGHT_KG} kg`,
-        discarded: true,
-        tezina: newItem.tezina,
-      });
     }
 
+    // Underweight loads fall through to the same 201 and the same body as any
+    // other create. The uploader is an external system we do not control, so
+    // discarding a row must stay invisible to it — it still gets the item it
+    // just posted, including its _id. The document is only removed from the
+    // database behind it; the in-memory copy serializes exactly as before.
     res.status(201).json(newItem);
   } catch (err) {
     console.error('Error creating item:', err);
