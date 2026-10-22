@@ -420,6 +420,35 @@ router.get('/carriers', auth, async (req, res) => {
   }
 });
 
+// Get unique roba values for filtering - BEFORE /:id route.
+// Same visibility rules as /carriers: a user only sees materials that appear
+// on items they are allowed to see.
+router.get('/roba', auth, async (req, res) => {
+  try {
+    let query = {};
+
+    if (isAsfaltOnlyUser(req.user)) {
+      query.isAsfalt = true;
+    } else if (req.user.role !== 'admin' && !req.user.hasFullAccess) {
+      query.code = { $in: req.user.codes };
+    } else if (req.user.role === 'admin' && req.user.codes && req.user.codes.length > 0) {
+      query.code = { $in: req.user.codes };
+    }
+
+    query.roba = { $exists: true, $ne: null, $ne: '' };
+
+    const uniqueRoba = await Item.distinct('roba', query);
+
+    console.log('Roba query:', query);
+    console.log('Found unique roba:', uniqueRoba.length);
+
+    res.json(uniqueRoba.sort((a, b) => a.localeCompare(b, 'hr')));
+  } catch (err) {
+    console.error('Error fetching unique roba:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get unique registrations (registracija values) - BEFORE /:id route
 router.get('/registrations', auth, async (req, res) => {
   try {
@@ -460,6 +489,7 @@ router.get('/', auth, async (req, res) => {
       endDate,
       code,
       prijevoznik,
+      roba,
       sortOrder = 'date-desc',
       searchTitle,
       searchRegistration,
@@ -567,6 +597,15 @@ router.get('/', auth, async (req, res) => {
     // Prijevoznik filtering
     if (prijevoznik) {
       query.prijevoznik = prijevoznik;
+    }
+
+    // Roba filtering. "Bez robe" selects the items that have no material —
+    // older ones the backfill has not reached, and asfalt loads whose
+    // otpremnica carries no "Roba:" block.
+    if (roba === 'Bez robe') {
+      query.$or = [{ roba: null }, { roba: { $exists: false } }];
+    } else if (roba) {
+      query.roba = roba;
     }
 
     // Search filtering

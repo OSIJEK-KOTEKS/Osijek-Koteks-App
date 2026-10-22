@@ -377,6 +377,7 @@ export const apiService = {
       if (filters?.excludeAsfalt) params.append('excludeAsfalt', 'true');
       if (filters?.prijevoznik && filters.prijevoznik.trim())
         params.append('prijevoznik', filters.prijevoznik);
+      if (filters?.roba && filters.roba.trim()) params.append('roba', filters.roba);
       if (filters?.paidStatus) params.append('paidStatus', filters.paidStatus);
 
       // ADD ONLY THIS ONE LINE to your existing params:
@@ -574,6 +575,17 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching unique carriers:', error);
+      throw error;
+    }
+  },
+
+  //  Get unique roba values for filtering
+  getUniqueRoba: async (): Promise<string[]> => {
+    try {
+      const response = await api.get<string[]>('/api/items/roba');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unique roba:', error);
       throw error;
     }
   },

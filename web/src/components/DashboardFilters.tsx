@@ -111,6 +111,9 @@ interface DashboardFiltersProps {
   selectedPrijevoznik: string;
   onPrijevoznikChange: (prijevoznik: string) => void;
   availableCarriers: string[];
+  selectedRoba: string;
+  onRobaChange: (roba: string) => void;
+  availableRoba: string[];
   selectedUser: string;
   onUserChange: (user: string) => void;
   availableUsers: ItemUser[];
@@ -148,6 +151,9 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedPrijevoznik,
   onPrijevoznikChange,
   availableCarriers,
+  selectedRoba,
+  onRobaChange,
+  availableRoba,
   selectedUser,
   onUserChange,
   availableUsers,
@@ -214,6 +220,14 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
       value: carrier,
       label: carrier,
     })),
+  ];
+
+  // Prepare roba options. "Bez robe" is offered so the items still waiting
+  // on a material can be picked out, not just hidden among the rest.
+  const allRobaOptions = [
+    { value: 'all', label: 'Sva Roba' },
+    ...availableRoba.map(roba => ({ value: roba, label: roba })),
+    { value: 'Bez robe', label: 'Bez robe' },
   ];
 
   // Create grouped users
@@ -485,6 +499,26 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               disabled={searchMode}
               $disabled={searchMode}>
               {allCarriersOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </FilterInputContainer>
+        </FilterSection>
+
+        <FilterSection>
+          <FilterLabel htmlFor="roba-select" $disabled={searchMode}>
+            Roba
+          </FilterLabel>
+          <FilterInputContainer>
+            <Select
+              id="roba-select"
+              value={selectedRoba}
+              onChange={e => onRobaChange(e.target.value)}
+              disabled={searchMode}
+              $disabled={searchMode}>
+              {allRobaOptions.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

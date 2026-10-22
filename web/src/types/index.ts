@@ -148,6 +148,7 @@ export interface ItemFilters {
   code?: string;
   sortOrder?: string;
   prijevoznik?: string;
+  roba?: string;
   searchTitle?: string;
   searchRegistration?: string;
   inTransitOnly?: boolean;

@@ -302,12 +302,14 @@ const Dashboard: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<Item | null>(null);
   const [selectedCode, setSelectedCode] = useState('all');
   const [selectedPrijevoznik, setSelectedPrijevoznik] = useState('all');
+  const [selectedRoba, setSelectedRoba] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
   const [sortOrder, setSortOrder] = useState('date-desc');
 
   // Available options for filters
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);
   const [availableCarriers, setAvailableCarriers] = useState<string[]>([]);
+  const [availableRoba, setAvailableRoba] = useState<string[]>([]);
   const [availableUsers, setAvailableUsers] = useState<ItemUser[]>([]);
 
   // Search states
@@ -519,6 +521,7 @@ const Dashboard: React.FC = () => {
             ...(selectedPrijevoznik !== 'all' && {
               prijevoznik: selectedPrijevoznik,
             }),
+            ...(selectedRoba !== 'all' && { roba: selectedRoba }),
             ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
             sortOrder,
             ...(inTransitOnly && { inTransitOnly: true }),
@@ -573,6 +576,7 @@ const Dashboard: React.FC = () => {
       endDate,
       selectedCode,
       selectedPrijevoznik,
+      selectedRoba,
       selectedUser,
       sortOrder,
       inTransitOnly,
@@ -621,6 +625,22 @@ const Dashboard: React.FC = () => {
       setAvailableCarriers(uniqueCarriers);
     } catch (error) {
       console.error('Error fetching carriers:', error);
+    }
+  }, []);
+
+  const fetchAvailableRoba = useCallback(async () => {
+    try {
+      const roba = await apiService.getUniqueRoba();
+
+      const uniqueRoba = Array.from(new Set(roba))
+        .filter(value => value != null && value !== '')
+        .map(value => String(value).trim())
+        .filter(value => value !== '')
+        .sort((a, b) => a.localeCompare(b, 'hr'));
+
+      setAvailableRoba(uniqueRoba);
+    } catch (error) {
+      console.error('Error fetching roba:', error);
     }
   }, []);
 
@@ -721,6 +741,7 @@ const Dashboard: React.FC = () => {
     endDate,
     selectedCode,
     selectedPrijevoznik,
+    selectedRoba,
     selectedUser,
     sortOrder,
     inTransitOnly,
@@ -739,7 +760,12 @@ const Dashboard: React.FC = () => {
         await fetchItems(1, false, abortControllerRef.current.signal);
 
         // Fetch filter options
-        await Promise.all([fetchAvailableCodes(), fetchAvailableCarriers(), fetchAvailableUsers()]);
+        await Promise.all([
+          fetchAvailableCodes(),
+          fetchAvailableCarriers(),
+          fetchAvailableRoba(),
+          fetchAvailableUsers(),
+        ]);
       } catch (error) {
         console.error('Error initializing dashboard:', error);
       }
@@ -793,6 +819,7 @@ const Dashboard: React.FC = () => {
     setEndDate(today);
     setSelectedCode('all');
     setSelectedPrijevoznik('all');
+    setSelectedRoba('all');
     setSelectedUser('all');
     setSortOrder('date-desc');
     setInTransitOnly(false);
@@ -888,6 +915,7 @@ const Dashboard: React.FC = () => {
     endDate: Date,
     selectedCode: string,
     selectedPrijevoznik: string,
+    selectedRoba: string,
     selectedUser: string,
     inTransitOnly: boolean,
     paidStatus: 'all' | 'paid' | 'unpaid'
@@ -921,6 +949,10 @@ const Dashboard: React.FC = () => {
 
     if (selectedPrijevoznik !== 'all') {
       filters.push(`Prijevoznik: ${selectedPrijevoznik}`);
+    }
+
+    if (selectedRoba !== 'all') {
+      filters.push(`Roba: ${selectedRoba}`);
     }
 
     if (selectedUser !== 'all') {
@@ -998,6 +1030,7 @@ const Dashboard: React.FC = () => {
           ...(selectedPrijevoznik !== 'all' && {
             prijevoznik: selectedPrijevoznik,
           }),
+          ...(selectedRoba !== 'all' && { roba: selectedRoba }),
           ...(selectedUser !== 'all' && { createdByUser: selectedUser }),
           sortOrder,
           ...(inTransitOnly && { inTransitOnly: true }),
@@ -1051,6 +1084,7 @@ const Dashboard: React.FC = () => {
               endDate,
               selectedCode,
               selectedPrijevoznik,
+              selectedRoba,
               selectedUser,
               inTransitOnly,
               paidStatus
@@ -1070,6 +1104,7 @@ const Dashboard: React.FC = () => {
               endDate,
               selectedCode,
               selectedPrijevoznik,
+              selectedRoba,
               selectedUser,
               inTransitOnly,
               paidStatus
@@ -1134,6 +1169,9 @@ const Dashboard: React.FC = () => {
           onCodeChange={setSelectedCode}
           availableCodes={availableCodes}
           selectedPrijevoznik={selectedPrijevoznik}
+          selectedRoba={selectedRoba}
+          onRobaChange={setSelectedRoba}
+          availableRoba={availableRoba}
           onPrijevoznikChange={setSelectedPrijevoznik}
           availableCarriers={availableCarriers}
           selectedUser={selectedUser}
