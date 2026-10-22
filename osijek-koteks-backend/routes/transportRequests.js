@@ -10,7 +10,9 @@ const auth = require('../middleware/auth');
 async function getCoordinates(code) {
   if (!code) return { latitude: null, longitude: null };
   const loc = await CodeLocation.findOne({ code });
-  return loc ? { latitude: loc.latitude, longitude: loc.longitude } : { latitude: null, longitude: null };
+  return loc
+    ? { latitude: loc.latitude, longitude: loc.longitude }
+    : { latitude: null, longitude: null };
 }
 
 // Create a new transport request (admin with prijevoz access only)
@@ -26,10 +28,18 @@ router.post('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only admins can create transport requests' });
     }
 
-    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT, assignedTo, distance } = req.body;
+    const { kamenolom, gradiliste, brojKamiona, prijevozNaDan, isplataPoT, assignedTo, distance } =
+      req.body;
 
     // Validate required fields
-    if (!kamenolom || !gradiliste || !brojKamiona || !prijevozNaDan || isplataPoT === undefined || !assignedTo) {
+    if (
+      !kamenolom ||
+      !gradiliste ||
+      !brojKamiona ||
+      !prijevozNaDan ||
+      isplataPoT === undefined ||
+      !assignedTo
+    ) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -288,19 +298,22 @@ router.get('/acceptances/my', auth, async (req, res) => {
       userId: req.user._id,
     })
       .populate('userId', 'firstName lastName email company')
-      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate(
+        'requestId',
+        'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt'
+      )
       .populate('reviewedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
     // Calculate total payout for each acceptance based on approved items
     const acceptancesWithPayout = await Promise.all(
-      acceptances.map(async (acceptance) => {
+      acceptances.map(async acceptance => {
         const acceptanceObj = acceptance.toObject();
 
         // Find all approved items linked to this acceptance
         const approvedItems = await Item.find({
           transportAcceptanceId: acceptance._id,
-          approvalStatus: 'odobreno'
+          approvalStatus: 'odobreno',
         });
 
         // Calculate total payout: sum of (isplataPoT * neto / 1000) for each approved item
@@ -342,19 +355,22 @@ router.get('/acceptances/user/:userId', auth, async (req, res) => {
       userId: req.params.userId,
     })
       .populate('userId', 'firstName lastName email company')
-      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate(
+        'requestId',
+        'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt'
+      )
       .populate('reviewedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
     // Calculate total payout for each acceptance based on approved items
     const acceptancesWithPayout = await Promise.all(
-      acceptances.map(async (acceptance) => {
+      acceptances.map(async acceptance => {
         const acceptanceObj = acceptance.toObject();
 
         // Find all approved items linked to this acceptance
         const approvedItems = await Item.find({
           transportAcceptanceId: acceptance._id,
-          approvalStatus: 'odobreno'
+          approvalStatus: 'odobreno',
         });
 
         // Calculate total payout: sum of (isplataPoT * neto / 1000) for each approved item
@@ -422,7 +438,9 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Status must be either "approved" or "declined"' });
     }
 
-    const acceptance = await TransportAcceptance.findById(req.params.acceptanceId).populate('requestId');
+    const acceptance = await TransportAcceptance.findById(req.params.acceptanceId).populate(
+      'requestId'
+    );
 
     if (!acceptance) {
       return res.status(404).json({ message: 'Acceptance not found' });
@@ -459,7 +477,10 @@ router.patch('/acceptances/:acceptanceId', auth, async (req, res) => {
     // Reduce brojKamiona in the transport request
     const transportRequest = await TransportRequest.findById(acceptance.requestId._id);
     if (transportRequest) {
-      transportRequest.brojKamiona = Math.max(0, transportRequest.brojKamiona - acceptance.acceptedCount);
+      transportRequest.brojKamiona = Math.max(
+        0,
+        transportRequest.brojKamiona - acceptance.acceptedCount
+      );
       await transportRequest.save();
     }
 
@@ -504,7 +525,10 @@ router.patch('/acceptances/:acceptanceId/payment', auth, async (req, res) => {
       { new: true }
     )
       .populate('userId', 'firstName lastName email company')
-      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate(
+        'requestId',
+        'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt'
+      )
       .populate('reviewedBy', 'firstName lastName email');
 
     if (!acceptance) {
@@ -547,18 +571,21 @@ router.get('/:id/acceptances', auth, async (req, res) => {
 
     const acceptances = await TransportAcceptance.find(query)
       .populate('userId', 'firstName lastName email company')
-      .populate('requestId', 'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt')
+      .populate(
+        'requestId',
+        'kamenolom gradiliste brojKamiona prijevozNaDan isplataPoT status createdAt'
+      )
       .populate('reviewedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
     // Calculate total payout for each acceptance based on approved items
     const acceptancesWithPayout = await Promise.all(
-      acceptances.map(async (acceptance) => {
+      acceptances.map(async acceptance => {
         const acceptanceObj = acceptance.toObject();
 
         const approvedItems = await Item.find({
           transportAcceptanceId: acceptance._id,
-          approvalStatus: 'odobreno'
+          approvalStatus: 'odobreno',
         });
 
         const isplataPoT = acceptance.requestId?.isplataPoT || 0;
@@ -591,21 +618,24 @@ router.get('/:id/delivered-count', auth, async (req, res) => {
     // Get all approved acceptances for this request
     const approvedAcceptances = await TransportAcceptance.find({
       requestId: req.params.id,
-      status: 'approved'
+      status: 'approved',
     });
 
     // Calculate total accepted count
-    const totalAccepted = approvedAcceptances.reduce((sum, acceptance) => sum + acceptance.acceptedCount, 0);
+    const totalAccepted = approvedAcceptances.reduce(
+      (sum, acceptance) => sum + acceptance.acceptedCount,
+      0
+    );
 
     // Count how many items are linked and approved
     const deliveredCount = await Item.countDocuments({
       transportAcceptanceId: { $in: approvedAcceptances.map(a => a._id) },
-      approvalStatus: 'odobreno'
+      approvalStatus: 'odobreno',
     });
 
     res.json({
       delivered: deliveredCount,
-      total: totalAccepted
+      total: totalAccepted,
     });
   } catch (error) {
     console.error('Error fetching delivered count:', error);
@@ -617,7 +647,7 @@ router.get('/:id/delivered-count', auth, async (req, res) => {
 });
 
 // Helper function to extract first part of registration (same logic as frontend)
-const getFirstPartOfRegistration = (registration) => {
+const getFirstPartOfRegistration = registration => {
   // Pattern 1: With spaces - "PŽ 995 FD", "SB 004 NP", "NA 224 O"
   const withSpaces = registration.match(/^([A-ZŠĐČĆŽ]+\s+\d+\s+[A-ZŠĐČĆŽ]{1,4})(?!\d)/i);
   if (withSpaces) return withSpaces[1];
@@ -681,7 +711,8 @@ router.post('/:id/accept', auth, async (req, res) => {
       });
       if (deliveredCount < existingAcceptance.acceptedCount) {
         return res.status(400).json({
-          message: 'Ne možete prihvatiti ovaj zahtjev jer već imate odobreno prihvaćanje za njega koje nije u potpunosti završeno (nije sav materijal prevežen).',
+          message:
+            'Ne možete prihvatiti ovaj zahtjev jer već imate odobreno prihvaćanje za njega koje nije u potpunosti završeno (nije sav materijal prevežen).',
         });
       }
     }

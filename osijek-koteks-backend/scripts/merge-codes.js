@@ -29,9 +29,10 @@ const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const CodeMapping = require('../models/CodeMapping');
 const CodeLocation = require('../models/CodeLocation');
+const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
 
 const APPLY = process.argv.includes('--apply');
-const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const positional = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const [FROM, TO] = positional;
 
 async function main() {
@@ -67,7 +68,9 @@ async function main() {
 
   console.log('\n=== Plan ===');
   console.log(`Items "${FROM}": ${fromItemCount}   →  will be recoded to "${TO}"`);
-  console.log(`Items "${TO}":   ${toItemCount}   (unchanged; total after merge: ${fromItemCount + toItemCount})`);
+  console.log(
+    `Items "${TO}":   ${toItemCount}   (unchanged; total after merge: ${fromItemCount + toItemCount})`
+  );
 
   console.log(
     `CodeMapping "${FROM}": ${fromMapping ? `exists ("${fromMapping.name}") — will be DELETED` : 'none'}`
@@ -78,7 +81,9 @@ async function main() {
 
   if (fromLocation) {
     if (toLocation) {
-      console.log(`CodeLocation "${FROM}": exists — will be DELETED ("${TO}" already has a location)`);
+      console.log(
+        `CodeLocation "${FROM}": exists — will be DELETED ("${TO}" already has a location)`
+      );
     } else {
       console.log(`CodeLocation "${FROM}": exists — will be MOVED to "${TO}"`);
     }
@@ -100,8 +105,14 @@ async function main() {
 
   console.log('\nApplying...');
 
-  const itemResult = await Item.updateMany({ code: FROM }, { $set: { code: TO } });
-  console.log(`Items recoded: matched=${itemResult.matchedCount} modified=${itemResult.modifiedCount}`);
+  const itemBulkMutations = createItemBulkMutationService();
+  const recodedItemCount = await itemBulkMutations.updateMatchingItems({
+    filter: { code: FROM },
+    mutateItem: item => {
+      item.code = TO;
+    },
+  });
+  console.log(`Items recoded: ${recodedItemCount}`);
 
   if (fromLocation) {
     if (toLocation) {
@@ -123,7 +134,7 @@ async function main() {
   await mongoose.disconnect();
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error('Merge failed:', err);
   mongoose.disconnect().finally(() => process.exit(1));
 });

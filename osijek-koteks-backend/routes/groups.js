@@ -69,11 +69,7 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(400).json({ message: 'Group name is required' });
     }
 
-    const group = await Group.findByIdAndUpdate(
-      req.params.id,
-      { name: name.trim() },
-      { new: true }
-    )
+    const group = await Group.findByIdAndUpdate(req.params.id, { name: name.trim() }, { new: true })
       .populate('users', 'firstName lastName email company')
       .populate('createdBy', 'firstName lastName email');
 
@@ -121,11 +117,7 @@ router.patch('/:id/users', auth, async (req, res) => {
       return res.status(400).json({ message: 'userIds must be an array' });
     }
 
-    const group = await Group.findByIdAndUpdate(
-      req.params.id,
-      { users: userIds },
-      { new: true }
-    )
+    const group = await Group.findByIdAndUpdate(req.params.id, { users: userIds }, { new: true })
       .populate('users', 'firstName lastName email company')
       .populate('createdBy', 'firstName lastName email');
 
@@ -136,7 +128,9 @@ router.patch('/:id/users', auth, async (req, res) => {
     res.json(group);
   } catch (error) {
     console.error('Error updating group users:', error);
-    res.status(500).json({ message: 'Server error while updating group users', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while updating group users', error: error.message });
   }
 });
 

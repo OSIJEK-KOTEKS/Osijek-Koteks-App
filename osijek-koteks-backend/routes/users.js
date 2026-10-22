@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { normalizeQuarryCode } = require('../utils/quarryOrigin');
 
 // Get all users (admin only)
 router.get('/', auth, async (req, res) => {
@@ -25,7 +26,7 @@ router.get('/prijevoz/access', auth, async (req, res) => {
     }
     const users = await User.find({
       canAccessPrijevoz: true,
-      role: { $ne: 'admin' }
+      role: { $ne: 'admin' },
     }).select('firstName lastName _id email company');
     res.json(users);
   } catch (error) {
@@ -144,7 +145,34 @@ router.patch('/:id', auth, async (req, res) => {
     const updatableFields = ['firstName', 'lastName', 'company', 'phoneNumber'];
     if (req.user.role === 'admin') {
       // Admin can manage additional fields
-      updatableFields.push('role', 'isVerified', 'codes', 'assignedRegistrations', 'hasFullAccess', 'canAccessRacuni', 'canAccessPrijevoz', 'onlyAsfalt');
+      updatableFields.push(
+        'role',
+        'isVerified',
+        'codes',
+        'assignedRegistrations',
+        'hasFullAccess',
+        'canAccessRacuni',
+        'canAccessPrijevoz',
+        'onlyAsfalt'
+      );
+
+      const nextRole = req.body.role ?? user.role;
+      const quarryCodeWasProvided = req.body.quarryCode !== undefined;
+      const nextQuarryCode = quarryCodeWasProvided
+        ? normalizeQuarryCode(req.body.quarryCode)
+        : normalizeQuarryCode(user.quarryCode);
+
+      if (nextRole === 'bot' && !nextQuarryCode && (user.role !== 'bot' || quarryCodeWasProvided)) {
+        return res.status(400).json({
+          message: 'Quarry code is required when assigning the bot role',
+        });
+      }
+
+      if (nextRole === 'bot' && quarryCodeWasProvided) {
+        user.quarryCode = nextQuarryCode;
+      } else if (nextRole !== 'bot' && (user.role === 'bot' || quarryCodeWasProvided)) {
+        user.quarryCode = undefined;
+      }
     }
 
     // Update allowed fields
@@ -154,9 +182,10 @@ router.patch('/:id', auth, async (req, res) => {
       }
     });
 
-    const updatedUser = await user.save();
-    console.log('Updated user:', updatedUser); // Add this log
-    res.json(updatedUser);
+    await user.save();
+    const userResponse = await User.findById(user._id).select('-password');
+    console.log('User updated successfully:', { userId: user._id });
+    res.json(userResponse);
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ message: 'Server error' });
@@ -182,10 +211,19 @@ router.post('/', auth, async (req, res) => {
       password,
       codes,
       role,
+      quarryCode,
       canAccessRacuni,
       canAccessPrijevoz,
       onlyAsfalt,
     } = req.body;
+
+    const newRole = role || 'user';
+    const normalizedQuarryCode = normalizeQuarryCode(quarryCode);
+    if (newRole === 'bot' && !normalizedQuarryCode) {
+      return res.status(400).json({
+        message: 'Quarry code is required when creating a bot user',
+      });
+    }
 
     // Check if user already exists
     let existingUser = await User.findOne({ email });
@@ -201,7 +239,8 @@ router.post('/', auth, async (req, res) => {
       email,
       password, // Will be hashed by the pre-save middleware
       codes: codes || [],
-      role: role || 'user',
+      role: newRole,
+      quarryCode: newRole === 'bot' ? normalizedQuarryCode : undefined,
       isVerified: false,
       hasFullAccess: req.body.hasFullAccess || false,
       canAccessRacuni: canAccessRacuni || false,

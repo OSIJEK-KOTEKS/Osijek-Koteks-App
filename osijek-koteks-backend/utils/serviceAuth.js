@@ -24,10 +24,10 @@ class ServiceAuthError extends Error {
 function serviceAuthHeadersPresent(req) {
   return Boolean(
     req.get(HEADER_NAMES.client) ||
-      req.get(HEADER_NAMES.timestamp) ||
-      req.get(HEADER_NAMES.nonce) ||
-      req.get(HEADER_NAMES.bodyHash) ||
-      req.get(HEADER_NAMES.signature)
+    req.get(HEADER_NAMES.timestamp) ||
+    req.get(HEADER_NAMES.nonce) ||
+    req.get(HEADER_NAMES.bodyHash) ||
+    req.get(HEADER_NAMES.signature)
   );
 }
 
@@ -41,7 +41,10 @@ function createServiceAuthHeaders({
   nonce = crypto.randomUUID(),
 }) {
   if (!clientId || !secret) {
-    throw new ServiceAuthError('missing_outgoing_config', 'service client id and secret are required');
+    throw new ServiceAuthError(
+      'missing_outgoing_config',
+      'service client id and secret are required'
+    );
   }
 
   const bodyHash = sha256Hex(bodyString);
@@ -107,14 +110,20 @@ function parseServiceClients(rawValue) {
   try {
     parsed = JSON.parse(rawValue);
   } catch {
-    throw new ServiceAuthError('invalid_service_auth_config', 'SERVICE_AUTH_CLIENTS_JSON is invalid JSON');
+    throw new ServiceAuthError(
+      'invalid_service_auth_config',
+      'SERVICE_AUTH_CLIENTS_JSON is invalid JSON'
+    );
   }
 
   if (!Array.isArray(parsed)) {
-    throw new ServiceAuthError('invalid_service_auth_config', 'SERVICE_AUTH_CLIENTS_JSON must be an array');
+    throw new ServiceAuthError(
+      'invalid_service_auth_config',
+      'SERVICE_AUTH_CLIENTS_JSON must be an array'
+    );
   }
 
-  return parsed.map((client) => normalizeServiceClient(client));
+  return parsed.map(client => normalizeServiceClient(client));
 }
 
 function canonicalRequest({ method, pathWithQuery, timestamp, nonce, bodyHash }) {
@@ -128,7 +137,10 @@ function canonicalRequest({ method, pathWithQuery, timestamp, nonce, bodyHash })
 }
 
 function sha256Hex(value) {
-  return crypto.createHash('sha256').update(value || '', 'utf8').digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(value || '', 'utf8')
+    .digest('hex');
 }
 
 function hmacSha256Hex(secret, value) {
@@ -184,7 +196,7 @@ function requiredHeader(req, headerName) {
 
 function serviceClientConfig(clientId, explicitClients) {
   const clients = explicitClients || configuredServiceClients();
-  const client = clients.find((candidate) => candidate.clientId === clientId);
+  const client = clients.find(candidate => candidate.clientId === clientId);
   if (!client) {
     throw new ServiceAuthError('unknown_service_client');
   }
@@ -206,7 +218,7 @@ function normalizeServiceClient(client) {
     clientId,
     secret,
     actorUserId,
-    allowed: allowed.map((entry) => ({
+    allowed: allowed.map(entry => ({
       method: stringField(entry, 'method').toUpperCase(),
       pathPrefix: stringField(entry, 'pathPrefix'),
     })),
@@ -225,7 +237,7 @@ function stringField(object, key) {
 function ensureAllowedPath(client, method, originalUrl) {
   const pathname = pathFromOriginalUrl(originalUrl);
   const normalizedMethod = method.toUpperCase();
-  const allowed = client.allowed.some((entry) => {
+  const allowed = client.allowed.some(entry => {
     return (
       (entry.method === '*' || entry.method === normalizedMethod) &&
       pathname.startsWith(entry.pathPrefix)
@@ -275,7 +287,8 @@ function ensureValidNonce(clientId, nonce, nowMs, nonceTtlSeconds) {
 
 function rememberNonce(clientId, nonce, nowMs, nonceTtlSeconds) {
   const ttlSeconds =
-    nonceTtlSeconds || positiveIntegerEnv('SERVICE_AUTH_NONCE_TTL_SECONDS', DEFAULT_NONCE_TTL_SECONDS);
+    nonceTtlSeconds ||
+    positiveIntegerEnv('SERVICE_AUTH_NONCE_TTL_SECONDS', DEFAULT_NONCE_TTL_SECONDS);
   nonceCache.set(nonceCacheKey(clientId, nonce), nowMs + ttlSeconds * 1000);
 }
 
@@ -308,7 +321,9 @@ function secureEqualHex(left, right) {
 
   const leftBuffer = Buffer.from(left, 'hex');
   const rightBuffer = Buffer.from(right, 'hex');
-  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+  return (
+    leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer)
+  );
 }
 
 function positiveIntegerEnv(key, defaultValue) {

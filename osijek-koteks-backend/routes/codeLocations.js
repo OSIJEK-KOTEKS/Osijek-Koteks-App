@@ -10,7 +10,9 @@ router.get('/', auth, async (req, res) => {
     res.json(codeLocations);
   } catch (error) {
     console.error('Error fetching code locations:', error);
-    res.status(500).json({ message: 'Server error while fetching code locations', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while fetching code locations', error: error.message });
   }
 });
 
@@ -50,7 +52,9 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json(codeLocation);
   } catch (error) {
     console.error('Error creating code location:', error);
-    res.status(500).json({ message: 'Server error while creating code location', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while creating code location', error: error.message });
   }
 });
 
@@ -80,7 +84,9 @@ router.put('/:id', auth, async (req, res) => {
     res.json(codeLocation);
   } catch (error) {
     console.error('Error updating code location:', error);
-    res.status(500).json({ message: 'Server error while updating code location', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while updating code location', error: error.message });
   }
 });
 
@@ -100,7 +106,9 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ message: 'Code location deleted successfully' });
   } catch (error) {
     console.error('Error deleting code location:', error);
-    res.status(500).json({ message: 'Server error while deleting code location', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error while deleting code location', error: error.message });
   }
 });
 

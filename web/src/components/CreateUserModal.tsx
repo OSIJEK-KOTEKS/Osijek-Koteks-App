@@ -159,6 +159,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     lastName: '',
     company: '',
     role: 'user',
+    quarryCode: '',
     codes: [],
   });
   const [newCode, setNewCode] = useState('');
@@ -182,6 +183,10 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       setError('Firma je obavezna');
       return false;
     }
+    if (formData.role === 'bot' && !formData.quarryCode?.trim()) {
+      setError('Kod kamenoloma je obavezan za bot korisnike');
+      return false;
+    }
     return true;
   };
 
@@ -193,7 +198,10 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setError('');
 
     try {
-      await apiService.createUser(formData);
+      await apiService.createUser({
+        ...formData,
+        quarryCode: formData.role === 'bot' ? formData.quarryCode?.trim() : undefined,
+      });
       onSuccess();
       onClose();
       // Reset form
@@ -204,6 +212,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         lastName: '',
         company: '',
         role: 'user',
+        quarryCode: '',
         codes: [],
       });
     } catch (err: any) {
@@ -338,6 +347,21 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               <option value="bot">Bot</option>
             </Select>
           </FormGroup>
+
+          {formData.role === 'bot' && (
+            <FormGroup>
+              <Label htmlFor="createQuarryCode">Kod kamenoloma</Label>
+              <Input
+                id="createQuarryCode"
+                type="text"
+                value={formData.quarryCode || ''}
+                onChange={e => setFormData({ ...formData, quarryCode: e.target.value })}
+                required
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </FormGroup>
+          )}
 
           <FormGroup>
             <Label>Samo asfalt</Label>

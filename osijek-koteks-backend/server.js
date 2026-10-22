@@ -4,9 +4,13 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-// Import models
-const Item = require('./models/Item');
 const { initCarrierUnification } = require('./utils/carrierUnification');
+const { createItemBulkMutationService } = require('./services/itemBulkMutationService');
+const { createDeliveryNoteWorker } = require('./services/deliveryNoteWorker');
+const { createServerShutdown } = require('./services/serverShutdownService');
+
+const itemBulkMutations = createItemBulkMutationService();
+let deliveryNoteWorker = null;
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -108,9 +112,11 @@ const dataRetentionMiddleware = async (req, res, next) => {
 
     // Clean up old items
     if (req.path.includes('/api/items')) {
-      await Item.deleteMany({
-        creationDate: { $lt: cutoffDate },
-        approvalStatus: { $in: ['odobreno', 'odbijen'] },
+      await itemBulkMutations.deleteMatchingItems({
+        filter: {
+          creationDate: { $lt: cutoffDate },
+          approvalStatus: { $in: ['odobreno', 'odbijen'] },
+        },
       });
     }
 
@@ -134,6 +140,7 @@ const groupsRouter = require('./routes/groups');
 const codeLocationsRouter = require('./routes/codeLocations');
 const codeMappingsRouter = require('./routes/codeMappings');
 const carrierUnificationRouter = require('./routes/carrierUnification');
+const integrationsRouter = require('./routes/integrations');
 
 // GDPR Routes
 app.get('/api/privacy-policy', (req, res) => {
@@ -173,6 +180,7 @@ app.use('/api/groups', groupsRouter);
 app.use('/api/code-locations', codeLocationsRouter);
 app.use('/api/code-mappings', codeMappingsRouter);
 app.use('/api/carrier-unification', carrierUnificationRouter);
+app.use('/api/integrations', integrationsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -197,6 +205,8 @@ mongoose
     // Seed the unified carrier list (first run) and warm the alias-rule cache
     // that Item write hooks read from.
     await initCarrierUnification();
+    deliveryNoteWorker = createDeliveryNoteWorker();
+    deliveryNoteWorker.start();
     const port = process.env.PORT || 5000;
     server.listen(port, () => {
       console.log(`Server running on port ${port}`);
@@ -207,16 +217,21 @@ mongoose
     process.exit(1);
   });
 
-//Handle server shutdown gracefully
-process.on('SIGINT', async () => {
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error during shutdown:', err);
-    process.exit(1);
-  }
+const shutdown = createServerShutdown({
+  io,
+  stopWorker: async () => {
+    if (deliveryNoteWorker) await deliveryNoteWorker.stop();
+  },
+  closeDatabase: () => mongoose.connection.close(),
 });
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    shutdown(signal).catch(error => {
+      console.error('Error during shutdown:', error.message);
+      process.exitCode = 1;
+    });
+  });
+}
 
 module.exports = app;

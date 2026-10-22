@@ -7,6 +7,7 @@ export interface User {
   codes: string[];
   assignedRegistrations: string[];
   role: 'admin' | 'user' | 'bot' | 'pc-user';
+  quarryCode?: string;
   isVerified: boolean;
   phoneNumber?: string;
   hasFullAccess: boolean;
@@ -23,6 +24,7 @@ export interface RegistrationData {
   lastName: string;
   company: string;
   role: 'admin' | 'user' | 'bot' | 'pc-user';
+  quarryCode?: string;
   codes: string[];
   assignedRegistrations?: string[];
   hasFullAccess?: boolean;
