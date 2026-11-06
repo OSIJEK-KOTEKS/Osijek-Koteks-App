@@ -10,43 +10,6 @@ import { ItemUser } from '../types';
 // Register Croatian locale
 registerLocale('hr', hr as unknown as Locale);
 
-// Utility functions
-const normalizeCarrierName = (name: string): string => {
-  return (
-    name
-      .trim()
-      .toUpperCase()
-      // Normalize Croatian characters
-      .replace(/Č/g, 'C')
-      .replace(/Ć/g, 'C')
-      .replace(/Š/g, 'S')
-      .replace(/Ž/g, 'Z')
-      .replace(/Đ/g, 'D')
-      .replace(/DŽ/g, 'DZ')
-      // Remove common company suffixes for comparison
-      .replace(/\s+(D\.O\.O\.|DOO|D\.O\.O|OBRT)\.?$/i, '')
-      // Remove extra spaces
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
-};
-
-const deduplicateCarriers = (carriers: string[]): string[] => {
-  const carrierMap = new Map<string, string>();
-
-  carriers.forEach(carrier => {
-    if (!carrier || carrier.trim() === '') return;
-
-    const normalized = normalizeCarrierName(carrier);
-
-    if (!carrierMap.has(normalized) || carrier.length > carrierMap.get(normalized)!.length) {
-      carrierMap.set(normalized, carrier);
-    }
-  });
-
-  return Array.from(carrierMap.values()).sort();
-};
-
 // Interface for grouped users
 interface GroupedUser {
   value: string;
@@ -207,11 +170,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     })),
   ];
 
-  // Deduplicate carriers with smart normalization
-  const uniqueCarriers = deduplicateCarriers(availableCarriers);
-
-  console.log('DashboardFilters - Raw availableCarriers:', availableCarriers);
-  console.log('DashboardFilters - Deduplicated carriers:', uniqueCarriers);
+  // The backend already returns one entry per carrier (spellings collapsed by
+  // carrierKey) and re-expands the chosen one when filtering. Collapsing again
+  // here used to hide items: the dropdown merged spellings the filter then
+  // matched exactly, so only one variant's items ever came back.
+  const uniqueCarriers = availableCarriers;
 
   // Prepare carriers options
   const allCarriersOptions = [

@@ -9,6 +9,7 @@ const {
   invalidateAliasCache,
   refreshAliasCache,
   seedCanonicalCarriers,
+  resolveCarrierVariants,
 } = require('../utils/carrierUnification');
 const { createItemBulkMutationService } = require('../services/itemBulkMutationService');
 
@@ -26,11 +27,7 @@ const adminOnly = (req, res, next) => {
  * Case/punctuation variants of the same name are all caught in one pass.
  */
 async function applyRuleToItems(fromKey, to) {
-  const allValues = await Item.distinct('prijevoznik', {
-    prijevoznik: { $exists: true, $nin: [null, ''] },
-  });
-
-  const variants = allValues.filter(v => typeof v === 'string' && carrierKey(v) === fromKey);
+  const variants = await resolveCarrierVariants(fromKey);
   if (variants.length === 0) return 0;
 
   return itemBulkMutations.updateMatchingItems({

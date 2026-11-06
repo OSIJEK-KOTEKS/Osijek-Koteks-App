@@ -13,7 +13,8 @@ const CodeLocation = require('../models/CodeLocation');
 const auth = require('../middleware/auth');
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const cloudinary = require('../config/cloudinary');
-const { normalizeCarrier } = require('../utils/normalizeCarrier');
+const { normalizeCarrier, carrierKey } = require('../utils/normalizeCarrier');
+const { resolveCarrierVariants } = require('../utils/carrierUnification');
 const {
   resolveCreatorOriginLocationCode,
   resolveCreatorQuarryCode,
@@ -68,27 +69,6 @@ const getFirstPartOfRegistration = registration => {
 
   // Fallback: return original if no pattern matches
   return registration;
-};
-
-const normalizeCarrierName = name => {
-  if (!name) return '';
-  return (
-    name
-      .trim()
-      .toUpperCase()
-      // Normalize Croatian characters
-      .replace(/Č/g, 'C')
-      .replace(/Ć/g, 'C')
-      .replace(/Š/g, 'S')
-      .replace(/Ž/g, 'Z')
-      .replace(/Đ/g, 'D')
-      .replace(/DŽ/g, 'DZ')
-      // Remove common company suffixes for comparison
-      .replace(/\s+(D\.O\.O\.|DOO|D\.O\.O|OBRT)\.?$/i, '')
-      // Remove extra spaces
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
 };
 
 const IGNORED_APPROVER_EMAILS = new Set([
@@ -146,37 +126,6 @@ async function calculateAverageSpeed(item, approverUser) {
  * created through the Asfalt flow.
  */
 const isAsfaltOnlyUser = user => user?.onlyAsfalt === true;
-
-// Function to find all carrier variations that match the normalized form
-const findCarrierVariations = async selectedCarrier => {
-  try {
-    console.log('Finding variations for carrier:', selectedCarrier);
-
-    // Get all unique carriers from database
-    const allCarriers = await Item.distinct('prijevoznik');
-
-    // Normalize the selected carrier
-    const normalizedSelected = normalizeCarrierName(selectedCarrier);
-    console.log('Normalized selected carrier:', normalizedSelected);
-
-    // Find all carriers that normalize to the same value
-    const variations = allCarriers.filter(carrier => {
-      if (!carrier) return false;
-      const normalized = normalizeCarrierName(carrier);
-      const matches = normalized === normalizedSelected;
-      if (matches) {
-        console.log(`Found variation: "${carrier}" -> "${normalized}"`);
-      }
-      return matches;
-    });
-
-    console.log('All variations found:', variations);
-    return variations;
-  } catch (error) {
-    console.error('Error finding carrier variations:', error);
-    return [selectedCarrier]; // Fallback to original carrier
-  }
-};
 
 // Configure multer for file upload
 const storage = multer.memoryStorage();
@@ -406,14 +355,43 @@ router.get('/carriers', auth, async (req, res) => {
     // If admin with no codes assigned (empty array or null), show all carriers (no filtering)
 
     // Only get items that have a prijevoznik field
-    query.prijevoznik = { $exists: true, $ne: null, $ne: '' };
+    query.prijevoznik = { $exists: true, $nin: [null, ''] };
 
-    const uniqueCarriers = await Item.distinct('prijevoznik', query);
+    // Collapse spellings of the same carrier into one dropdown entry, keeping
+    // the spelling that appears on the most items — that is the one the user
+    // recognises from the documents. Filtering re-expands the entry to the
+    // whole group (see resolveCarrierVariants), so no item becomes unreachable.
+    const counted = await Item.aggregate([
+      { $match: query },
+      { $group: { _id: '$prijevoznik', count: { $sum: 1 } } },
+    ]);
+
+    const byKey = new Map();
+    counted.forEach(({ _id: name, count }) => {
+      if (typeof name !== 'string' || !name.trim()) return;
+      const key = carrierKey(name);
+      const current = byKey.get(key);
+      // Most used wins; ties fall back to the longer, then alphabetical spelling
+      // so the list stays stable between requests.
+      if (
+        !current ||
+        count > current.count ||
+        (count === current.count &&
+          (name.length > current.name.length ||
+            (name.length === current.name.length && name < current.name)))
+      ) {
+        byKey.set(key, { name, count });
+      }
+    });
+
+    const uniqueCarriers = Array.from(byKey.values())
+      .map(c => c.name)
+      .sort((a, b) => a.localeCompare(b, 'hr'));
 
     console.log('Carriers query:', query);
     console.log('Found unique carriers:', uniqueCarriers.length);
 
-    res.json(uniqueCarriers.sort());
+    res.json(uniqueCarriers);
   } catch (err) {
     console.error('Error fetching unique carriers:', err);
     res.status(500).json({ message: 'Server error' });
@@ -594,9 +572,12 @@ router.get('/', auth, async (req, res) => {
       }
     }
 
-    // Prijevoznik filtering
+    // Prijevoznik filtering. The dropdown offers one representative spelling
+    // per carrier, so match every stored spelling of that carrier — otherwise
+    // picking "IKAR D.O.O." would hide every item saved as "IKAR d.o.o.".
     if (prijevoznik) {
-      query.prijevoznik = prijevoznik;
+      const variants = await resolveCarrierVariants(carrierKey(prijevoznik));
+      query.prijevoznik = variants.length > 0 ? { $in: variants } : prijevoznik;
     }
 
     // Roba filtering. "Bez robe" selects the items that have no material —

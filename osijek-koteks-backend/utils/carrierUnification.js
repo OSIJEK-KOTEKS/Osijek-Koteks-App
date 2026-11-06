@@ -84,6 +84,31 @@ async function applyAlias(value) {
 }
 
 /**
+ * Every spelling currently stored on items that means the same carrier as
+ * `key` (a carrierKey).
+ *
+ * The dashboard offers ONE representative spelling per carrier in its filter
+ * dropdown, so a query that matches that representative exactly would hide the
+ * items saved under the group's other spellings ("IKAR D.O.O." vs
+ * "IKAR d.o.o."). Callers filter with `$in` over this list instead.
+ *
+ * Returns [] when no stored value matches, so a caller can tell "no items"
+ * apart from "one item".
+ */
+async function resolveCarrierVariants(key) {
+  // Required lazily to avoid a circular import (Item -> carrierUnification).
+  const Item = require('../models/Item');
+
+  if (!key) return [];
+
+  const allValues = await Item.distinct('prijevoznik', {
+    prijevoznik: { $exists: true, $nin: [null, ''] },
+  });
+
+  return allValues.filter(v => typeof v === 'string' && carrierKey(v) === key);
+}
+
+/**
  * Seed the canonical list from config/carriers.json. Idempotent: existing
  * entries keep their spelling, missing ones are inserted. Returns counts.
  */
@@ -134,6 +159,7 @@ async function initCarrierUnification() {
 module.exports = {
   applyAlias,
   applyAliasSync,
+  resolveCarrierVariants,
   ensureAliasCache,
   refreshAliasCache,
   invalidateAliasCache,
