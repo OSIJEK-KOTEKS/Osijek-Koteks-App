@@ -20,6 +20,12 @@ function analyzeBackfillItem({ item, creator, currentState }) {
     pdfUrl: item.pdfUrl,
     approvalStatus: item.approvalStatus,
     in_transit: item.in_transit,
+    title: item.title,
+    isAsfalt: item.isAsfalt,
+    approvalDate: item.approvalDate,
+    approvalPhotoFront: item.approvalPhotoFront,
+    approvalPhotoBack: item.approvalPhotoBack,
+    approvalLocation: item.approvalLocation,
   };
   const candidateEvent = buildDeliveryNoteEvent({ item: candidateItem });
 

@@ -48,7 +48,62 @@ test('builds the contract DTO from raw Item values', () => {
     pdfUrl: 'https://source.example/delivery-note.pdf',
     approvalStatus: 'na čekanju',
     inTransit: true,
+    noteNumber: null,
+    isAsphalt: false,
+    createdByName: null,
+    approvalDate: null,
+    approvedByName: null,
+    photoFrontUrl: null,
+    photoBackUrl: null,
+    approvalLocation: null,
   });
+});
+
+test('adds the note number, asphalt flag, names, approval and photos', () => {
+  const event = buildDeliveryNoteEvent({
+    item: item({
+      title: ' 83812/2026 ',
+      isAsfalt: true,
+      approvalStatus: 'odobreno',
+      approvalDate: new Date('2026-08-24T10:02:00.000Z'),
+      approvalPhotoFront: { url: 'https://img.example/front.jpg', publicId: 'front' },
+      approvalPhotoBack: { url: 'https://img.example/back.jpg', publicId: 'back' },
+      approvalLocation: {
+        coordinates: { latitude: 45.34, longitude: 19.0 },
+        accuracy: 12,
+        timestamp: new Date('2026-08-24T10:02:00.000Z'),
+      },
+    }),
+    userNames: { createdByName: 'Vaga Molaris', approvedByName: ' Ivan Horvat ' },
+  });
+
+  assert.equal(event.noteNumber, '83812/2026');
+  assert.equal(event.isAsphalt, true);
+  assert.equal(event.createdByName, 'Vaga Molaris');
+  assert.equal(event.approvedByName, 'Ivan Horvat');
+  assert.equal(event.approvalDate.toISOString(), '2026-08-24T10:02:00.000Z');
+  assert.equal(event.photoFrontUrl, 'https://img.example/front.jpg');
+  assert.equal(event.photoBackUrl, 'https://img.example/back.jpg');
+  assert.deepEqual(event.approvalLocation, { latitude: 45.34, longitude: 19.0, accuracy: 12 });
+});
+
+test('builds the event when a user, photo, location or approval date is missing or broken', () => {
+  const event = buildDeliveryNoteEvent({
+    item: item({
+      approvalDate: 'not-a-date',
+      approvalPhotoFront: { url: null },
+      approvalPhotoBack: null,
+      approvalLocation: { coordinates: { latitude: null, longitude: 19.0 } },
+    }),
+    userNames: { createdByName: null },
+  });
+
+  assert.equal(event.approvalDate, null);
+  assert.equal(event.photoFrontUrl, null);
+  assert.equal(event.photoBackUrl, null);
+  assert.equal(event.approvalLocation, null);
+  assert.equal(event.createdByName, null);
+  assert.equal(event.approvedByName, null);
 });
 
 test('uses raw dates without calling the locale-formatted Item toJSON method', () => {

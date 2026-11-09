@@ -1,4 +1,5 @@
-const TARGET_NAMES = Object.freeze(['PRODUCTION', 'STAGING']);
+// PORTAL is the new Osijek-Koteks web portal. New targets go at the end.
+const TARGET_NAMES = Object.freeze(['PRODUCTION', 'STAGING', 'PORTAL']);
 const DEFAULT_WORKER_CONFIG = Object.freeze({
   pollIntervalMs: 5000,
   batchSize: 25,

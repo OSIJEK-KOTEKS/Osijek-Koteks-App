@@ -33,6 +33,22 @@ test('loads production and staging independently without exposing secret values 
   );
 });
 
+test('adds the web portal as a third target, after the existing two', () => {
+  const targets = loadDeliveryNoteTargets({
+    DELIVERY_NOTE_TARGET_PORTAL_ENABLED: 'true',
+    DELIVERY_NOTE_TARGET_PORTAL_URL: 'https://portal.example',
+    DELIVERY_NOTE_TARGET_PORTAL_CLIENT_ID: 'osijek-koteks-app',
+    DELIVERY_NOTE_TARGET_PORTAL_SECRET: 'portal-secret',
+  });
+
+  assert.deepEqual(
+    targets.map(target => target.name),
+    ['PRODUCTION', 'STAGING', 'PORTAL']
+  );
+  assert.deepEqual(enabledTargetNames(targets), ['PORTAL']);
+  assert.equal(targets[2].url, 'https://portal.example');
+});
+
 test('requires complete credentials only for enabled targets', () => {
   assert.doesNotThrow(() => loadDeliveryNoteTargets({}));
   assert.throws(

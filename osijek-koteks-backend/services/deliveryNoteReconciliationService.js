@@ -18,6 +18,14 @@ const EVENT_FIELDS = Object.freeze([
   'pdfUrl',
   'approvalStatus',
   'inTransit',
+  'noteNumber',
+  'isAsphalt',
+  'createdByName',
+  'approvalDate',
+  'approvedByName',
+  'photoFrontUrl',
+  'photoBackUrl',
+  'approvalLocation',
 ]);
 
 class ReconciliationQueryError extends Error {

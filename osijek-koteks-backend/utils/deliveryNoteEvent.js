@@ -22,6 +22,23 @@ function optionalText(value) {
   return value.trim() || null;
 }
 
+function optionalDate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function finiteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function approvalLocation(item) {
+  const latitude = finiteNumber(item.approvalLocation?.coordinates?.latitude);
+  const longitude = finiteNumber(item.approvalLocation?.coordinates?.longitude);
+  if (latitude === null || longitude === null) return null;
+  return { latitude, longitude, accuracy: finiteNumber(item.approvalLocation.accuracy) };
+}
+
 function integrationWeight(item) {
   const value = item.tezina ?? item.neto;
   if (value === undefined || value === null || value === '') return null;
@@ -40,6 +57,8 @@ function buildDeliveryNoteEvent({
   eventId = randomUUID(),
   occurredAt = new Date(),
   sourceUpdatedAt = item?.updatedAt,
+  // Who created and approved the item, by name. Looked up by the caller.
+  userNames = {},
 }) {
   if (!item) throw new TypeError('item is required');
   if (!Object.values(DELIVERY_NOTE_EVENT_TYPES).includes(eventType)) {
@@ -68,6 +87,15 @@ function buildDeliveryNoteEvent({
     pdfUrl: optionalText(item.pdfUrl),
     approvalStatus,
     inTransit: Boolean(item.in_transit),
+    // Optional extras. Never throw: a save must not fail because of them.
+    noteNumber: optionalText(item.title),
+    isAsphalt: item.isAsfalt === true,
+    createdByName: optionalText(userNames.createdByName),
+    approvalDate: optionalDate(item.approvalDate),
+    approvedByName: optionalText(userNames.approvedByName),
+    photoFrontUrl: optionalText(item.approvalPhotoFront?.url),
+    photoBackUrl: optionalText(item.approvalPhotoBack?.url),
+    approvalLocation: approvalLocation(item),
   };
 }
 

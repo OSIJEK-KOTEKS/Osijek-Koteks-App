@@ -121,6 +121,53 @@ test('persists a later raw Item timestamp when two meaningful changes share a mi
   assert.equal(persistedTimes[0].toISOString(), '2026-08-24T08:04:58.001Z');
 });
 
+test('sends who created and approved the item, by name', async () => {
+  const fake = stores();
+  const lookups = [];
+  const service = createDeliveryNoteSyncService({
+    ...fake,
+    targetNames: ['portal'],
+    now: () => NOW,
+    lookupUserNames: async ({ item: source, session }) => {
+      lookups.push({ createdBy: source.createdBy, session });
+      return { createdByName: 'Vaga Molaris', approvedByName: 'Ivan Horvat' };
+    },
+  });
+
+  const result = await service.recordUpsert(item({ createdBy: 'bot-user-id' }), {
+    session: SESSION,
+  });
+
+  assert.equal(result.event.createdByName, 'Vaga Molaris');
+  assert.equal(result.event.approvedByName, 'Ivan Horvat');
+  assert.deepEqual(lookups, [{ createdBy: 'bot-user-id', session: SESSION }]);
+});
+
+test('sends an event when the item is approved again with new photos', async () => {
+  const approved = item({
+    approvalStatus: 'odobreno',
+    approvalDate: new Date('2026-08-25T09:00:00.000Z'),
+    approvalPhotoFront: { url: 'https://img.example/first.jpg' },
+  });
+  const fake = stores(buildDeliveryNoteEvent({ item: approved, occurredAt: NOW }));
+  const service = createDeliveryNoteSyncService({
+    ...fake,
+    targetNames: ['portal'],
+    now: () => NOW,
+    persistItemUpdatedAt: async args => {
+      args.item.updatedAt = args.sourceUpdatedAt;
+    },
+  });
+
+  const result = await service.recordUpsert(
+    { ...approved, approvalPhotoFront: { url: 'https://img.example/second.jpg' } },
+    { session: SESSION }
+  );
+
+  assert.equal(result.changed, true);
+  assert.equal(result.event.photoFrontUrl, 'https://img.example/second.jpg');
+});
+
 test('records a DELETE as a retained latest tombstone', async () => {
   const existing = buildDeliveryNoteEvent({ item: item(), occurredAt: NOW });
   const fake = stores(existing);

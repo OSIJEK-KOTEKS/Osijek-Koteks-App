@@ -1,6 +1,11 @@
 /**
  * Builds Item quarry snapshots and delivery-note reconciliation state.
  *
+ * WARNING: do not run --apply while delivery-note targets are connected.
+ * It records a new event for almost every item, and every enabled target
+ * (Prijevoz-Java and the web portal) receives all of them again. The portal
+ * wants only notes from the day it was connected onward.
+ *
  * Dry-run is the default:
  *   node scripts/backfill-delivery-note-sync.js
  *

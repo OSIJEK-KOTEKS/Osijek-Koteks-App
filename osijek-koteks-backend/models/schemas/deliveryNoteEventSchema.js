@@ -2,6 +2,15 @@ const mongoose = require('mongoose');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const ApprovalLocationSchema = new mongoose.Schema(
+  {
+    latitude: { type: Number, required: true },
+    longitude: { type: Number, required: true },
+    accuracy: { type: Number, default: null },
+  },
+  { _id: false, id: false }
+);
+
 function deliveryNoteEventDefinition() {
   return {
     eventId: {
@@ -26,6 +35,16 @@ function deliveryNoteEventDefinition() {
     pdfUrl: { type: String, trim: true, default: null },
     approvalStatus: { type: String, required: true, trim: true },
     inTransit: { type: Boolean, required: true },
+    // Optional. Older events have none of these. A field missing here is
+    // silently dropped from the outbox and the sync state.
+    noteNumber: { type: String, trim: true, default: null },
+    isAsphalt: { type: Boolean, default: false },
+    createdByName: { type: String, trim: true, default: null },
+    approvalDate: { type: Date, default: null },
+    approvedByName: { type: String, trim: true, default: null },
+    photoFrontUrl: { type: String, trim: true, default: null },
+    photoBackUrl: { type: String, trim: true, default: null },
+    approvalLocation: { type: ApprovalLocationSchema, default: null },
   };
 }
 
